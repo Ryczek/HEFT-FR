@@ -1,0 +1,136 @@
+(* NNLO bosonic operators (chiral dimension 2) for the 1604.06801 basis.
+
+   HELD BACK FROM THIS RELEASE: WL2h2D2NNLO, h4D6NNLOv1/v2, h4T2D6NNLOv1/v2.  Their
+   Lagrangians are defined and gated below exactly like the live ones, but no catalogue in
+   heft_notebook_reference.wl offers their labels, so HEFTActiveNLOPieces can never contain
+   one and every gate below stays False.  Nothing here needs changing to bring them back -
+   list the labels in HEFT$Catalog1604Higher again.  See NNLO/parameters_NNLO.fr for the
+   full inventory of inert rows. *)
+
+If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
+If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+
+(* Gluon-Higgs NNLO (Brivio / Grober basis). *)
+LGHNNLO1 := Block[{mu, nu, ga, a},
+  -ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, mu] del[H, nu] FS[Gl, mu, ga, a] FS[Gl, nu, ga, a]
+      FCGHNNLO1[H, NEFT]
+];
+
+LGHNNLO2 := Block[{mu, nu, ga, a},
+  -ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] FS[Gl, mu, nu, a] FS[Gl, mu, nu, a]
+      FCGHNNLO2[H, NEFT]
+];
+
+LGHtildeNNLO := Block[{mu, nu, al, be, ga, a},
+  -ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] Eps[mu, nu, al, be]/2
+      HC[FS[Gl, al, be, a]] FS[Gl, mu, nu, a]
+      FCGHtildeNNLO[H, NEFT]
+];
+
+
+WL[mu_, nu_, ii_] := 1/2 (FS[Wi, mu, nu, ii] - I*Eps[mu, nu, al, be] FS[Wi, mu, nu, ii]);
+WR[mu_, nu_, ii_] := 1/2 (FS[Wi, mu, nu, ii] + I*Eps[mu, nu, al, be] FS[Wi, al, be, ii]);
+
+LWL2h2D2NNLO := Block[{mu, nu, la, ii, aux},
+      aux = ExpandIndices[
+ChiralOrder^2/LamHEFT^2 H^2 (del[WL[mu, nu, ii], la] . del[WL[mu, nu, ii], la] + HC[ del[WL[mu, nu, ii], la] . del[WL[mu, nu, ii], la]])
+      FCWL2h2D2NNLO[H, NEFT],
+        FlavorExpand -> {SU2D}
+      , NoDefinitions -> True];
+      aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+
+LWLh2WRD2NNLO := Block[{mu, nu, la, ii, aux},
+      aux = ExpandIndices[
+ChiralOrder^2/LamHEFT^2 H (del[del[H ,nu], mu] . WR[la, nu, ii] . WL[la, mu, ii]  + HC[ del[del[H ,nu], mu] . WR[la, nu, ii] . WL[la, mu, ii] ])
+      FCWL2h2DRD2NNLO[H, NEFT],
+        FlavorExpand -> {SU2D}
+      , NoDefinitions -> True];
+      aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+
+    (*VU[mu_] = Block[{ii},
+      I*gw/2*Sum[PauliSigma[ii]*Wi[mu, ii], {ii, 1, 3}] -
+      I*g1/2*PauliSigma[3]*B[mu]];
+    (* Custodial-breaking spurion T. *)*)
+
+LWLh3D4NNLO := Block[{mu, nu, la, ii, aux},
+    aux = ExpandIndices[ChiralOrder^2/LamHEFT^2 H (del[del[H ,la], nu] del[ WL[la, mu, ii], nu] . VU[mu]  + HC[ del[del[H ,la], nu] del[ WL[la, mu, ii], nu] . VU[mu] ])
+      FCWLh3D4NNLO[H, NEFT],
+      FlavorExpand -> {SU2D}
+    , NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+]; 
+
+
+(* Operator labels: "h4D6NNLOv1" in NLOOperators; Lagrangian symbols: Lh4D6NNLOv1. *)
+
+Lh4D6NNLOv1 := Block[{mu, nu, la, ii, aux},
+    aux = ExpandIndices[ChiralOrder^2/LamHEFT^2 (del[H,la] del[del[del[H,nu],mu],la] Tr[VU[mu] . VU[nu]]  + HC[ del[H,la] del[del[del[H,nu],mu],la] Tr[VU[mu] . VU[nu] ]])
+      FCh4D6NNLOv1[H, NEFT],
+      FlavorExpand -> {SU2D}
+    , NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+]; 
+
+Lh4D6NNLOv2 := Block[{mu, nu, la, ii, aux},
+    aux = ExpandIndices[ChiralOrder^2/LamHEFT^2 (del[del[H,nu] ,la] del[del[H,nu] ,la] Tr[VU[mu] . VU[mu]]  + HC[ del[del[H,nu] ,la] del[del[H,nu] ,la] Tr[VU[mu] . VU[mu] ]])
+      FCh4D6NNLOv2[H, NEFT],
+      FlavorExpand -> {SU2D}
+    , NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+]; 
+
+
+(* Operator labels: "h4T2D6NNLOv1" in NLOOperators; Lagrangian symbols: Lh4T2D6NNLOv1. *)
+
+Lh4T2D6NNLOv1 := Block[{mu, nu, la, ii, aux},
+    aux = ExpandIndices[ChiralOrder^2/LamHEFT^2 (del[H,la] del[del[del[H,nu],mu],la] Tr[TT . VU[mu]] Tr[TT . VU[nu]]  +  HC[ del[H,la] del[del[del[H,nu],mu],la] Tr[TT . VU[mu]] Tr[TT . VU[nu]]])
+      FCh4T2D6NNLOv1[H, NEFT],
+      FlavorExpand -> {SU2D}
+    , NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+]; 
+
+
+Lh4T2D6NNLOv2 := Block[{mu, nu, la, ii, aux},
+    aux = ExpandIndices[ChiralOrder^2/LamHEFT^2 (del[del[H,nu] ,la] del[del[H,nu] ,la] Tr[TT . VU[mu]] Tr[TT . VU[mu]]  + HC[ del[del[H,nu] ,la] del[del[H,nu] ,la] Tr[TT . VU[mu]] Tr[TT . VU[mu] ]])
+      FCh4T2D6NNLOv2[H, NEFT],
+      FlavorExpand -> {SU2D}
+    , NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+]; 
+
+
+
+LNNLOaux = 0;
+If[HEFTPieceActiveQ[ "GHNNLO1"],     LNNLOaux += LGHNNLO1];
+If[HEFTPieceActiveQ[ "GHNNLO2"],     LNNLOaux += LGHNNLO2];
+If[HEFTPieceActiveQ[ "GHtildeNNLO"], LNNLOaux += LGHtildeNNLO];
+If[HEFTPieceActiveQ[ "WL2h2D2NNLO"],   LNNLOaux += LWL2h2D2NNLO];
+If[HEFTPieceActiveQ[ "WLh2WRD2NNLO"], LNNLOaux += LWLh2WRD2NNLO];
+If[HEFTPieceActiveQ[ "WLh3D4NNLO"],    LNNLOaux += LWLh3D4NNLO];
+If[HEFTPieceActiveQ[ "h4D6NNLOv1"],    LNNLOaux += Lh4D6NNLOv1];
+If[HEFTPieceActiveQ[ "h4D6NNLOv2"],    LNNLOaux += Lh4D6NNLOv2];
+If[HEFTPieceActiveQ[ "h4T2D6NNLOv1"],    LNNLOaux += Lh4T2D6NNLOv1];
+If[HEFTPieceActiveQ[ "h4T2D6NNLOv2"],    LNNLOaux += Lh4T2D6NNLOv2];
+
+LNNLO := ExpandIndices[LNNLOaux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+
+HEFTRebuildLNNLO[] := Block[{aux = 0, res},
+  If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
+  If[HEFTPieceActiveQ[ "GHNNLO1"],      aux += LGHNNLO1];
+  If[HEFTPieceActiveQ[ "GHNNLO2"],      aux += LGHNNLO2];
+  If[HEFTPieceActiveQ[ "GHtildeNNLO"],  aux += LGHtildeNNLO];
+  If[HEFTPieceActiveQ[ "WL2h2D2NNLO"],   aux += LWL2h2D2NNLO];
+  If[HEFTPieceActiveQ[ "WLh2WRD2NNLO"], aux += LWLh2WRD2NNLO];
+  If[HEFTPieceActiveQ[ "WLh3D4NNLO"],    aux += LWLh3D4NNLO];
+  If[HEFTPieceActiveQ[ "h4D6NNLOv1"],    aux += Lh4D6NNLOv1];
+  If[HEFTPieceActiveQ[ "h4D6NNLOv2"],    aux += Lh4D6NNLOv2];
+  If[HEFTPieceActiveQ[ "h4T2D6NNLOv1"], aux += Lh4T2D6NNLOv1];
+  If[HEFTPieceActiveQ[ "h4T2D6NNLOv2"], aux += Lh4T2D6NNLOv2];
+  res = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+  If[ListQ[res], Plus @@ Flatten[res], res]
+];

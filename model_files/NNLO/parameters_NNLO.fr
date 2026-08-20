@@ -1,0 +1,82 @@
+(* NNLO parameters: flare functions and Wilson-coefficient tables for the bosonic
+   operators of chiral dimension 2.
+
+   These operators are an EXTENSION beyond the NLO basis of 1604.06801, not part of that
+   paper: they are shipped as worked examples of how a higher-chiral-order sector is added,
+   not as a complete NNLO basis.  See README SS "Operators by Chiral Dimension".
+
+   LOADED AFTER NLO/basis_<basis>/parameters_NLO.fr, which is where the machinery this file
+   uses lives - DefineScalarFlare, MakeScalarCoeffTable, realWCProps,
+   HEFTBuildNLOParameterEntries and HEFTRegisterNLOWilsonCoefficients.  This file only
+   APPENDS its rows to scalarFlareSpecs / scalarCoeffSpecs and re-runs the registration, so
+   there is exactly one registration path for NLO and NNLO alike and the two can never drift
+   apart.  Do not duplicate the builders here. *)
+
+If[!ValueQ[scalarFlareSpecs] || !ValueQ[scalarCoeffSpecs],
+  Print[Style["[HEFT] ERROR: NNLO/parameters_NNLO.fr loaded before the NLO parameter file. " <>
+    "HEFT_Model.fr must Get NLO/basis_<basis>/parameters_NLO.fr first.", Red, Bold]];
+  Abort[]
+];
+
+(* {flare function, operator label, coefficient prefix, nmin}.
+
+   EIGHT OF THESE ROWS ARE INERT IN THIS RELEASE.  Every flare and every coefficient table
+   is gated on HEFTPieceActiveQ[op], so a row whose label no catalogue in
+   heft_notebook_reference.wl offers cannot be selected, and none of its coefficients is
+   declared or written to the WCxf files.
+
+   Three have no Lagrangian at all:
+
+     "WL2h2WRD2NNLO"   no Lagrangian term anywhere; the operator the catalogue calls
+                       WLh2WRD2NNLO is the row below it, which uses the DRD2 prefix.
+     "WL2h2T2D2NNLO"   2206.07722 operator; its Lagrangian lived in the 2206 basis folder,
+                       which is empty in this release.
+     "BL2h2D2NNLO"     ditto.
+
+   Five DO have a Lagrangian (NNLO/Lagrangian_Bosonic_NNLO.fr) but are held back from this
+   release, so they are not offered by any catalogue either:
+
+     "WL2h2D2NNLO", "h4D6NNLOv1", "h4D6NNLOv2", "h4T2D6NNLOv1", "h4T2D6NNLOv2"
+
+   All eight are kept so that the coefficient naming stays stable, and flagged here so they
+   are not mistaken for live operators.  Listing a label in heft_notebook_reference.wl is all
+   it takes to offer one again. *)
+nnloScalarFlareSpecs = {
+  {FCGHNNLO1,        "GHNNLO1",        "CGHNNLOn1",         0},
+  {FCGHNNLO2,        "GHNNLO2",        "CGHNNLOn2",         0},
+  {FCGHtildeNNLO,    "GHtildeNNLO",    "CGHtildeNNLOn",     0},
+  {FCWL2h2D2NNLO,    "WL2h2D2NNLO",    "CWL2h2D2NNLOn",     0},  (* held back - see above *)
+  {FCWL2h2WRD2NNLO,  "WL2h2WRD2NNLO",  "CWL2h2WRD2NNLOn",   0},  (* no Lagrangian - see above *)
+  {FCWL2h2T2D2NNLO,  "WL2h2T2D2NNLO",  "CWL2h2T2D2NNLOn",   0},  (* no Lagrangian - see above *)
+  {FCBL2h2D2NNLO,    "BL2h2D2NNLO",    "CBL2h2D2NNLOn",     0},  (* no Lagrangian - see above *)
+  {FCWL2h2DRD2NNLO,  "WLh2WRD2NNLO",   "CWL2h2DRD2NNLOn",   0},
+  {FCWLh3D4NNLO,     "WLh3D4NNLO",     "CWLh3D4NNLOn",      0},
+  {FCh4D6NNLOv1,     "h4D6NNLOv1",     "Ch4D6NNLOv1n",      0},  (* held back - see above *)
+  {FCh4D6NNLOv2,     "h4D6NNLOv2",     "Ch4D6NNLOv2n",      0},  (* held back - see above *)
+  {FCh4T2D6NNLOv1,   "h4T2D6NNLOv1",   "Ch4T2D6NNLOv1n",    0},  (* held back - see above *)
+  {FCh4T2D6NNLOv2,   "h4T2D6NNLOv2",   "Ch4T2D6NNLOv2n",    0}   (* held back - see above *)
+};
+
+(* Coefficient specs mirror the flare specs exactly - same op, prefix and nmin - so a flare
+   and its M$Parameters entries can never drift apart.  (Before the restructure the two NNLO
+   lists disagreed: WL2h2T2D2NNLO had a coefficient row but no flare row, and its flare was
+   instead written out longhand at the top of parameters_NLO.fr.  Deriving one list from the
+   other removes that failure mode.) *)
+nnloScalarCoeffSpecs = Rest /@ nnloScalarFlareSpecs;
+
+(* Append to the shared spec lists.  Guarded so a re-Get of this file in the same kernel
+   cannot append the rows twice - Join is not idempotent, and a duplicated row would declare
+   the same M$Parameters entry twice (UniqueParameterEntries dedupes it, but silently). *)
+If[!MemberQ[scalarFlareSpecs[[All, 2]], "GHNNLO1"],
+  scalarFlareSpecs = Join[scalarFlareSpecs, nnloScalarFlareSpecs]
+];
+If[!MemberQ[scalarCoeffSpecs[[All, 1]], "GHNNLO1"],
+  scalarCoeffSpecs = Join[scalarCoeffSpecs, nnloScalarCoeffSpecs]
+];
+
+(* Define the NNLO flares now, and re-register so M$Parameters picks up the NNLO coefficient
+   tables for whichever of these operators HEFTActiveNLOPieces selects.  HEFT_Model.fr calls
+   HEFTRegisterNLOWilsonCoefficients[] again after the Lagrangians load; that call is
+   idempotent and now covers NNLO as well, because the rows are in the shared lists. *)
+Scan[(DefineScalarFlare @@ #) &, nnloScalarFlareSpecs];
+HEFTRegisterNLOWilsonCoefficients[];

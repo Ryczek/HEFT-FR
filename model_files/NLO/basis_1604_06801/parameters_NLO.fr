@@ -1,0 +1,497 @@
+(* NLO parameters and NEFT-dependent Wilson coefficients. *)
+
+(* NEFT: internal H/vev truncation (configuration option HiggsMaxOrder). *)
+If[ValueQ[Global`HiggsMaxOrder], NEFT = Global`HiggsMaxOrder];
+If[!ValueQ[NEFT], NEFT = 3];
+
+(* Combine2Derivatives: see the block comment above combinedDerivFlareSpecs below. *)
+If[ValueQ[Global`Combine2Derivatives], Combine2Derivatives = Global`Combine2Derivatives];
+If[!ValueQ[Combine2Derivatives], Combine2Derivatives = False];
+
+(* FC functions for various operators - expanded up to NEFT.
+   Each power of (H/vev) is accompanied by LamF, so that ExpansionF is
+   tracked via powers of LamF. *)
+
+FCGHNLO[h_, neft_] :=
+  Sum[Symbol["CGHNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCGHtildeNLO[h_, neft_] :=
+  Sum[Symbol["CGHtildeNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+(* NNLO (chiral dimension 2) flares and coefficient tables now live in
+   ../../NNLO/parameters_NNLO.fr, which appends its rows to scalarFlareSpecs /
+   scalarCoeffSpecs below.  NNNLO (GHDNNNLO) was dropped from this release. *)
+
+(* FC functions for derivative Higgs operators *)
+FCDH1[h_, neft_] :=
+  Sum[Symbol["CDHn1" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCDH2[h_, neft_] :=
+  Sum[Symbol["CDHn2" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP1NLO[h_, neft_] :=
+  Sum[Symbol["CP1NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCS1NLO[h_, neft_] :=
+  Sum[Symbol["CS1NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCBHNLO[h_, neft_] :=
+  Sum[Symbol["CBHNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCBtildeHNLO[h_, neft_] :=
+  Sum[Symbol["CBtildeHNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCWHNLO[h_, neft_] :=
+  Sum[Symbol["CWHNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCWtildeHNLO[h_, neft_] :=
+  Sum[Symbol["CWtildeHNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCWWWNLO[h_, neft_] :=
+  Sum[Symbol["CWWWNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCGGGNLO[h_, neft_] :=
+  Sum[Symbol["CGGGNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCWWWtildeNLO[h_, neft_] :=
+  Sum[Symbol["CWWWtildeNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCGGGtildeNLO[h_, neft_] :=
+  Sum[Symbol["CGGGtildeNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP2NLO[h_, neft_] :=
+  Sum[Symbol["CP2NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP3NLO[h_, neft_] :=
+  Sum[Symbol["CP3NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP4NLO[h_, neft_] :=
+  Sum[Symbol["CP4NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP5NLO[h_, neft_] :=
+  Sum[Symbol["CP5NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP6NLO[h_, neft_] :=
+  Sum[Symbol["CP6NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP8NLO1[h_, neft_] :=
+  Sum[Symbol["CP8NLO1n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP8NLO2[h_, neft_] :=
+  Sum[Symbol["CP8NLO2n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP11NLO[h_, neft_] :=
+  Sum[Symbol["CP11NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP12NLO[h_, neft_] :=
+  Sum[Symbol["CP12NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP13NLO[h_, neft_] :=
+  Sum[Symbol["CP13NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP14NLO[h_, neft_] :=
+  Sum[Symbol["CP14NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP17NLO[h_, neft_] :=
+  Sum[Symbol["CP17NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP18NLO[h_, neft_] :=
+  Sum[Symbol["CP18NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP20NLO1[h_, neft_] :=
+  Sum[Symbol["CP20NLO1n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP20NLO2[h_, neft_] :=
+  Sum[Symbol["CP20NLO2n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP21NLO1[h_, neft_] :=
+  Sum[Symbol["CP21NLO1n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP21NLO2[h_, neft_] :=
+  Sum[Symbol["CP21NLO2n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP22NLO1[h_, neft_] :=
+  Sum[Symbol["CP22NLO1n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP22NLO2[h_, neft_] :=
+  Sum[Symbol["CP22NLO2n" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCP23NLO[h_, neft_] :=
+  Sum[Symbol["CP23NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP24NLO[h_, neft_] :=
+  Sum[Symbol["CP24NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCP26NLO[h_, neft_] :=
+  Sum[Symbol["CP26NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCS2DNLO[h_, neft_] :=
+  Sum[Symbol["CS2DNLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS2NLO[h_, neft_] :=
+  Sum[Symbol["CS2NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+  
+FCS3NLO[h_, neft_] :=
+  Sum[Symbol["CS3NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS4NLO[h_, neft_] :=
+  Sum[Symbol["CS4NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCS5NLO[h_, neft_] :=
+  Sum[Symbol["CS5NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS6NLO[h_, neft_] :=
+  Sum[Symbol["CS6NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS7NLO[h_, neft_] :=
+  Sum[Symbol["CS7NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS8NLO[h_, neft_] :=
+  Sum[Symbol["CS8NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+FCS9NLO[h_, neft_] :=
+  Sum[Symbol["CS9NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+FCS15NLO[h_, neft_] :=
+  Sum[Symbol["CS15NLOn" <> ToString[n]]*(LamF*h/vev)^n, {n, 1, neft}];
+
+(* 2F quark operators NQ1--NQ8 (single flare, real); NQ9--NQ20 (dual flare + complex n0); NQ11--NQ20 (single flare with VUFerm, complex n0); NQ21--NQ28 (sigma^{mu nu} V_mu with partial_nu F, complex n0); NQ29--NQ36 (sigma^{mu nu} with field strengths, complex n0) below. *)
+HEFT2FNLOCount = 8;
+HEFT2FNLOCountExtended = 36;
+
+(* ---- Fermionic flare functions -------------------------------------------------------
+   Every Wilson coefficient of a fermionic operator lives INSIDE its flare function and
+   carries the operator's flavour indices - exactly the shape the LO Yukawa flares
+   FQU / FQD / FLE already use in LO/parameters_LO.fr:
+
+     FC<op>[h, neft, ff1, ff2] = Sum_{n=nmin}^{neft} C<op>n<n>[ff1, ff2] (LamF h/vev)^n
+
+   so each term of the expanded Lagrangian carries exactly one Wilson coefficient.  The
+   operator body is now just the field structure times the flare - there is no separate
+   coefficient tensor multiplying it any more (that used to be C<op>n0RE[ff1, ff2]).
+
+   All coefficients are REAL: the Cn0RE / Cn0IM split is gone, and with it the CP-odd
+   imaginary parts of the chirality-flipping and dipole operators (see README,
+   "Known limitations").
+
+   nmin = 0 for a normal flare.  The dual-flare operators NQ9, NQ10 and NL3 (structure
+   del[F] del[F']) use nmin = 1 in each half, because a constant term inside del[...]
+   drops out; they are the one place where a term carries two coefficients (C1n * C2m).
+   The spec lists below are consumed twice: Define2FermFlare / Define4FermFlare build the
+   flares, MakeFermCoeffTable declares the matching M$Parameters tensors. *)
+
+(* NQ9 / NQ10 dual flares: del[FCNQ9NLO1] del[FCNQ9NLO2]. *)
+ferm2FFlareSpecs = Join[
+  Table[
+    {Symbol["FCNQ" <> ToString[i] <> "NLO"], "NQ" <> ToString[i] <> "NLO",
+     "CNQ" <> ToString[i] <> "NLOn", 0},
+    {i, DeleteCases[Range[1, HEFT2FNLOCountExtended], 9 | 10]}
+  ],
+  {
+    {FCNQ9NLO1, "NQ9NLO", "CNQ9NLO1n", 1}, {FCNQ9NLO2, "NQ9NLO", "CNQ9NLO2n", 1},
+    {FCNQ10NLO1, "NQ10NLO", "CNQ10NLO1n", 1}, {FCNQ10NLO2, "NQ10NLO", "CNQ10NLO2n", 1}
+  }
+];
+
+(* Leptonic 2F operators NL1--NL14 (1604.06801 eq. 2.20, paper numbering):
+   NL1, NL2 real n0 (j = 1, 2); NL3--NL11 complex n0 (j = 3-11, 1/Lambda);
+   NL12--NL14 complex n0 (j = 12-14, 4 pi/Lambda).
+   NL3 uses dual flares (del F del F', like NQ9).
+   NLF1--NLF3: extra flavour structures of eq. (2.21), complex n0. *)
+HEFT2FLeptonNLOCount = 17;  (* NL1--NL14 from 1604.06801 eq. 2.20 + NL15--NL17 from eq. 2.21 flavour structures *)
+HEFT2FLeptonFlavourCount = 3;
+
+(* NL3 dual flares: del[FCNL3NLO1] del[FCNL3NLO2] (cf. NQ9). *)
+ferm2FFlareSpecs = Join[
+  ferm2FFlareSpecs,
+  Table[
+    {Symbol["FCNL" <> ToString[i] <> "NLO"], "NL" <> ToString[i] <> "NLO",
+     "CNL" <> ToString[i] <> "NLOn", 0},
+    {i, DeleteCases[Range[1, HEFT2FLeptonNLOCount], 3]}
+  ],
+  {
+    {FCNL3NLO1, "NL3NLO", "CNL3NLO1n", 1},
+    {FCNL3NLO2, "NL3NLO", "CNL3NLO2n", 1}
+  },
+  Table[
+    {Symbol["FCNLF" <> ToString[i] <> "NLO"], "NLF" <> ToString[i] <> "NLO",
+     "CNLF" <> ToString[i] <> "NLOn", 0},
+    {i, 1, HEFT2FLeptonFlavourCount}
+  ]
+];
+
+(* Flare functions for the 4F operators (eq. 2.22).  Same convention as the 2F ones above:
+   every coefficient lives in the flare and carries all four flavour indices. *)
+HEFT4FRQCount  = 26;
+HEFT4FRQLCount = 23;
+HEFT4FRLCount  = 7;
+
+ferm4FFlareSpecs = Join[
+  Table[
+    {Symbol["FCRQ" <> ToString[i] <> "NLO"], "RQ" <> ToString[i] <> "NLO",
+     "CRQ" <> ToString[i] <> "NLOn", 0},
+    {i, 1, HEFT4FRQCount}
+  ],
+  Table[
+    {Symbol["FCRQL" <> ToString[i] <> "NLO"], "RQL" <> ToString[i] <> "NLO",
+     "CRQL" <> ToString[i] <> "NLOn", 0},
+    {i, 1, HEFT4FRQLCount}
+  ],
+  Table[
+    {Symbol["FCL" <> ToString[i] <> "NLO"], "RL" <> ToString[i] <> "NLO",
+     "CL" <> ToString[i] <> "NLOn", 0},
+    {i, 1, HEFT4FRLCount}
+  ]
+];
+
+
+(* -------- Active-operator gated flare functions and coefficients -------- *)
+If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+(* HEFTPieceActiveQ is defined in wcxf_input.fr (operator list + WCxf zeros). *)
+
+(* FeynRules needs tensor Value as replacement rules, not Value -> 1 for indexed params.
+   Flavour indices run over the 3 fermion generations (fixed, not configurable). *)
+HEFT2FermValueRules[param_Symbol] :=
+  Flatten@Table[
+    param[i, j] -> HEFTWCGetFlat[HEFTWCFlatKey[param, i, j],
+                                 HEFTWCDefaultTemplateValue[HEFTWCFlatKey[param, i, j]]],
+    {i, 1, 3}, {j, 1, 3}
+  ];
+
+HEFT4FermValueRules[param_Symbol] :=
+  Flatten@Table[
+    param[i, j, k, l] -> HEFTWCGetFlat[HEFTWCFlatKey[param, i, j, k, l],
+                                       HEFTWCDefaultTemplateValue[HEFTWCFlatKey[param, i, j, k, l]]],
+    {i, 1, 3}, {j, 1, 3}, {k, 1, 3}, {l, 1, 3}
+  ];
+
+(* Bosonic flare: flavour-blind, one scalar coefficient per power of h/vev. *)
+DefineScalarFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+(* Fermionic flares: the coefficient of every power of h/vev is a flavour tensor, so the
+   operator body needs no coefficient factor of its own.  See the block comment above. *)
+Define2FermFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_, f1_, f2_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]][f1, f2]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+Define4FermFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_, f1_, f2_, f3_, f4_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]][f1, f2, f3, f4]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+(* ---- Combine2Derivatives -----------------------------------------------------------
+   DH, P8NLO, P20NLO, P21NLO and P22NLO each multiply TWO independently-truncated flare
+   functions together via a spacetime derivative on each (del[F1,mu] del[F2,nu]-type; DH is
+   the square of that bilinear). Expanded to a fixed power of h/vev, the vertex coefficient
+   is unavoidably a SUM OF PRODUCTS of the two (four, for DH) families' Wilson coefficients -
+   e.g. P8's h^2 term is 3 CP8NLO1n3 CP8NLO2n1 + 4 CP8NLO1n2 CP8NLO2n2 + 3 CP8NLO1n1 CP8NLO2n3.
+   That is correct but misleading: a single vertex only ever depends on that one fixed sum,
+   never on the individual products, so showing it as built from two "independent" WC
+   families overstates how many free parameters actually enter that vertex. When
+   Combine2Derivatives is True, each of the 5 operators gets ONE new WC family instead
+   (C<op>n<nh>prime, "prime" spelled out because a literal "'" is not a valid identifier
+   character and would break UFO/FeynArts/WCxf), replacing (not supplementing) the
+   original two-or-four families for that operator, so no dead/unused parameters get
+   declared in either mode.
+
+   NUMBERING: nh is the TOTAL number of Higgs fields the term puts into the vertex, counting
+   the ones carried by the explicit del[H,..] factors - exactly the convention the ordinary
+   scalar flares already follow, where C<op>n<n> multiplies (LamF h/vev)^n. So for the
+   quadratic operators (extraPow = 2, two del[H,..]) nh runs 2..2N and CP8NLOn4prime is the
+   4-Higgs term del[H,mu] del[H,nu] (LamF h/vev)^2; for DH (extraPow = 4) nh runs 4..4N.
+   Term count is unchanged: extraPow*(N-1)+1.
+
+   The exact rewritten form (verified symbolically term-by-term, not just dimensionally):
+   with F1(h) = Sum_{n=1}^{N} C1n (LamF h/vev)^n, F2(h) likewise, and y = LamF h/vev,
+
+     dF1/dh * dF2/dh = (LamF/vev)^2 * Sum_{nh=2}^{2N} D[nh] * y^(nh-2),
+                       D[nh] = Sum_{n1+n2=nh} n1 n2 C1[n1] C2[n2]
+
+   so del[F1,mu] del[F2,nu] === del[H,mu] del[H,nu] * (LamF/vev)^2 * Sum_nh (C<op>n<nh>prime) y^(nh-2)
+   once C<op>n<nh>prime is understood to equal D[nh] - the new parameter is free to take ANY
+   value, D[nh] is only what makes the two representations describe the same physics for a given
+   choice of the retired C1/C2. DH is the same bilinear squared, so its combined family runs to
+   4N-3 terms (not 2N-1) with an extra (LamF/vev)^2 factor (i.e. (LamF/vev)^4 total). *)
+
+(* Bosonic combined-derivative flare: extraPow = 2 for the quadratic operators (P8/P20/P21/
+   P22 - one bilinear), 4 for DH (the bilinear squared). The index nh counts all Higgs fields
+   in the term, the extraPow derivative ones included, so it starts at extraPow rather than
+   at 1 and the plain h/vev power is nh - extraPow. Term count = extraPow*(NEFT-1)+1. *)
+DefineCombinedDerivFlare[fun_Symbol, op_String, prefix_String, extraPow_Integer] :=
+  (fun[h_, neft_] :=
+    If[HEFTPieceActiveQ[op],
+      (LamF/vev)^extraPow *
+        Sum[Symbol[prefix <> ToString[nh] <> "prime"]*(LamF*h/vev)^(nh - extraPow),
+          {nh, extraPow, extraPow*neft}],
+      0
+    ]);
+
+MakeCombinedCoeffTable[op_String, prefix_String, extraPow_Integer, withValue_:True] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      Symbol[prefix <> ToString[nh] <> "prime"] == Join[
+        realWCProps[],
+        If[TrueQ[withValue], {Value -> 1}, {}],
+        {Description -> prefix <> ToString[nh] <> "prime HEFT coefficient (" <> ToString[nh] <>
+          " Higgs fields, the " <> ToString[extraPow] <> " differentiated ones included; " <>
+          "combines " <> ToString[extraPow] <>
+          " independent derivative-flare factors into one, see Combine2Derivatives)"}
+      ],
+      {nh, extraPow, extraPow*NEFT}
+    ],
+    {}
+  ];
+
+(* {function, op, prefix, nmin/extraPow} - the two-or-four-independent-family form
+   (Combine2Derivatives -> False, current/default behaviour) vs. the combined form
+   (Combine2Derivatives -> True). Exactly one of these two tables is ever Scanned for these
+   5 operators, so only one family of parameters ever gets declared for them. *)
+derivProductFlareSpecs = {
+  {FCDH1, "DH", "CDHn1", 1}, {FCDH2, "DH", "CDHn2", 1},
+  {FCP8NLO1, "P8NLO", "CP8NLO1n", 1}, {FCP8NLO2, "P8NLO", "CP8NLO2n", 1},
+  {FCP20NLO1, "P20NLO", "CP20NLO1n", 1}, {FCP20NLO2, "P20NLO", "CP20NLO2n", 1},
+  {FCP21NLO1, "P21NLO", "CP21NLO1n", 1}, {FCP21NLO2, "P21NLO", "CP21NLO2n", 1},
+  {FCP22NLO1, "P22NLO", "CP22NLO1n", 1}, {FCP22NLO2, "P22NLO", "CP22NLO2n", 1}
+};
+combinedDerivFlareSpecs = {
+  {FCDHCombined, "DH", "CDHn", 4},
+  {FCP8NLOCombined, "P8NLO", "CP8NLOn", 2},
+  {FCP20NLOCombined, "P20NLO", "CP20NLOn", 2},
+  {FCP21NLOCombined, "P21NLO", "CP21NLOn", 2},
+  {FCP22NLOCombined, "P22NLO", "CP22NLOn", 2}
+};
+derivProductCoeffSpecs = Rest /@ derivProductFlareSpecs;
+combinedDerivCoeffSpecs = Rest /@ combinedDerivFlareSpecs;
+
+scalarFlareSpecs = {
+  {FCGHNLO, "GHNLO", "CGHNLOn", 0}, {FCGHtildeNLO, "GHtildeNLO", "CGHtildeNLOn", 0},
+  {FCP1NLO, "P1NLO", "CP1NLOn", 0}, {FCS1NLO, "S1NLO", "CS1NLOn", 0},
+  {FCBHNLO, "BHNLO", "CBHNLOn", 0}, {FCBtildeHNLO, "BtildeHNLO", "CBtildeHNLOn", 0},
+  {FCWHNLO, "WHNLO", "CWHNLOn", 0}, {FCWtildeHNLO, "WtildeHNLO", "CWtildeHNLOn", 0},
+  {FCWWWNLO, "WWWNLO", "CWWWNLOn", 0}, {FCGGGNLO, "GGGNLO", "CGGGNLOn", 0},
+  {FCWWWtildeNLO, "WWWtildeNLO", "CWWWtildeNLOn", 0}, {FCGGGtildeNLO, "GGGtildeNLO", "CGGGtildeNLOn", 0},
+  {FCP2NLO, "P2NLO", "CP2NLOn", 0}, {FCP3NLO, "P3NLO", "CP3NLOn", 0},
+  {FCP4NLO, "P4NLO", "CP4NLOn", 1}, {FCP5NLO, "P5NLO", "CP5NLOn", 1},
+  {FCP6NLO, "P6NLO", "CP6NLOn", 0},
+  {FCP11NLO, "P11NLO", "CP11NLOn", 0}, {FCP12NLO, "P12NLO", "CP12NLOn", 0},
+  {FCP13NLO, "P13NLO", "CP13NLOn", 0}, {FCP14NLO, "P14NLO", "CP14NLOn", 0},
+  {FCP17NLO, "P17NLO", "CP17NLOn", 1}, {FCP18NLO, "P18NLO", "CP18NLOn", 1},
+  {FCP23NLO, "P23NLO", "CP23NLOn", 0}, {FCP24NLO, "P24NLO", "CP24NLOn", 0},
+  {FCP26NLO, "P26NLO", "CP26NLOn", 0},
+  {FCS2DNLO, "S2DNLO", "CS2DNLOn", 1}, {FCS2NLO, "S2NLO", "CS2NLOn", 1},
+  {FCS3NLO, "S3NLO", "CS3NLOn", 1}, {FCS4NLO, "S4NLO", "CS4NLOn", 0},
+  {FCS5NLO, "S5NLO", "CS5NLOn", 1}, {FCS6NLO, "S6NLO", "CS6NLOn", 1},
+  {FCS7NLO, "S7NLO", "CS7NLOn", 1}, {FCS8NLO, "S8NLO", "CS8NLOn", 0},
+  {FCS9NLO, "S9NLO", "CS9NLOn", 1}, {FCS15NLO, "S15NLO", "CS15NLOn", 1}
+};
+Scan[(DefineScalarFlare @@ #) &, scalarFlareSpecs];
+If[TrueQ[Combine2Derivatives],
+  Scan[(DefineCombinedDerivFlare @@ #) &, combinedDerivFlareSpecs],
+  Scan[(DefineScalarFlare @@ #) &, derivProductFlareSpecs]
+];
+Scan[(Define2FermFlare @@ #) &, ferm2FFlareSpecs];
+Scan[(Define4FermFlare @@ #) &, ferm4FFlareSpecs];
+
+realWCProps[] := {ParameterType -> External, Type -> Real, ComplexParameter -> False, BlockName -> HEFT};
+
+MakeScalarCoeffTable[op_String, prefix_String, nmin_Integer, withValue_:True] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      Symbol[prefix <> ToString[n]] == Join[
+        realWCProps[],
+        If[TrueQ[withValue], {Value -> 1}, {}],
+        {Description -> prefix <> ToString[n] <> " HEFT coefficient"}
+      ],
+      {n, nmin, NEFT}
+    ],
+    {}
+  ];
+
+(* One real flavour tensor per power of h/vev, matching the flare built from the same spec.
+   nIdx is 2 (two-fermion operators) or 4 (four-fermion operators). *)
+MakeFermCoeffTable[op_String, prefix_String, nmin_Integer, nIdx_Integer] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      With[{sym = Symbol[prefix <> ToString[n]]},
+        sym == Join[
+          realWCProps[],
+          {Indices -> ConstantArray[Index[Generation], nIdx],
+           Value -> If[nIdx === 2, HEFT2FermValueRules[sym], HEFT4FermValueRules[sym]],
+           Description -> prefix <> ToString[n] <> " HEFT coefficient"}
+        ]
+      ],
+      {n, nmin, NEFT}
+    ],
+    {}
+  ];
+
+scalarCoeffSpecs = {
+  {"GHNLO", "CGHNLOn", 0}, {"GHtildeNLO", "CGHtildeNLOn", 0},
+  {"P1NLO", "CP1NLOn", 0}, {"S1NLO", "CS1NLOn", 0},
+  {"BHNLO", "CBHNLOn", 0}, {"BtildeHNLO", "CBtildeHNLOn", 0},
+  {"WHNLO", "CWHNLOn", 0}, {"WtildeHNLO", "CWtildeHNLOn", 0},
+  {"WWWNLO", "CWWWNLOn", 0}, {"GGGNLO", "CGGGNLOn", 0},
+  {"WWWtildeNLO", "CWWWtildeNLOn", 0}, {"GGGtildeNLO", "CGGGtildeNLOn", 0},
+  {"P2NLO", "CP2NLOn", 0}, {"P3NLO", "CP3NLOn", 0}, {"P4NLO", "CP4NLOn", 0},
+  {"P5NLO", "CP5NLOn", 0}, {"P6NLO", "CP6NLOn", 0},
+  {"P11NLO", "CP11NLOn", 0}, {"P12NLO", "CP12NLOn", 0},
+  {"P13NLO", "CP13NLOn", 0}, {"P14NLO", "CP14NLOn", 0}, {"P17NLO", "CP17NLOn", 0},
+  {"P18NLO", "CP18NLOn", 0},
+  {"P23NLO", "CP23NLOn", 0}, {"P24NLO", "CP24NLOn", 0},
+  {"P26NLO", "CP26NLOn", 0}, {"S2DNLO", "CS2DNLOn", 0}, {"S2NLO", "CS2NLOn", 0},
+  {"S3NLO", "CS3NLOn", 0}, {"S4NLO", "CS4NLOn", 0}, {"S5NLO", "CS5NLOn", 0},
+  {"S6NLO", "CS6NLOn", 0}, {"S7NLO", "CS7NLOn", 0}, {"S8NLO", "CS8NLOn", 0},
+  {"S9NLO", "CS9NLOn", 0}, {"S15NLO", "CS15NLOn", 0}
+};
+
+
+
+(* Coefficient specs mirror the flare specs exactly - same op, prefix and nmin - so a
+   flare and its M$Parameters tensors can never drift apart. *)
+ferm2FCoeffSpecs = Rest /@ ferm2FFlareSpecs;
+ferm4FCoeffSpecs = Rest /@ ferm4FFlareSpecs;
+
+UniqueParameterEntries[list_] := Module[{keys},
+  keys = list /. (lhs_ == _rhs_) :> HoldForm[lhs];
+  Values@AssociationThread[keys, list]
+];
+
+HEFTBuildNLOParameterEntries[] := Flatten@Join[
+  (MakeScalarCoeffTable @@ #) & /@ scalarCoeffSpecs,
+  If[TrueQ[Combine2Derivatives],
+    (MakeCombinedCoeffTable @@ #) & /@ combinedDerivCoeffSpecs,
+    (MakeScalarCoeffTable @@ #) & /@ derivProductCoeffSpecs
+  ],
+  (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 2] &) /@ ferm2FCoeffSpecs,
+  (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 4] &) /@ ferm4FCoeffSpecs
+];
+
+(* Register NLO Wilson coefficients for operators in HEFTActiveNLOPieces.
+   Call after HEFTActiveNLOPieces is set (heft_fr.wl sets it before LoadModel). *)
+HEFTRegisterNLOWilsonCoefficients[] := Module[{np},
+  If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
+  If[ValueQ[Global`Combine2Derivatives], Combine2Derivatives = Global`Combine2Derivatives];
+  Scan[(DefineScalarFlare @@ #) &, scalarFlareSpecs];
+  If[TrueQ[Combine2Derivatives],
+    Scan[(DefineCombinedDerivFlare @@ #) &, combinedDerivFlareSpecs],
+    Scan[(DefineScalarFlare @@ #) &, derivProductFlareSpecs]
+  ];
+  Scan[(Define2FermFlare @@ #) &, ferm2FFlareSpecs];
+  Scan[(Define4FermFlare @@ #) &, ferm4FFlareSpecs];
+  np = HEFTBuildNLOParameterEntries[];
+  If[ValueQ[M$Parameters] && np =!= {},
+    M$Parameters = UniqueParameterEntries@Join[M$Parameters, np]
+  ]
+];
+
+HEFTRegisterNLOWilsonCoefficients[];

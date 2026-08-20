@@ -1,0 +1,84 @@
+If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
+If[!ValueQ[KappaFramework], KappaFramework = True];
+
+
+(* LO building blocks and Lagrangian (SM / HEFT-LO). *)
+
+If[TrueQ[KappaFramework],
+FC := 1 + 2*KappaV*H/vev + Kappa2V*H^2/vev^2 + FFC[H, NEFT],
+FC := 1 + 2*(1 + DeltaFCn1)*H/vev + (1 + DeltaFCn2)*H^2/vev^2 + FFC[H, NEFT]
+];
+
+PC := Block[{mu}, Tr[VU[mu].VU[mu]] FC];
+
+FT := FFT[H, NEFT];
+
+(* IncludeCustodialT - configuration option (default True).  PT is the custodial-symmetry
+   breaking operator Tr[T.V_mu]Tr[T.V^mu] F_T(h); it is the only user of FT / FFT / CFTn.
+   False drops it from LGaugeHiggs entirely and, in parameters_LO.fr, also skips declaring the
+   CFTn coefficients, so no coefficient survives that cannot appear in the Lagrangian. *)
+PT := If[TrueQ[IncludeCustodialT],
+  Block[{mu}, ChiralOrder*Tr[TT.VU[mu]] Tr[TT.VU[mu]] FT],
+  0
+];
+
+(* SM potential + (Kappa - 1) deformation (FeynRules-safe, cf. Delta (1 + Delta) form). *)
+If[TrueQ[KappaFramework],
+VHiggs := -1/4*vev^4*hlambda + hlambda*vev^2*H^2
+        + Kappa3H*hlambda*vev*H^3
+        + Kappa4H*1/4*hlambda*H^4
+        + vev^4*FVHiggs[H, NEFT],
+VHiggs := -1/4*vev^4*hlambda + hlambda*vev^2*H^2
+        + (1 + DeltaLam3)*hlambda*vev*H^3
+        + (1 + DeltaLam4)*1/4*hlambda*H^4
+        + vev^4*FVHiggs[H, NEFT]
+];
+
+LGauge := Block[{mu, nu, al, be, ii, aa},
+  ExpandIndices[
+    -1/4 FS[B, mu, nu] FS[B, mu, nu]
+    - 1/4 FS[Wi, mu, nu, ii] FS[Wi, mu, nu, ii]
+    - 1/4 FS[Gl, mu, nu, aa] FS[Gl, mu, nu, aa]
+    - gs^2/16/Pi^2 thetaS Eps[mu, nu, al, be] HC[FS[Gl, al, be, aa]] FS[Gl, mu, nu, aa],
+    FlavorExpand -> SU2W, NoDefinitions -> True]
+];
+
+LGaugeHiggs := Block[{mu, aux},
+  aux = ExpandIndices[-vev^2/4*(PT + PC), FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+LFermions := Block[{mu, aux},
+  aux = ExpandIndices[
+    I*(QLbar.Ga[mu].DC[QL, mu] + LLbar.Ga[mu].DC[LL, mu] + uRbar.Ga[mu].DC[uR, mu]
+      + dRbar.Ga[mu].DC[dR, mu] + lRbar.Ga[mu].DC[lR, mu]),
+    FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+  aux /. {
+    CKM[a_, b_] Conjugate[CKM[a_, c_]] -> IndexDelta[b, c],
+    CKM[b_, a_] Conjugate[CKM[c_, a_]] -> IndexDelta[b, c]
+  }
+];
+
+LHiggs := Block[{mu},
+  ExpandIndices[1/2 del[H, mu] del[H, mu], FlavorExpand -> {SU2D, SU2W}, NoDefinitions -> True] - VHiggs
+];
+
+LYukawa := Block[{sp, ii, jj, cc, ff1, ff2, ff3, yuk},
+  yuk = -vev/Sqrt[2] * ExpandIndices[
+      Sum[(yu[ff1, ff2] + yuH[ff1, ff2]*H/vev + FQU[H, NEFT, ff1, ff2])
+          QLbar[sp, ii, ff1, cc].uR[sp, ff2, cc] UFerm[ii, 1], {ii, 1, 2}] +
+      Sum[(yd[ff2, ff3] + ydH[ff2, ff3]*H/vev + FQD[H, NEFT, ff2, ff3])
+          CKM[ff1, ff2] QLbar[sp, ii, ff1, cc].dR[sp, ff3, cc] UFerm[ii, 2], {ii, 1, 2}] +
+      Sum[(yl[ff1, ff3] + ylH[ff1, ff3]*H/vev + FLE[H, NEFT, ff1, ff3])
+          LLbar[sp, ii, ff1].lR[sp, ff3] UFerm[ii, 2], {ii, 1, 2}],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  yuk = yuk /. {
+    CKM[a_, b_] Conjugate[CKM[a_, c_]] -> IndexDelta[b, c],
+    CKM[b_, a_] Conjugate[CKM[c_, a_]] -> IndexDelta[b, c]
+  };
+  yuk + HC[yuk]
+];
+
+LLO := LGauge + LGaugeHiggs + LFermions + LHiggs + LYukawa;
+

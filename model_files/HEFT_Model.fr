@@ -1,0 +1,221 @@
+(* Modular HEFT model file (smeftfr-like, no use of the monolithic .fr). *)
+
+HEFTModelRoot = DirectoryName[$InputFileName] // ExpandFileName;
+
+HEFTLoad[rel_] := Get[FileNameJoin[{HEFTModelRoot, Sequence @@ rel}]];
+
+(* Configuration flags (Global` survives FeynRules model context during LoadModel). *)
+If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
+If[!ValueQ[KappaFramework], KappaFramework = True];
+
+(* Goldstone-matrix truncation order for the Rxi branch of definitions.fr.  FIXED at 1, not a
+   configuration option: the model only ships unitary gauge, where nothing reads this.  Revisit
+   together with HEFTGauge when the Rxi / Feynman gauge is actually implemented - see README
+   SS "Deferred configuration options". *)
+GoldstoneMaxOrder = 1;
+
+(* Max-expansion controls from heft_fr.wl (set before gauge-dependent definitions). *)
+If[ValueQ[Global`HEFTMaxOrder], HEFTMaxOrder = Global`HEFTMaxOrder];
+If[!ValueQ[HEFTMaxOrder], HEFTMaxOrder = 1];
+If[ValueQ[Global`HiggsMaxOrder], NEFT = Global`HiggsMaxOrder];
+If[!ValueQ[NEFT], NEFT = 3];
+If[ValueQ[Global`HEFTNLOBasis], HEFTNLOBasis = Global`HEFTNLOBasis];
+If[ValueQ[Global`HEFTWCxfOutputFile], HEFTWCxfOutputFile = Global`HEFTWCxfOutputFile];
+If[ValueQ[Global`HEFTWCxfFile], HEFTWCxfOutputFile = Global`HEFTWCxfFile];
+
+(* heft_fr.wl may set Global`LamHEFT; never leave LamHEFT bound to a number here. *)
+If[ValueQ[LamHEFT] && NumericQ[LamHEFT], Remove[LamHEFT]];
+
+(* Fields and LO pieces *)
+HEFTLoad[{"fields_LO.fr"}];
+(* Gauge-dependent building blocks (DU, FSWi, TT, ...) *)
+HEFTLoad[{"definitions.fr"}];
+HEFTLoad[{"wcxf_input.fr"}];
+HEFTInitializeWCxf[];
+
+HEFTLoad[{"LO", "parameters_LO.fr"}];
+(* DownValues[f] =!= {}, not ValueQ[f]: these are all defined as f[] := ..., and ValueQ only
+   looks at OwnValues, so ValueQ[f] is False for every one of them.  Written as ValueQ, all six
+   of these guards below were permanently false - the Wilson-coefficient values read from
+   wcxf_output.json were loaded into HEFTWCValues but never written into M$Parameters, so every
+   UFO / FeynArts export shipped the .fr defaults (all 1) no matter what the JSON said.
+   (Operator selection was unaffected: HEFTPieceActiveQ reads HEFTWCValues directly.) *)
+If[DownValues[HEFTWCApplyScaleParameter] =!= {}, HEFTWCApplyScaleParameter[]];
+If[DownValues[HEFTWCApplyLOParameters] =!= {}, HEFTWCApplyLOParameters[]];
+HEFTLoad[{"LO", "Lagrangian_LO.fr"}];
+
+(* Power-counting parameters (ChiralOrder, LamF, LamGold); LamHEFT in parameters_LO.fr *)
+HEFTLoad[{"power_counting.fr"}];
+
+(* NLO parameters and Lagrangians *)
+
+(* Default NLO basis if the notebook Configuration did not set one. *)
+If[!ValueQ[HEFTNLOBasis], HEFTNLOBasis = "1604.06801"];
+
+HEFTNLOBasis::wrong =
+  "Wrong HEFT NLO basis `1`. The only supported option is \"1604.06801\".";
+
+(* The 2206.07722 basis is NOT IMPLEMENTED in this release.  Refused here, inside LoadModel,
+   as well as in heft_fr.wl Cell 3 - the Cell 3 check is the friendly one, this one is what
+   makes the refusal unavoidable for headless entry points that never run Cell 3.  Keep the
+   two in step: the 2206.07722 operator files are not part of this release, and both this
+   check and HEFT$SupportedNLOBases (heft_defaults.wl) have to be lifted together before the
+   basis can be re-enabled. *)
+HEFTNLOBasis::notimplemented =
+  "HEFT NLO basis \"2206.07722\" is not yet implemented and cannot be loaded. Use \
+HEFTNLOBasis = \"1604.06801\".";
+
+If[HEFTNLOBasis === "2206.07722",
+  Message[HEFTNLOBasis::notimplemented];
+  Abort[]
+];
+
+Module[{basisFolder},
+  (* heft_fr.wl sets Global`HEFTActiveNLOPieces; mirror before any basis .fr file runs. *)
+  If[ValueQ[Global`HEFTActiveNLOPieces],
+    HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces
+  ];
+  If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+
+  basisFolder =
+    Switch[HEFTNLOBasis,
+      "1604.06801", "basis_1604_06801",
+      _, (Message[HEFTNLOBasis::wrong, HEFTNLOBasis]; "basis_1604_06801")
+    ];
+
+  HEFTLoad[{"NLO", basisFolder, "parameters_NLO.fr"}];
+  HEFTLoad[{"NLO", basisFolder, "Lagrangian_Bosonic_NLO.fr"}];
+
+  (* NNLO (chiral dimension 2) is its own layer, not part of any basis folder: the operators
+     are an extension beyond the 1604.06801 NLO basis rather than part of that paper.  Loaded
+     unconditionally - which operators actually enter is decided by HEFTPieceActiveQ, and
+     HEFTMaxOrder truncates the ChiralOrder^2 terms away when it is below 2.  parameters_NNLO
+     must come after the basis parameter file: it appends to that file's spec lists. *)
+  HEFTLoad[{"NNLO", "parameters_NNLO.fr"}];
+  HEFTLoad[{"NNLO", "Lagrangian_Bosonic_NNLO.fr"}];
+
+  (* NNNLO (chiral dimension 3, GHDNNNLO) was dropped from this release; the Lagrangian sum
+     below still references LNNNLO, so it must be defined. *)
+  LNNNLO = 0;
+
+  HEFTLoad[{"NLO", basisFolder, "Lagrangian_Fermionic_2F_NLO.fr"}];
+  HEFTLoad[{"NLO", basisFolder, "Lagrangian_Fermionic_4F_NLO.fr"}];
+
+  (* Re-register Wilson coeffs and refresh gated form factors. *)
+  If[DownValues[HEFTRegisterNLOWilsonCoefficients] =!= {},
+    HEFTRegisterNLOWilsonCoefficients[]
+  ];
+  If[DownValues[HEFTWCApplyNLOParameters] =!= {}, HEFTWCApplyNLOParameters[]];
+  If[DownValues[HEFTWCPrintApplySummary] =!= {}, HEFTWCPrintApplySummary[]];
+  (* Re-assemble LNNLO using the configured operator list (context-safe). *)
+  If[DownValues[HEFTRebuildLNNLO] =!= {}, LNNLO = HEFTRebuildLNNLO[]];
+];
+
+(* Gauge-field normalizations and A–Z mixing matrix (Wnorm, Bnorm, Gnorm, AZnorm). *)
+HEFTLoad[{"gauge_normalization.fr"}];
+HEFTUpdateGaugeNormalizations[];
+
+(* EW input replacements (EWInputScheme from the notebook Configuration or defaults).  The CKM
+   side is no longer selectable: DiagonalCKM alone decides whether CKM -> IndexDelta. *)
+HEFTLoad[{"input_scheme.fr"}];
+
+(* Assemble full Lagrangian from LO + selected NLO pieces.
+   If HEFTGauge == "Rxi", truncate the Goldstone-matrix expansion in LamGold
+   at the fixed order GoldstoneMaxOrder (= 1, set above) for all operators
+   (those involving U, VU, TT, ...).  In unitary gauge - the only gauge the
+   model currently ships - no LamGold expansion is applied. *)
+
+(* Lagrangian in the electroweak (gauge) basis, before chiral-dimension truncation.
+   Gauge normalizations are updated first so that AZnorm, Wnorm, Bnorm, Gnorm
+   are well-defined when the LO and NLO pieces are assembled. *)
+
+(* Raw mass-basis Lagrangian, before the EW input-scheme replacement
+   (HEFTEWInputRepl is applied afterwards, at the end of this file). *)
+HEFTLHEFTMassBasisRaw :=
+  Module[{lag,nn},
+
+    (* Use only the pieces that were actually defined in the NLO Lagrangian. *)
+    lag = LLO + LNLO + LNNLO + LNNNLO + LNLO2Ferm + LNLO4Ferm;
+
+    (* Go to the mass basis by applying all field and parameter
+       Definitions (A/Z mixing, Wnorm/Bnorm/Gnorm, etc.). *)
+
+    (*lag = lag /. KinRepl;*)
+
+
+    (* In Rxi gauge, truncate the Goldstone-matrix expansion in LamGold. *)
+    lag = If[HEFTGauge === "rxi",
+      HEFTExpandInLamGold[lag, GoldstoneMaxOrder],
+      lag
+    ];
+
+    If[ValueQ[HEFTCKMInputRepl] && HEFTCKMInputRepl =!= {},
+      lag = lag /. HEFTCKMInputRepl
+    ];
+
+    (* Mass / physical basis: apply deferred field and parameter Definitions
+       (Wi -> W/Z/A, B/Gl -> physical, Wnorm/Bnorm/AZnorm, gw/g1/gs, ...).
+       Without this, WriteUFO sees mixed {W, Wi, ...} and raises QN::NonConserv. *)
+  
+
+    lag = ExpandIndices[lag, FlavorExpand -> {SU2W,SU2D}];
+
+     (* Truncate at the requested chiral catalogue layer (HEFTMaxOrder). *)
+    If[HEFTMaxOrder < 1, lag = lag /. ChiralOrder -> 0];
+
+    lag = lag /. ChiralOrder^nn_Integer /; nn > HEFTMaxOrder -> 0;
+
+    lag = lag /. powercountingreplacements;
+
+    lag
+
+    (* Remove spurious derivative-of-zero terms from Rxi building blocks.
+       U - 1 has no constant term in LamGold, so del[U-1, mu] expands to
+       coefficients involving del[0, mu], del[0, nu], etc., which must be set to 0.
+    If[HEFTGauge === "rxi",
+      lag = lag /. {
+        del[0, ___] -> 0,
+        Derivative[__][del][0, ___] -> 0
+      }]*)
+  ];
+
+(* Re-expand in ChiralOrder and truncate at HEFTMaxOrder.
+
+   Needed after the EW input-scheme replacement.  The "gf" rules carry ChiralOrder into
+   vev, GW, G1 and lhambda, and those appear in DENOMINATORS in the Lagrangian (1/vev,
+   (LamF h/vev)^n, ...).  A plain /. therefore leaves 1/(a + b ChiralOrder) behind - i.e.
+   ChiralOrder in a denominator, and implicitly an uncontrolled all-orders resummation -
+   and it also reintroduces ChiralOrder powers above HEFTMaxOrder through cross terms
+   between two replaced symbols.  The truncation inside HEFTLHEFTMassBasisRaw runs BEFORE
+   the substitution, so nothing cleans this up.  Expanding about ChiralOrder = 0 turns the
+   denominators back into polynomials and re-imposes the HEFTMaxOrder cut.
+
+   Series is mapped over the top-level Plus instead of being applied to the whole
+   Lagrangian at once: one SeriesData per term is far cheaper in time and memory than a
+   single huge one, and the result is identical.  The fields/Dot products do not depend on
+   ChiralOrder, so they ride along as constants. *)
+HEFTTruncateChiralOrder[expr_, maxOrder_Integer] :=
+  Module[{eps, work, seriesOf},
+    If[FreeQ[expr, ChiralOrder], Return[expr]];
+    seriesOf[t_] := Normal @ Series[t, {eps, 0, maxOrder}];
+    work = expr /. ChiralOrder -> eps;
+    work = If[Head[work] === Plus,
+      Plus @@ (seriesOf /@ (List @@ work)),
+      seriesOf[work]
+    ];
+    (* Cross terms between two expanded factors can still exceed maxOrder after Expand. *)
+    work = Expand[work] /. eps^nn_Integer /; nn > maxOrder -> 0;
+    work /. eps -> ChiralOrder
+  ];
+
+(* EW input-scheme replacement is applied last, outside the Module, so
+   LHEFTMassBasis stays a lazy rule (cacheable via lheft_cache.wl) and
+   HEFTEWInputRepl (built in input_scheme.fr) can add ChiralOrder-dependent
+   shifts (e.g. the "gf" scheme's NLO corrections) without interfering with
+   the ChiralOrder truncation above - the re-truncation below is what puts
+   those shifts back on the same footing as the rest of the Lagrangian. *)
+LHEFTMassBasis :=
+  If[ValueQ[HEFTEWInputRepl] && HEFTEWInputRepl =!= {},
+    HEFTTruncateChiralOrder[HEFTLHEFTMassBasisRaw /. HEFTEWInputRepl, HEFTMaxOrder],
+    HEFTLHEFTMassBasisRaw
+  ];

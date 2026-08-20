@@ -1,0 +1,81 @@
+# This file was automatically created by FeynRules 2.3.49
+# Mathematica version: 14.0.0 for Mac OS X x86 (64-bit) (December 13, 2023)
+# Date: Thu 20 Aug 2026 17:41:52
+
+
+# 
+# This is the logfile for the model HEFT -- Higgs Effective Field Theory (LO + selectable NLO/NNLO operators)
+
+# Authors: M. Ryczkowski
+# Model version: 1
+# Checking the Quantum numbers
+   * Electric charge defined.
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 1 Lagrangians.
+   * Number of classes vertices: 41
+   * Number of flavored vertices: 85
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+      - Quantum number LeptonNumber conserved in all vertices.
+      - Quantum number Q conserved in all vertices.
+      - Quantum number Y conserved in all vertices.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 131 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 33 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 101 couplings written.
+   * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.
+#
+# Decay definitions
+#
+
+   * 12 decays written.
+   * decay.py not written
+#
+# CTCoupling definitions
+#
+
+   * 0 CTcouplings written.
+   * CT_couplings.py written.

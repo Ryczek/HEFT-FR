@@ -1,0 +1,352 @@
+(* NLO building blocks and Lagrangian pieces (HEFT), bosonic sector. *)
+(* Only define pieces that are requested in HEFTActiveNLOPieces. *)
+
+(* If HEFTActiveNLOPieces is not set, default to empty (no NLO pieces). *)
+If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
+If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+
+(* See combinedDerivFlareSpecs in parameters_NLO.fr for what this controls (DH/P8NLO/
+   P20NLO/P21NLO/P22NLO only). *)
+If[ValueQ[Global`Combine2Derivatives], Combine2Derivatives = Global`Combine2Derivatives];
+If[!ValueQ[Combine2Derivatives], Combine2Derivatives = False];
+
+(* Define only the requested NLO Lagrangian pieces *)
+
+(* Gluon triple operators (QCD cubic, CP-even and CP-odd) *)
+
+LGGGNLO := Block[{mu, nu, al, ii, jj, kk},
+    ExpandIndices[
+      4*Pi*ChiralOrder/LamHEFT^2 f[ii,jj,kk] FS[Gl, mu, nu, ii] FS[Gl, nu, al, jj] FS[Gl, al, mu, kk]
+          FCGGGNLO[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+LGGGtildeNLO := Block[{mu, nu, al, be, ga, ii, jj, kk},
+    ExpandIndices[
+      4*Pi*ChiralOrder/LamHEFT^2 f[ii,jj,kk] Eps[mu, nu, be, ga]/2 HC[FS[Gl, be, ga, ii]] FS[Gl, nu, al, jj] FS[Gl, al, mu, kk]
+          FCGGGtildeNLO[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+(* Weak triple operators (QCD cubic, CP-even and CP-odd) *)
+LWWWNLO := Block[{mu, nu, al, ii, jj, kk},
+    ExpandIndices[4*Pi*ChiralOrder/LamHEFT^2 Eps[ii,jj,kk] FS[Wi, mu, nu, ii] FS[Wi, nu, al, jj] FS[Wi, al, mu, kk]
+        FCWWWNLO[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LWWWtildeNLO := Block[{mu, nu, al, be, ga, ii, jj, kk},
+    ExpandIndices[4*Pi*ChiralOrder/LamHEFT^2 Eps[ii,jj,kk] Eps[mu, nu, be, ga]/2 HC[FS[Wi, be, ga, ii]] FS[Wi, nu, al, jj] FS[Wi, al, mu, kk]
+        FCWWWtildeNLO[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+
+(* ----------------------------- Remaining CP-even bosonic operators ----------------------------- *)
+
+(* Combine2Derivatives -> True: FCDHCombined[H,NEFT] replaces the two independently-
+   truncated flares FCDH1/FCDH2 with one new family (CDHn<nh>prime, nh = the total number of
+   Higgs fields in the term, the four differentiated ones included), pre-multiplying the
+   bilinear-squared expansion so a fixed power of h/vev carries a single WC instead of a
+   sum of four-way products of the two originals. See the block comment above
+   combinedDerivFlareSpecs in parameters_NLO.fr for the (symbolically verified) derivation. *)
+LDH := Block[{mu, nu},
+    If[TrueQ[Combine2Derivatives],
+      ChiralOrder FCDHCombined[H, NEFT] del[H, mu] del[H, mu] del[H, nu] del[H, nu],
+      ChiralOrder del[FCDH1[H, NEFT], mu] del[FCDH2[H, NEFT], mu]
+               del[FCDH1[H, NEFT], nu] del[FCDH2[H, NEFT], nu]
+    ]
+  ];
+
+LGHNLO := Block[{mu, nu, a},
+    ExpandIndices[
+      -ChiralOrder 1/4 FS[Gl, mu, nu, a] FS[Gl, mu, nu, a] FCGHNLO[H, NEFT], NoDefinitions -> True]
+  ];
+
+LWHNLO := Block[{mu, nu, ii},
+    ExpandIndices[- ChiralOrder 1/4 FS[Wi, mu, nu, ii] FS[Wi, mu, nu, ii]
+        FCWHNLO[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LBHNLO := Block[{mu, nu},
+    ExpandIndices[
+      -ChiralOrder 1/4 FS[B, mu, nu] FS[B, mu, nu] FCBHNLO[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+ LP1NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder FS[B, mu, nu] Tr[TT.FSWi[mu, nu]]
+        FCP1NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP2NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) FS[B,mu,nu] Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])]
+        FCP2NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+LP3NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) Tr[FSWi[mu,nu].(VU[mu].VU[nu] - VU[nu].VU[mu])] FCP3NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP4NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) FS[B,mu,nu] Tr[TT . VU[mu]] del[FCP4NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP5NLO := Block[{mu, nu, a, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) Tr[FSWi[mu,nu] . VU[mu]] del[FCP5NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP6NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu].VU[mu]] Tr[VU[nu].VU[nu]] FCP6NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+(* Combine2Derivatives -> True: see the comment on LDH above / combinedDerivFlareSpecs in
+   parameters_NLO.fr. *)
+LP8NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu].VU[nu]] *
+        If[TrueQ[Combine2Derivatives],
+          del[H,mu] del[H,nu] FCP8NLOCombined[H, NEFT],
+          del[FCP8NLO1[H, NEFT],mu] del[FCP8NLO2[H, NEFT],nu]
+        ],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+  LP11NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu].VU[nu]] Tr[VU[mu].VU[nu]] FCP11NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP12NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder Tr[TT . FSWi[mu,nu]] Tr[TT . FSWi[mu,nu]]
+        FCP12NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LP13NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) Tr[TT . FSWi[mu,nu]] Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])]
+        FCP13NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP14NLO := Block[{mu, nu, rho, lambda, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)
+      Eps[mu, nu, rho, lambda] 
+      Tr[TT . VU[mu]] Tr[VU[nu] . FSWi[rho,lambda]]
+      FCP14NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP17NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) 
+      Tr[TT . FSWi[mu,nu]] Tr[TT. VU[mu]] del[FCP17NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP18NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])] Tr[TT . VU[mu]] del[FCP18NLO[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  (* Combine2Derivatives -> True: see the comment on LDH above / combinedDerivFlareSpecs in
+     parameters_NLO.fr. *)
+  LP20NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu] . VU[mu]] *
+        If[TrueQ[Combine2Derivatives],
+          del[H,nu] del[H,nu] FCP20NLOCombined[H, NEFT],
+          del[ FCP20NLO1[H, NEFT], nu] del[ FCP20NLO2[H, NEFT], nu]
+        ],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+  LP21NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[mu]] *
+        If[TrueQ[Combine2Derivatives],
+          del[H,nu] del[H,nu] FCP21NLOCombined[H, NEFT],
+          del[ FCP21NLO1[H, NEFT], nu] del[ FCP21NLO2[H, NEFT], nu]
+        ],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+  LP22NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[nu]] *
+        If[TrueQ[Combine2Derivatives],
+          del[H,mu] del[H,nu] FCP22NLOCombined[H, NEFT],
+          del[ FCP22NLO1[H, NEFT], mu] del[ FCP22NLO2[H, NEFT], nu]
+        ],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP23NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu] . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[nu]] FCP23NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+
+  LP24NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[VU[mu] . VU[nu]] Tr[TT . VU[mu]] Tr[TT . VU[nu]] FCP24NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP26NLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[mu]] Tr[TT . VU[nu]] FCP26NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+
+
+(* ----------------------------------------- Remaining CP-odd bosonic operators ----------------------------------------- *)
+
+  LS2DNLO := Block[{mu, nu, aux},
+    aux = ExpandIndices[ChiralOrder I vev^2/4 Tr[TT . VU[mu]] del[FCS2DNLO[H, NEFT], mu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LBtildeHNLO := Block[{mu, nu, al, be},
+    ExpandIndices[
+      -ChiralOrder Eps[mu, nu, al, be]/2 HC[FS[B, al, be]] FS[B, mu, nu] FCBtildeHNLO[H, NEFT], NoDefinitions -> True]
+  ];
+  
+  LGHtildeNLO := Block[{mu, nu, al, be, a},
+    ExpandIndices[
+      -ChiralOrder gs^2 1/4 Eps[mu, nu, al, be]/2 HC[FS[Gl, al, be, a]] FS[Gl, mu, nu, a] FCGHtildeNLO[H, NEFT], NoDefinitions -> True]
+  ];
+
+  LWtildeHNLO := Block[{mu, nu, al, be, ii},
+    ExpandIndices[- ChiralOrder Eps[mu, nu, al, be]/2 HC[FS[Wi, al, be, ii]] FS[Wi, mu, nu, ii]
+        FCWtildeHNLO[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LS1NLO := Block[{mu, nu, al, be, aux},
+    aux = ExpandIndices[ChiralOrder Eps[mu, nu, al, be]/2 HC[FS[B, al, be]] Tr[TT . FSWi[mu,nu]]
+        FCS1NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS2NLO := Block[{mu, nu, al, be, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi) 1/2 Eps[mu,nu,al,be] HC[FS[B,al,be]] Tr[TT . VU[mu]] del[FCS2NLO[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS3NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder  I/(4*Pi) 1/2 Eps[mu,nu,al,be] Tr[HC[FSWi[al,be]] . VU[mu]] del[FCS3NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS4NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi) Tr[FSWi[mu,nu] . VU[mu]] Tr[TT . VU[nu]] FCS4NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS5NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi)^2 Tr[VU[mu] . VU[nu]] Tr[TT . VU[mu]] del[FCS5NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS6NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder I/(4*Pi)^2 Tr[VU[mu] . VU[mu]] Tr[TT . VU[nu]] del[FCS6NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS7NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder 1/(4*Pi) Tr[TT . (FSWi[mu,nu] . VU[mu] - VU[mu] . FSWi[mu,nu])] del[FCS7NLO[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LS8NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[ChiralOrder 1/2 Eps[mu,nu,al,be] Tr[TT . HC[FSWi[al,be]]] Tr[TT . FSWi[mu,nu]] FCS8NLO[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS9NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[I/(4*Pi) ChiralOrder 1/2 Eps[mu,nu,al,be] Tr[TT . FSWi[al,be]] Tr[TT . VU[mu]] del[FCS9NLO[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS15NLO := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[I/(4*Pi)^2 ChiralOrder Tr[TT . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[nu]] del[FCS15NLO[H, NEFT], mu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+(* Total NLO bosonic Lagrangian (chiral dimension 1 only). NNLO: ../../NNLO/. *)
+
+LNLOaux = 0;
+If[HEFTPieceActiveQ[ "GGGNLO"],       LNLOaux += LGGGNLO];
+If[HEFTPieceActiveQ[ "GGGtildeNLO"],  LNLOaux += LGGGtildeNLO];
+If[HEFTPieceActiveQ[ "WWWNLO"],       LNLOaux += LWWWNLO];
+If[HEFTPieceActiveQ[ "WWWtildeNLO"],  LNLOaux += LWWWtildeNLO];
+If[HEFTPieceActiveQ[ "DH"],           LNLOaux += LDH];
+If[HEFTPieceActiveQ[ "GHNLO"],        LNLOaux += LGHNLO];
+If[HEFTPieceActiveQ[ "GHtildeNLO"],   LNLOaux += LGHtildeNLO];
+If[HEFTPieceActiveQ[ "WHNLO"],        LNLOaux += LWHNLO];
+If[HEFTPieceActiveQ[ "WtildeHNLO"],   LNLOaux += LWtildeHNLO];
+If[HEFTPieceActiveQ[ "BHNLO"],        LNLOaux += LBHNLO];
+If[HEFTPieceActiveQ[ "BtildeHNLO"],   LNLOaux += LBtildeHNLO];
+If[HEFTPieceActiveQ[ "P1NLO"],        LNLOaux += LP1NLO];
+If[HEFTPieceActiveQ[ "P2NLO"],        LNLOaux += LP2NLO];
+If[HEFTPieceActiveQ[ "P3NLO"],        LNLOaux += LP3NLO];
+If[HEFTPieceActiveQ[ "P4NLO"],        LNLOaux += LP4NLO];
+If[HEFTPieceActiveQ[ "P5NLO"],        LNLOaux += LP5NLO];
+If[HEFTPieceActiveQ[ "P6NLO"],        LNLOaux += LP6NLO];
+If[HEFTPieceActiveQ[ "P8NLO"],        LNLOaux += LP8NLO];
+If[HEFTPieceActiveQ[ "P11NLO"],       LNLOaux += LP11NLO];
+If[HEFTPieceActiveQ[ "P12NLO"],       LNLOaux += LP12NLO];
+If[HEFTPieceActiveQ[ "P13NLO"],       LNLOaux += LP13NLO];
+If[HEFTPieceActiveQ[ "P14NLO"],       LNLOaux += LP14NLO];
+If[HEFTPieceActiveQ[ "P17NLO"],       LNLOaux += LP17NLO];
+If[HEFTPieceActiveQ[ "P18NLO"],       LNLOaux += LP18NLO];
+If[HEFTPieceActiveQ[ "P20NLO"],       LNLOaux += LP20NLO];
+If[HEFTPieceActiveQ[ "P21NLO"],       LNLOaux += LP21NLO];
+If[HEFTPieceActiveQ[ "P22NLO"],       LNLOaux += LP22NLO];
+If[HEFTPieceActiveQ[ "P23NLO"],       LNLOaux += LP23NLO];
+If[HEFTPieceActiveQ[ "P24NLO"],       LNLOaux += LP24NLO];
+If[HEFTPieceActiveQ[ "P26NLO"],       LNLOaux += LP26NLO];
+If[HEFTPieceActiveQ[ "S2DNLO"],       LNLOaux += LS2DNLO];
+If[HEFTPieceActiveQ[ "S1NLO"],        LNLOaux += LS1NLO];
+If[HEFTPieceActiveQ[ "S2NLO"],        LNLOaux += LS2NLO];
+If[HEFTPieceActiveQ[ "S3NLO"],        LNLOaux += LS3NLO];
+If[HEFTPieceActiveQ[ "S4NLO"],        LNLOaux += LS4NLO];
+If[HEFTPieceActiveQ[ "S5NLO"],        LNLOaux += LS5NLO];
+If[HEFTPieceActiveQ[ "S6NLO"],        LNLOaux += LS6NLO];
+If[HEFTPieceActiveQ[ "S7NLO"],        LNLOaux += LS7NLO];
+If[HEFTPieceActiveQ[ "S8NLO"],        LNLOaux += LS8NLO];
+If[HEFTPieceActiveQ[ "S9NLO"],        LNLOaux += LS9NLO];
+If[HEFTPieceActiveQ[ "S15NLO"],       LNLOaux += LS15NLO];
+
+LNLO := LNLOaux;

@@ -1,0 +1,373 @@
+(* LO fields and gauge structure for the HEFT model (extracted from HEFT_2025_FRULES_19_11_2025.fr) *)
+
+(* ************************** *)
+(* *****  Information   ***** *)
+(* ************************** *)
+
+M$ModelName = "HEFT — Higgs Effective Field Theory (LO + selectable NLO/NNLO operators)";
+
+(* EWInputScheme decides whether MW is an input or a prediction; see the W boson class below
+   and the block comment in LO/parameters_LO.fr.  Mirrored here as well as there because this
+   file is loaded first (HEFT_Model.fr) and the particle class needs it. *)
+If[ValueQ[Global`EWInputScheme], EWInputScheme = Global`EWInputScheme];
+If[!ValueQ[EWInputScheme], EWInputScheme = "heft"];
+
+M$Information = {
+  Authors      -> {"M. Ryczkowski"},
+  Version      -> "1",
+  Date         -> "02. 07. 2025",
+  Description  -> "Modular HEFT model: SM at LO with HEFT modifications (kappa, F-functions in H/vev). Selectable NLO/NNLO operators. Configuration: HEFTMaxOrder, HiggsMaxOrder. Bookkeepers: ChiralOrder (LO=0, NLO=1, NNLO=2), LamF, LamGold, LamHEFT. Notation follows Brivio et al. (arXiv:1604.06801)."
+};
+
+(* ************************** *)
+(* *****  Gauge groups  ***** *)
+(* ************************** *)
+
+M$GaugeGroups = {
+  U1Y  == {
+    Abelian          -> True,
+    CouplingConstant -> g1,
+    GaugeBoson       -> B,
+    Charge           -> Y
+  },
+  SU2L == {
+    Abelian           -> False,
+    CouplingConstant  -> gw,
+    GaugeBoson        -> Wi,
+    StructureConstant -> Eps,
+    Representations   -> {Ta, SU2D},
+    Definitions       -> {Ta[a_, b_, c_] -> PauliSigma[a, b, c]/2,
+                          FSU2L[i_, j_, k_] :> I Eps[i, j, k]}
+  },
+  SU3C == {
+    Abelian           -> False,
+    CouplingConstant  -> gs,
+    GaugeBoson        -> Gl,
+    StructureConstant -> f,
+    Representations   -> {T, Colour},
+    SymmetricTensor   -> dSUN
+  }
+};
+
+(* ************************** *)
+(* *****    Indices     ***** *)
+(* ************************** *)
+
+IndexRange[Index[SU2W      ]] = Unfold[Range[3]];
+IndexRange[Index[SU2D      ]] = Unfold[Range[2]];
+IndexRange[Index[Gluon     ]] = NoUnfold[Range[8]];
+IndexRange[Index[Colour    ]] = NoUnfold[Range[3]];
+IndexRange[Index[Generation]] = Range[3];
+
+IndexStyle[SU2W,       j];
+IndexStyle[SU2D,       k];
+IndexStyle[Gluon,      a];
+IndexStyle[Colour,     m];
+IndexStyle[Generation, f];
+
+(* ************************** *)
+(* *** Interaction orders *** *)
+(* ***  (as used by mg5)  *** *)
+(* ************************** *)
+
+M$InteractionOrderHierarchy = {
+  {QCD, 1},
+  {QED, 1},
+  {ExpansionF, 1},
+  {ExpansionChiral,1}
+};
+
+M$InteractionOrderLimit = {
+  {QCD, 99},
+  {QED, 99},
+  {ExpansionF, 99},
+  {ExpansionChiral,99}
+};
+
+(* ************************** *)
+(* **** Particle classes **** *)
+(* ************************** *)
+
+M$ClassesDescription = {
+
+  (* Gauge bosons: physical vector fields *)
+  V[1] == {
+    ClassName       -> A,
+    SelfConjugate   -> True,
+    Mass            -> 0,
+    Width           -> 0,
+    ParticleName    -> "a",
+    PDG             -> 22,
+    PropagatorLabel -> "a",
+    PropagatorType  -> W,
+    PropagatorArrow -> None,
+    FullName        -> "Photon"
+  },
+  V[2] == {
+    ClassName       -> Z,
+    SelfConjugate   -> True,
+    Mass            -> {MZ, 91.1876},
+    Width           -> {WZ, 2.4952},
+    ParticleName    -> "Z",
+    PDG             -> 23,
+    PropagatorLabel -> "Z",
+    PropagatorType  -> Sine,
+    PropagatorArrow -> None,
+    FullName        -> "Z"
+  },
+  V[3] == {
+    ClassName        -> W,
+    SelfConjugate    -> False,
+    (* EWInputScheme-gated.  "heft"/"gf": MW is a measured input, so it is an External
+       parameter carrying its PDG value.  "aem": the inputs are alpha_EM/Gf/MZ and MW is a
+       PREDICTION, so it becomes Internal and its value is defined in LO/parameters_LO.fr -
+       the same arrangement FeynRules' own SM.fr uses for its alpha-scheme. *)
+    Mass             -> If[TrueQ[EWInputScheme === "aem"], {MW, Internal}, {MW, 80.387}],
+    Width            -> {WW, 2.085},
+    ParticleName     -> "W+",
+    AntiParticleName -> "W-",
+    QuantumNumbers   -> {Q -> 1},
+    PDG              -> 24,
+    PropagatorLabel  -> "W",
+    PropagatorType   -> Sine,
+    PropagatorArrow  -> Forward,
+    FullName         -> "W"
+  },
+  V[4] == {
+    ClassName        -> G,
+    SelfConjugate    -> True,
+    Indices          -> {Index[Gluon]},
+    Mass             -> 0,
+    Width            -> 0,
+    ParticleName     -> "g",
+    PDG              -> 21,
+    PropagatorLabel  -> "G",
+    PropagatorType   -> C,
+    PropagatorArrow  -> None,
+    FullName         -> "G"
+  },
+
+  (* Gauge bosons: unphysical vector fields *)
+  V[11] == {
+    ClassName     -> B,
+    Unphysical    -> True,
+    Mass          -> 0,
+    SelfConjugate -> True,
+    Definitions   -> {B[mu_] -> AZnorm2x1 Z[mu] + AZnorm2x2 A[mu]}
+  },
+
+  V[12] == {
+    ClassName     -> Wi,
+    Unphysical    -> True,
+    Mass          -> 0,
+    SelfConjugate -> True,
+    Indices       -> {Index[SU2W]},
+    FlavorIndex   -> SU2W,
+    Definitions   -> {
+      Wi[mu_, 1] ->   WnormINV (Wbar[mu] + W[mu])/Sqrt[2],
+      Wi[mu_, 2] -> -I WnormINV (Wbar[mu] - W[mu])/(Sqrt[2]),
+      Wi[mu_, 3] -> AZnorm1x1 Z[mu] + AZnorm1x2 A[mu]
+    }
+  },
+  
+
+  V[14] == {
+    ClassName        -> Gl,
+    Unphysical       -> True,
+    Mass             -> 0,
+    SelfConjugate    -> True,
+    Indices          -> {Index[Gluon]},
+    Definitions      -> { Gl[mu_,aa_] -> GnormINV G[mu,aa] }
+  },
+  
+
+  (* Fermions: physical fields *)
+  F[1] == {
+    ClassName        -> vl,
+    ClassMembers     -> {ve, vm, vt},
+    Indices          -> {Index[Generation]},
+    FlavorIndex      -> Generation,
+    SelfConjugate    -> False,
+    Mass             -> 0,
+    Width            -> 0,
+    QuantumNumbers   -> {LeptonNumber -> 1},
+    PropagatorLabel  -> {"v", "ve", "vm", "vt"},
+    PropagatorType   -> S,
+    PropagatorArrow  -> Forward,
+    PDG              -> {12, 14, 16},
+    ParticleName     -> {"ve", "vm", "vt"},
+    AntiParticleName -> {"ve~", "vm~", "vt~"},
+    FullName         -> {"Electron-neutrino", "Mu-neutrino", "Tau-neutrino"}
+  },
+  F[2] == {
+    ClassName        -> l,
+    ClassMembers     -> {e, mu, ta},
+    Indices          -> {Index[Generation]},
+    FlavorIndex      -> Generation,
+    SelfConjugate    -> False,
+    Mass             -> {mldiag, {MLE, 0.000511}, {MLM, 0.10566}, {MLT, 1.777}},
+    Width            -> {WL, {WLE, 0}, {WLM, 0}, {WLT, 0}},
+    QuantumNumbers   -> {Q -> -1, LeptonNumber -> 1},
+    PropagatorLabel  -> {"l", "e", "mu", "ta"},
+    PropagatorType   -> Straight,
+    PropagatorArrow  -> Forward,
+    PDG              -> {11, 13, 15},
+    ParticleName     -> {"e-", "mu-", "ta-"},
+    AntiParticleName -> {"e+", "mu+", "ta+"},
+    FullName         -> {"Electron", "Muon", "Tau"}
+  },
+  F[3] == {
+    ClassName        -> uq,
+    ClassMembers     -> {u, c, t},
+    Indices          -> {Index[Generation], Index[Colour]},
+    FlavorIndex      -> Generation,
+    SelfConjugate    -> False,
+    Mass             -> {mudiag, {MQU, 2.16 10^-3}, {MQC, 1.27}, {MQT, 172.76}},
+    Width            -> {WU, {WQU, 0}, {WQC, 0}, {WQT, 1.33}},
+    QuantumNumbers   -> {Q -> 2/3},
+    PropagatorLabel  -> {"uq", "u", "c", "t"},
+    PropagatorType   -> Straight,
+    PropagatorArrow  -> Forward,
+    PDG              -> {2, 4, 6},
+    ParticleName     -> {"u", "c", "t"},
+    AntiParticleName -> {"u~", "c~", "t~"},
+    FullName         -> {"u-quark", "c-quark", "t-quark"}
+  },
+  F[4] == {
+    ClassName        -> dq,
+    ClassMembers     -> {d, s, b},
+    Indices          -> {Index[Generation], Index[Colour]},
+    FlavorIndex      -> Generation,
+    SelfConjugate    -> False,
+    Mass             -> {mddiag, {MQD, 4.67 10^-3}, {MQS, 0.093}, {MQB, 4.18}},
+    Width            -> {WD, {WQD, 0}, {WQS, 0}, {WQB, 0}},
+    QuantumNumbers   -> {Q -> -1/3},
+    PropagatorLabel  -> {"dq", "d", "s", "b"},
+    PropagatorType   -> Straight,
+    PropagatorArrow  -> Forward,
+    PDG              -> {1, 3, 5},
+    ParticleName     -> {"d", "s", "b"},
+    AntiParticleName -> {"d~", "s~", "b~"},
+    FullName         -> {"d-quark", "s-quark", "b-quark"}
+  },
+
+  (* Fermions: unphysical fields *)
+  F[11] == {
+    ClassName      -> LL,
+    Unphysical     -> True,
+    Indices        -> {Index[SU2D], Index[Generation]},
+    FlavorIndex    -> SU2D,
+    SelfConjugate  -> False,
+    QuantumNumbers -> {Y -> -1/2},
+    Definitions    -> {
+      LL[sp1_, 1, ff_] :> Module[{sp2}, ProjM[sp1, sp2] vl[sp2, ff]],
+      LL[sp1_, 2, ff_] :> Module[{sp2}, ProjM[sp1, sp2] l[sp2, ff]]
+    }
+  },
+  F[12] == {
+    ClassName      -> lR,
+    Unphysical     -> True,
+    Indices        -> {Index[Generation]},
+    FlavorIndex    -> Generation,
+    SelfConjugate  -> False,
+    QuantumNumbers -> {Y -> -1},
+    Definitions    -> {lR[sp1_, ff_] :> Module[{sp2}, ProjP[sp1, sp2] l[sp2, ff]]}
+  },
+  F[13] == {
+    ClassName      -> QL,
+    Unphysical     -> True,
+    Indices        -> {Index[SU2D], Index[Generation], Index[Colour]},
+    FlavorIndex    -> SU2D,
+    SelfConjugate  -> False,
+    QuantumNumbers -> {Y -> 1/6},
+    Definitions    -> {
+      QL[sp1_, 1, ff_, cc_] :> Module[{sp2}, ProjM[sp1, sp2] uq[sp2, ff, cc]],
+      QL[sp1_, 2, ff_, cc_] :> Module[{sp2, ff2}, CKM[ff, ff2] ProjM[sp1, sp2] dq[sp2, ff2, cc]]
+    }
+  },
+  F[14] == {
+    ClassName      -> uR,
+    Unphysical     -> True,
+    Indices        -> {Index[Generation], Index[Colour]},
+    FlavorIndex    -> Generation,
+    SelfConjugate  -> False,
+    QuantumNumbers -> {Y -> 2/3},
+    Definitions    -> {uR[sp1_, ff_, cc_] :> Module[{sp2}, ProjP[sp1, sp2] uq[sp2, ff, cc]]}
+  },
+  F[15] == {
+    ClassName      -> dR,
+    Unphysical     -> True,
+    Indices        -> {Index[Generation], Index[Colour]},
+    FlavorIndex    -> Generation,
+    SelfConjugate  -> False,
+    QuantumNumbers -> {Y -> -1/3},
+    Definitions    -> {dR[sp1_, ff_, cc_] :> Module[{sp2}, ProjP[sp1, sp2] dq[sp2, ff, cc]]}
+  },
+
+  (* Higgs: physical scalars  *)
+  S[1] == {
+    ClassName       -> H,
+    SelfConjugate   -> True,
+    Mass            -> {MH, 125.09},
+    Width           -> {WH, 0.00407},
+    PropagatorLabel -> "H",
+    PropagatorType  -> D,
+    PropagatorArrow -> None,
+    PDG             -> 25,
+    ParticleName    -> "H",
+    FullName        -> "H"
+  }
+
+(*
+  (* Goldstone fields  *)
+  S[2] == {
+    ClassName       -> G0,
+    SelfConjugate   -> True,
+    Goldstone       -> Z,
+    Mass            -> {MG0,Internal},
+    PropagatorLabel -> "G0",
+    PropagatorType  -> D,
+    PropagatorArrow -> None,
+    PDG             -> 250,
+    ParticleName    -> "G0",
+    FullName        -> "G0"
+  },
+  S[3] == {
+    ClassName        -> GP,
+    SelfConjugate    -> False,
+    Goldstone        -> W,
+    Mass             -> {MGP,Internal},
+    QuantumNumbers   -> {Q -> 1},
+    PropagatorLabel  -> "GP",
+    PropagatorType   -> D,
+    PropagatorArrow  -> None,
+    PDG              -> 251,
+    ParticleName     -> "G+",
+    AntiParticleName -> "G-",
+    FullName         -> "GP"
+  }*)
+};
+
+
+(* ************************** *)
+(* *****     Gauge      ***** *)
+(* *****   Parameters   ***** *)
+(* *****   (FeynArts)   ***** *)
+(* ************************** *)
+
+GaugeXi[ V[1]  ] = GaugeXi[A];
+GaugeXi[ V[2]  ] = GaugeXi[Z];
+GaugeXi[ V[3]  ] = GaugeXi[W];
+GaugeXi[ V[4]  ] = GaugeXi[G];
+GaugeXi[ S[1]  ] = 1;
+GaugeXi[ S[2]  ] = GaugeXi[Z];
+GaugeXi[ S[3]  ] = GaugeXi[W];
+GaugeXi[ U[1]  ] = GaugeXi[A];
+GaugeXi[ U[2]  ] = GaugeXi[Z];
+GaugeXi[ U[31] ] = GaugeXi[W];
+GaugeXi[ U[32] ] = GaugeXi[W];
+GaugeXi[ U[4]  ] = GaugeXi[G];
+
+
+
+

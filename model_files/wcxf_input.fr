@@ -1,0 +1,776 @@
+(* WCxf Wilson-coefficient I/O for HEFT (arXiv:1712.05298 subset, JSON only).
+   Workflow (heft_fr.wl) - no options, three fixed steps:
+     1. Cell 3: HEFTWriteWCxfPointFiles always (re)writes both wcxf/wcxf_init.json (reference
+        copy of the defaults, never read by the model) and wcxf/wcxf_output.json (the file the
+        model reads), every coefficient at its default of 1.
+     2. Cell 4: optionally edit wcxf/wcxf_output.json. Nothing else has to be set.
+     3. LoadModel reads that file via Global`HEFTWCxfOutputFile; values replace LO and NLO.
+   Listed coefficients only; absent keys -> 0.  A value of 0 is just the number 0 in the
+   exported model - it does not remove anything from the Lagrangian.  Which operators exist
+   is decided solely by NLOOperators. *)
+
+If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
+If[!ValueQ[KappaFramework], KappaFramework = True];
+
+If[ValueQ[Global`HEFTWCxfOutputFile], HEFTWCxfOutputFile = Global`HEFTWCxfOutputFile];
+If[!ValueQ[HEFTWCxfOutputFile], HEFTWCxfOutputFile = None];
+(* Legacy alias *)
+If[HEFTWCxfOutputFile === None && ValueQ[Global`HEFTWCxfFile],
+  HEFTWCxfOutputFile = Global`HEFTWCxfFile
+];
+
+If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
+If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+
+If[ValueQ[Global`HiggsMaxOrder], HiggsMaxOrder = Global`HiggsMaxOrder];
+If[!ValueQ[HiggsMaxOrder], HiggsMaxOrder = 2];
+
+(* Fermion generations are fixed at 3 - not a configuration option. *)
+
+(* InitialiseWCs: the default numerical value written into the WCxf files for the *effective*
+   (beyond-SM) coefficients - 0 or 1.  Accepts the integers or the strings "0"/"1".
+   It only decides the numbers in wcxf_output.json; it never changes which operators are in
+   the Lagrangian (that is NLOOperators alone, via HEFTPieceActiveQ) and so is deliberately
+   NOT part of the LHEFT cache key. *)
+If[ValueQ[Global`InitialiseWCs], InitialiseWCs = Global`InitialiseWCs];
+If[!ValueQ[InitialiseWCs], InitialiseWCs = 1];
+
+InitialiseWCs::invalid =
+  "Unknown InitialiseWCs `1`. Supported: 0 or 1 (also as the strings \"0\"/\"1\"). Using 1.";
+
+(* Higher-order fermion-Higgs terms of the LO Yukawa sector (FQU/FQD/FLE and their
+   CQUn/CQDn/CLEn tensors).  Off -> those coefficients do not exist, so no WCxf key is
+   generated for them.  Defined in LO/parameters_LO.fr; mirrored here because Cell 3 writes
+   the WCxf files before LoadModel. *)
+If[ValueQ[Global`LOYukawaExpansion], LOYukawaExpansion = Global`LOYukawaExpansion];
+If[!ValueQ[LOYukawaExpansion], LOYukawaExpansion = True];
+
+(* Custodial-breaking operator PT; the only user of the CFTn coefficients. *)
+If[ValueQ[Global`IncludeCustodialT], IncludeCustodialT = Global`IncludeCustodialT];
+If[!ValueQ[IncludeCustodialT], IncludeCustodialT = True];
+
+(* DH/P8NLO/P20NLO/P21NLO/P22NLO: see combinedDerivFlareSpecs in
+   NLO/basis_1604_06801/parameters_NLO.fr for what this controls. *)
+If[ValueQ[Global`Combine2Derivatives], Combine2Derivatives = Global`Combine2Derivatives];
+If[!ValueQ[Combine2Derivatives], Combine2Derivatives = False];
+
+HEFTWCInitValue[] := Which[
+  InitialiseWCs === 0 || InitialiseWCs === "0", 0,
+  InitialiseWCs === 1 || InitialiseWCs === "1", 1,
+  True, (Message[InitialiseWCs::invalid, InitialiseWCs]; 1)
+];
+
+HEFTWCxfDefaultScale[] := Which[
+  NumericQ[HEFTWCxfScale], HEFTWCxfScale,
+  ValueQ[Global`LamHEFT], Global`LamHEFT,
+  True, 1000
+];
+
+If[ValueQ[Global`HEFTNLOBasis], HEFTNLOBasis = Global`HEFTNLOBasis];
+If[!ValueQ[HEFTNLOBasis], HEFTNLOBasis = "1604.06801"];
+
+HEFTWCValues = <||>;
+HEFTWCxfLoadedQ = False;
+HEFTWCxfScale = None;
+
+(* Bookkeepers: never assign numeric values to these symbols during WCxf load. *)
+HEFTWCProtectedParameterSymbols = {ChiralOrder, LamF, LamGold};
+
+(* LO Yukawa-expansion tensors: present only when LOYukawaExpansion is on, and only for
+   n >= 2, mirroring FQU/FQD/FLE and the M$Parameters declarations in LO/parameters_LO.fr.
+   n = 1 does not exist - the single-Higgs Yukawa strength is KappaQU.../DeltaYQU... *)
+HEFTLOYukawaSymbols[] :=
+  If[!TrueQ[LOYukawaExpansion], {},
+    Flatten @ Table[
+      Symbol[pre <> ToString[heftN]],
+      {pre, {"CQUn", "CQDn", "CLEn"}}, {heftN, 2, HiggsMaxOrder}
+    ]
+  ];
+
+HEFTLOSymbols[] := If[TrueQ[KappaFramework],
+  Join[
+    {KappaV, Kappa2V, Kappa3H, Kappa4H,
+     KappaLE, KappaLM, KappaLT, KappaQU, KappaQC, KappaQT, KappaQD, KappaQS, KappaQB},
+    HEFTLOYukawaSymbols[],
+    If[HiggsMaxOrder >= 3, Table[Symbol["CFCn" <> ToString[heftN]], {heftN, 3, HiggsMaxOrder}], {}],
+    If[TrueQ[IncludeCustodialT],
+      Table[Symbol["CFTn" <> ToString[heftN]], {heftN, 0, HiggsMaxOrder}], {}],
+    If[HiggsMaxOrder >= 5, Table[Symbol["CVn" <> ToString[heftN]], {heftN, 5, HiggsMaxOrder}], {}]
+  ],
+  Join[
+    {DeltaFCn1, DeltaFCn2, DeltaLam3, DeltaLam4,
+     DeltaYLE, DeltaYLM, DeltaYLT, DeltaYQU, DeltaYQC, DeltaYQT, DeltaYQD, DeltaYQS, DeltaYQB},
+    HEFTLOYukawaSymbols[],
+    If[HiggsMaxOrder >= 3, Table[Symbol["CFCn" <> ToString[heftN]], {heftN, 3, HiggsMaxOrder}], {}],
+    If[TrueQ[IncludeCustodialT],
+      Table[Symbol["CFTn" <> ToString[heftN]], {heftN, 0, HiggsMaxOrder}], {}],
+    If[HiggsMaxOrder >= 5, Table[Symbol["CVn" <> ToString[heftN]], {heftN, 5, HiggsMaxOrder}], {}]
+  ]
+];
+
+HEFTWCZeroQ[wcNum_] := wcNum === 0 || wcNum === 0. || MatchQ[wcNum, Complex[0., 0.]];
+
+HEFTWCFlatKey[sym_Symbol] := SymbolName[sym];
+HEFTWCFlatKey[sym_Symbol, idx__Integer] :=
+  StringJoin[SymbolName[sym], StringJoin @@ ( "_" <> ToString[#] & /@ {idx})];
+
+HEFTWCParseFlatKey[wcKey_String] := Module[{wcParts},
+  wcParts = StringSplit[wcKey, "_"];
+  If[Length[wcParts] === 1, {Symbol[wcKey], {}},
+    {Symbol[wcParts[[1]]], ToExpression /@ Rest[wcParts]}
+  ]
+];
+
+HEFTWCSetFlat[wcKey_String, wcVal_] := Module[{sym, idx},
+  {sym, idx} = HEFTWCParseFlatKey[wcKey];
+  If[idx === {},
+    HEFTWCValues[wcKey] = wcVal,
+    HEFTWCValues[wcKey] = wcVal
+  ]
+];
+
+HEFTWCGetFlat[wcKey_String, default_:0] :=
+  If[TrueQ[HEFTWCxfLoadedQ], Lookup[HEFTWCValues, wcKey, 0], default];
+
+HEFTWCGetSymbol[sym_Symbol, default_:0] :=
+  HEFTWCGetFlat[SymbolName[sym], default];
+
+(* 1604.06801 operator -> scalar flare prefixes {prefix, nMin}.  DH/P8NLO/P20NLO/P21NLO/
+   P22NLO are NOT here - each multiplies two (DH: the square of a bilinear, so four)
+   independently-truncated flares together, so they need a different key shape; see
+   heft1604DerivProductOpPrefixes / heft1604CombinedDerivOpPrefixes below, selected by
+   Combine2Derivatives exactly as parameters_NLO.fr selects which parameters to declare. *)
+HEFT1604ScalarOpPrefixes = {
+  {"GHNLO", "CGHNLOn", 0}, {"GHtildeNLO", "CGHtildeNLOn", 0},
+  {"GHNNLO1", "CGHNNLOn1", 0}, {"GHNNLO2", "CGHNNLOn2", 0},
+  {"GHtildeNNLO", "CGHtildeNNLOn", 0},
+  {"WL2h2D2NNLO", "CWL2h2D2NNLOn", 0}, {"WL2h2T2D2NNLO", "CWL2h2T2D2NNLOn", 0},
+  {"BL2h2D2NNLO", "CBL2h2D2NNLOn", 0}, {"WLh2WRD2NNLO", "CWL2h2DRD2NNLOn", 0},
+  {"WLh3D4NNLO", "CWLh3D4NNLOn", 0},
+  {"h4D6NNLOv1", "Ch4D6NNLOv1n", 0}, {"h4D6NNLOv2", "Ch4D6NNLOv2n", 0},
+  {"h4T2D6NNLOv1", "Ch4T2D6NNLOv1n", 0}, {"h4T2D6NNLOv2", "Ch4T2D6NNLOv2n", 0},
+  {"P1NLO", "CP1NLOn", 0}, {"S1NLO", "CS1NLOn", 0},
+  {"BHNLO", "CBHNLOn", 0}, {"BtildeHNLO", "CBtildeHNLOn", 0},
+  (* CWtildeHNLOn, not CWtildeNLOn: the prefix here must match the one parameters_NLO.fr
+     declares, or the generated WCxf key names a parameter the model does not have and the
+     value silently never reaches the Lagrangian.  This one was wrong (missing the H) from
+     the start and was found 2026-08-20 by diffing this table against scalarCoeffSpecs. *)
+  {"WHNLO", "CWHNLOn", 0}, {"WtildeHNLO", "CWtildeHNLOn", 0},
+  {"WWWNLO", "CWWWNLOn", 0}, {"GGGNLO", "CGGGNLOn", 0},
+  {"WWWtildeNLO", "CWWWtildeNLOn", 0}, {"GGGtildeNLO", "CGGGtildeNLOn", 0},
+  {"P2NLO", "CP2NLOn", 0}, {"P3NLO", "CP3NLOn", 0}, {"P4NLO", "CP4NLOn", 0},
+  {"P5NLO", "CP5NLOn", 0}, {"P6NLO", "CP6NLOn", 0},
+  {"P11NLO", "CP11NLOn", 0}, {"P12NLO", "CP12NLOn", 0},
+  {"P13NLO", "CP13NLOn", 0}, {"P14NLO", "CP14NLOn", 0},
+  {"P17NLO", "CP17NLOn", 1}, {"P18NLO", "CP18NLOn", 1},
+  {"P23NLO", "CP23NLOn", 0}, {"P24NLO", "CP24NLOn", 0}, {"P26NLO", "CP26NLOn", 0},
+  {"S2DNLO", "CS2DNLOn", 1}, {"S2NLO", "CS2NLOn", 1}, {"S3NLO", "CS3NLOn", 1},
+  {"S4NLO", "CS4NLOn", 0}, {"S5NLO", "CS5NLOn", 1}, {"S6NLO", "CS6NLOn", 1},
+  {"S7NLO", "CS7NLOn", 1}, {"S8NLO", "CS8NLOn", 0}, {"S9NLO", "CS9NLOn", 1},
+  {"S15NLO", "CS15NLOn", 1},
+  {"NQ9NLO", "CNQ9NLO1n", 1}, {"NQ9NLO", "CNQ9NLO2n", 1},
+  {"NQ10NLO", "CNQ10NLO1n", 1}, {"NQ10NLO", "CNQ10NLO2n", 1},
+  {"NL3NLO", "CNL3NLO1n", 1}, {"NL3NLO", "CNL3NLO2n", 1}
+};
+
+(* {op, prefix, nMin} for Combine2Derivatives -> False (current/default), mirroring
+   derivProductFlareSpecs in parameters_NLO.fr exactly. *)
+heft1604DerivProductOpPrefixes = {
+  {"DH", "CDHn1", 1}, {"DH", "CDHn2", 1},
+  {"P8NLO", "CP8NLO1n", 1}, {"P8NLO", "CP8NLO2n", 1},
+  {"P20NLO", "CP20NLO1n", 1}, {"P20NLO", "CP20NLO2n", 1},
+  {"P21NLO", "CP21NLO1n", 1}, {"P21NLO", "CP21NLO2n", 1},
+  {"P22NLO", "CP22NLO1n", 1}, {"P22NLO", "CP22NLO2n", 1}
+};
+
+(* {op, prefix, extraPow} for Combine2Derivatives -> True, mirroring combinedDerivFlareSpecs
+   in parameters_NLO.fr exactly (extraPow = 2 for the quadratic operators, 4 for DH). *)
+heft1604CombinedDerivOpPrefixes = {
+  {"DH", "CDHn", 4},
+  {"P8NLO", "CP8NLOn", 2}, {"P20NLO", "CP20NLOn", 2},
+  {"P21NLO", "CP21NLOn", 2}, {"P22NLO", "CP22NLOn", 2}
+};
+
+(* There is no real/complex split any more: every fermionic Wilson coefficient is a real
+   flavour tensor living inside its flare function (see the block comment in
+   NLO/basis_1604_06801/parameters_NLO.fr).  The old HEFT1604Fermion{2F,4F}{Real,Complex}Ops
+   lists, which existed only to decide whether to emit an extra n0IM key, are gone. *)
+
+HEFT1604Fermion4FScalarOps = Join[
+  Table["RQ" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 26}],
+  Table["RQL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 23}],
+  Table["RL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 7}]
+];
+
+HEFT1604Fermion2FScalarOps = Join[
+  Table["NQ" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 36}],
+  Table["NL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 17}],
+  Table["NLF" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 3}]
+];
+
+HEFT1604FermionPrefix[op_String] := Module[{wcMatch},
+  wcMatch = StringCases[op, {
+    "NLF" ~~ heftNum : NumberString ~~ "NLO" :> ("CNLF" <> heftNum <> "NLO"),
+    "NL" ~~ heftNum : NumberString ~~ "NLO" :> ("CNL" <> heftNum <> "NLO"),
+    "NQ" ~~ heftNum : NumberString ~~ "NLO" :> ("CNQ" <> heftNum <> "NLO"),
+    "RQL" ~~ heftNum : NumberString ~~ "NLO" :> ("CRQL" <> heftNum <> "NLO"),
+    "RQ" ~~ heftNum : NumberString ~~ "NLO" :> ("CRQ" <> heftNum <> "NLO"),
+    "RL" ~~ heftNum : NumberString ~~ "NLO" :> ("CL" <> heftNum <> "NLO")
+  }];
+  If[wcMatch === {}, "", First[wcMatch]]
+];
+
+(* One flat key per (power of h/vev, flavour tuple), mirroring the flare functions in
+   parameters_NLO.fr one for one: C<op>n<n>_<f1>_<f2>[_<f3>_<f4>], n = nmin..HiggsMaxOrder,
+   each flavour index over the 3 generations.  nIdx is 2 or 4. *)
+HEFTWCGenFermKeys[prefix_String, nmin_Integer, nIdx_Integer] :=
+  Flatten @ Table[
+    prefix <> ToString[heftN] <> StringJoin[("_" <> ToString[#]) & /@ heftTuple],
+    {heftN, nmin, HiggsMaxOrder},
+    {heftTuple, Tuples[Range[3], nIdx]}
+  ];
+
+(* NQ9 / NQ10 / NL3 are the dual-flare operators (del[F] del[F']): two flares, each with its
+   own coefficient tensor, both starting at n = 1 because a constant under del[...] drops. *)
+HEFTWCGen2FermKeys[op_String] := Module[{base = HEFT1604FermionPrefix[op]},
+  If[base === "", Return[{}]];
+  Which[
+    op === "NQ9NLO",
+      Join[HEFTWCGenFermKeys["CNQ9NLO1n", 1, 2], HEFTWCGenFermKeys["CNQ9NLO2n", 1, 2]],
+    op === "NQ10NLO",
+      Join[HEFTWCGenFermKeys["CNQ10NLO1n", 1, 2], HEFTWCGenFermKeys["CNQ10NLO2n", 1, 2]],
+    op === "NL3NLO",
+      Join[HEFTWCGenFermKeys["CNL3NLO1n", 1, 2], HEFTWCGenFermKeys["CNL3NLO2n", 1, 2]],
+    True,
+      HEFTWCGenFermKeys[base <> "n", 0, 2]
+  ]
+];
+
+HEFTWCGen4FermKeys[op_String] := Module[{base = HEFT1604FermionPrefix[op]},
+  If[base === "", Return[{}]];
+  HEFTWCGenFermKeys[base <> "n", 0, 4]
+];
+
+HEFTWCOperatorKeys[op_String] := Module[
+  {scalar = Select[HEFT1604ScalarOpPrefixes, #[[1]] === op &],
+   derivProduct = If[TrueQ[Combine2Derivatives], {}, Select[heft1604DerivProductOpPrefixes, #[[1]] === op &]],
+   combinedDeriv = If[TrueQ[Combine2Derivatives], Select[heft1604CombinedDerivOpPrefixes, #[[1]] === op &], {}]},
+  Which[
+    MemberQ[HEFT1604Fermion2FScalarOps, op], HEFTWCGen2FermKeys[op],
+    MemberQ[HEFT1604Fermion4FScalarOps, op], HEFTWCGen4FermKeys[op],
+    combinedDeriv =!= {}, Flatten @ Map[HEFTWCGenCombinedScalarKeys[#[[2]], #[[3]]] &, combinedDeriv],
+    derivProduct =!= {}, Flatten @ Map[HEFTWCGenScalarKeys[#[[2]], #[[3]]] &, derivProduct],
+    scalar =!= {}, Flatten @ Map[HEFTWCGenScalarKeys[#[[2]], #[[3]]] &, scalar],
+    True, {}
+  ]
+];
+
+HEFTWCSeedOperatorDefaults[op_String] := Module[{keys},
+  keys = HEFTWCOperatorKeys[op];
+  Scan[(If[!KeyExistsQ[HEFTWCValues, #], HEFTWCValues[#] = HEFTWCDefaultTemplateValue[#]]) &, keys]
+];
+
+(* Operator selection is NLOOperators and nothing else.  Wilson-coefficient *values* never
+   change which operators are in the Lagrangian - a coefficient of 0 is simply a coefficient
+   of 0 in the exported model.  (Until 2026-08-05 zeroing every coefficient of an operator
+   also deleted it from the Lagrangian, and the LO terms had a matching HEFTLOIf gate; both
+   were removed on request - if you don't want an operator, leave it out of NLOOperators.) *)
+HEFTPieceActiveQ[op_] := MemberQ[HEFTActiveNLOPieces, op];
+
+HEFTWCImportJSON[path_String] := Import[path, "RawJSON"];
+
+HEFTWCNormalizeComplexEntries[assoc_Association] := Module[{wcOut = assoc, wcKey, wcVal, heftIdx},
+  Do[
+    wcKey = Keys[wcOut][[heftIdx]];
+    wcVal = wcOut[[wcKey]];
+    If[AssociationQ[wcVal] && KeyExistsQ[wcVal, "Re"] && KeyExistsQ[wcVal, "Im"],
+      wcOut[wcKey <> "_Re"] = wcVal["Re"];
+      wcOut[wcKey <> "_Im"] = wcVal["Im"];
+      wcOut = KeyDrop[wcOut, {wcKey}]
+    ];
+    , {heftIdx, Length[wcOut]}
+  ];
+  wcOut
+];
+
+HEFTWCAllowedFlatKeys[] := Select[
+  Join[
+    HEFTWCLoFlatKeys[],
+    Flatten[HEFTWCOperatorKeys /@ HEFTActiveNLOPieces],
+    {"LamHEFT"}
+  ],
+  StringQ
+];
+
+HEFTWCApplyFileData[data_Association] := Module[{vals, scale, lamVal, allowed, nDrop},
+  vals = HEFTWCNormalizeComplexEntries@Lookup[data, "values", <||>];
+  lamVal = Lookup[vals, "LamHEFT", None];
+  If[NumericQ[lamVal], HEFTWCxfScale = lamVal];
+  vals = KeyDrop[vals, {"LamHEFT"}];
+  allowed = HEFTWCAllowedFlatKeys[];
+  nDrop = Length[vals] - Length@Intersection[Keys[vals], allowed];
+  If[nDrop > 0,
+    Print["[HEFT WCxf] Ignoring ", nDrop,
+      " stale coefficient(s) not in the current operator / LO selection."]
+  ];
+  vals = KeyTake[vals, Intersection[Keys[vals], allowed]];
+  HEFTWCValues = Join[HEFTWCValues, vals];
+  scale = Lookup[data, "scale", None];
+  If[NumericQ[scale], HEFTWCxfScale = scale];
+  HEFTWCxfLoadedQ = True;
+];
+
+HEFTWCApplyScaleParameter[] := Module[{},
+  If[!NumericQ[HEFTWCxfScale] || !ValueQ[M$Parameters], Return[]];
+  M$Parameters = Replace[M$Parameters, {
+    (LamHEFT == rest__) :>
+      (LamHEFT == Replace[rest, Rule[Value, _] -> Rule[Value, HEFTWCxfScale], {1}])
+  }, {1}]
+];
+
+HEFTWCIsWilsonCoefficientSymbol[sym_Symbol] :=
+  !MemberQ[HEFTWCProtectedParameterSymbols, sym];
+
+HEFTWCSeedNLODefaults[] := Scan[
+  If[MemberQ[HEFTActiveNLOPieces, #], HEFTWCSeedOperatorDefaults[#]] &,
+  Union@Join[
+    HEFT1604ScalarOpPrefixes[[All, 1]],
+    heft1604DerivProductOpPrefixes[[All, 1]],
+    heft1604CombinedDerivOpPrefixes[[All, 1]],
+    HEFT1604Fermion2FScalarOps,
+    HEFT1604Fermion4FScalarOps
+  ]
+];
+
+HEFTLoadWCxfFile[path_String] := Module[{ext, data},
+  If[!FileExistsQ[path],
+    Message[HEFTLoadWCxfFile::missing, path];
+    Return[$Failed]
+  ];
+  ext = ToLowerCase@FileExtension[path];
+  If[ext =!= "json",
+    Message[HEFTLoadWCxfFile::fmt, ext];
+    Return[$Failed]
+  ];
+  data = HEFTWCImportJSON[path];
+  If[!AssociationQ[data], Return[$Failed]];
+  HEFTWCSeedNLODefaults[];
+  HEFTWCApplyFileData[data];
+  Print["[HEFT WCxf] Loaded ", Length@HEFTWCValues, " Wilson coefficients from ", path];
+  data
+];
+
+HEFTInitializeWCxf[] := (
+  HEFTWCValues = <||>;
+  HEFTWCxfLoadedQ = False;
+  HEFTWCxfScale = None;
+  If[StringQ[HEFTWCxfOutputFile] && HEFTWCxfOutputFile =!= "" && HEFTWCxfOutputFile =!= None,
+    If[!FileExistsQ[HEFTWCxfOutputFile],
+      Message[HEFTInitializeWCxf::nooutput, HEFTWCxfOutputFile];
+      Return[$Failed]
+    ];
+    HEFTLoadWCxfFile[HEFTWCxfOutputFile]
+  ]
+);
+
+HEFTWCReplacementRules[] := Module[{rules = {}},
+  KeyValueMap[
+    Function[{wcKey, wcVal},
+      Module[{sym, idx},
+        {sym, idx} = HEFTWCParseFlatKey[wcKey];
+        If[HEFTWCIsWilsonCoefficientSymbol[sym],
+          If[idx === {},
+            AppendTo[rules, sym -> wcVal],
+            (* sym @@ idx, not sym[idx]: idx is a List, so sym[idx] builds CQUn1[{1, 1}],
+               which matches nothing - the tensor entries in M$Parameters are CQUn1[1, 1]. *)
+            AppendTo[rules, (sym @@ idx) -> wcVal]
+          ]
+        ]
+      ]
+    ],
+    HEFTWCValues
+  ];
+  rules
+];
+
+(* The CQUn/CQDn/CLEn LO coefficients are flavour tensors (Indices -> {Generation, Generation},
+   Value -> a list of CQUn1[i, j] -> _ rules); every other LO symbol is a plain scalar. *)
+HEFTWCLOTensorSymbolQ[sym_Symbol] :=
+  StringMatchQ[SymbolName[sym], ("CQU" | "CQD" | "CLE") ~~ "n" ~~ NumberString];
+
+HEFTWCApplyLOParameters[] := Module[{rules},
+  If[!TrueQ[HEFTWCxfLoadedQ] || !ValueQ[M$Parameters], Return[]];
+  rules = HEFTWCReplacementRules[];
+  M$Parameters = Replace[M$Parameters, {
+    (* !HEFTWCLOTensorSymbolQ is essential, not belt-and-braces: Replace applies the FIRST
+       matching rule, and HEFTLOSymbols[] contains the CQUn/CQDn/CLEn tensors too. Without
+       this guard the scalar branch swallowed them, the tensor branch below was unreachable,
+       and - since there is no flat "CQUn1" key, only "CQUn1_1_1" etc. - the Lookup fell back
+       to 0, so every LO fermion Yukawa-expansion tensor was silently zeroed and handed to
+       FeynRules as a scalar Value on an indexed parameter (ReplaceAll::reps: {0}). *)
+    (sym_ == rest__) /; MemberQ[HEFTLOSymbols[], sym] && !HEFTWCLOTensorSymbolQ[sym] :>
+      Module[{wcVal = Lookup[rules, sym, HEFTWCGetSymbol[sym, 0]]},
+        sym == Replace[rest, Rule[Value, _] -> Rule[Value, wcVal], {1}]
+      ],
+    (sym_ == rest__) /; HEFTWCLOTensorSymbolQ[sym] :>
+      Module[{tensorRules = HEFTWCLOTensorValueRules[sym]},
+        sym == Replace[rest, Rule[Value, _] -> Rule[Value, tensorRules], {1}]
+      ]
+  }, {1}]
+];
+
+HEFTWCLOTensorValueRules[sym_Symbol] := Flatten@Table[
+  sym[heftIdx, heftJ] -> HEFTWCGetFlat[HEFTWCFlatKey[sym, heftIdx, heftJ], 0],
+  {heftIdx, 1, 3}, {heftJ, 1, 3}
+];
+
+HEFTWCApplyNLOParameters[] := Module[{},
+  If[!TrueQ[HEFTWCxfLoadedQ] || !ValueQ[M$Parameters], Return[]];
+  M$Parameters = Replace[M$Parameters, {
+    (sym_ == rest__) /; HEFTWCIsWilsonCoefficientSymbol[sym] && KeyExistsQ[HEFTWCValues, SymbolName[sym]] :>
+      (sym == Replace[rest, Rule[Value, _] -> Rule[Value, HEFTWCGetSymbol[sym, 0]], {1}]),
+    (* Tensor-valued NLO coefficients: substitute into the RIGHT-HAND SIDES of the
+       Value -> {sym[i, j] -> _, ...} list only.  `old /. tensorRules`, which is what this did
+       before, also rewrote the sym[i, j] on the LEFT of every rule, collapsing the list to
+       {value -> value, ...} - meaningless to FeynRules, which then silently fell back to 1.
+       LO tensors are skipped: HEFTWCApplyLOParameters has already set those correctly, so the
+       only thing this branch could do to them was corrupt them. *)
+    (sym_ == rest__) /; !HEFTWCLOTensorSymbolQ[sym] && !FreeQ[rest, Rule[Value, _List]] :>
+      Module[{tensorValues = Association @@ Select[HEFTWCReplacementRules[], !FreeQ[#, sym] &]},
+        If[tensorValues =!= <||>,
+          sym == Replace[rest,
+            Rule[Value, old_List] :> Rule[Value,
+              Replace[old,
+                (idxLhs_ -> idxRhs_) :> (idxLhs -> Lookup[tensorValues, Key[idxLhs], idxRhs]),
+                {1}]],
+            {1}],
+          sym == rest
+        ]
+      ]
+  }, {1}]
+];
+
+(* The option list on the right-hand side of a `sym == {...}` M$Parameters entry.
+   Not `List @@ (entry /. sym -> Sequence)`: that turns `sym == {opts}` into
+   `Equal[Sequence, {opts}]`, whose List-apply is `{Sequence, {opts}}` -> `{{opts}}` (the
+   Sequence splices itself away), and `Association[{{opts}}]` is invalid - Lookup::invrl. *)
+HEFTWCParamOptions[sym_Symbol] := Module[{wcEntry},
+  wcEntry = Select[M$Parameters, MatchQ[#, sym == _] &];
+  If[wcEntry === {}, Return[None]];
+  Replace[First[wcEntry], HoldPattern[Equal[_, opts_]] :> opts]
+];
+
+HEFTWCReadParamValueRules[sym_Symbol] := Module[{opts = HEFTWCParamOptions[sym]},
+  If[!ListQ[opts], Return[{}]];
+  Lookup[Association @@ opts, Value, {}]
+];
+
+HEFTWCPrintApplySummary[] := Module[{wcCount, sample},
+  If[!TrueQ[HEFTWCxfLoadedQ] || !ValueQ[M$Parameters], Return[]];
+  wcCount = Length@HEFTWCValues;
+  Print["[HEFT WCxf] Applied ", wcCount, " Wilson coefficient(s) from ", HEFTWCxfOutputFile];
+  sample = Select[Keys[HEFTWCValues], StringMatchQ[#, ("CQUn1_" | "CWHNLOn" | "KappaV") ~~ __] &];
+  Scan[Function[wcKey, Print["  ", wcKey, " -> ", HEFTWCValues[wcKey]]], Take[sample, UpTo[5]]];
+  If[KeyExistsQ[HEFTWCValues, "CQUn1_1_1"],
+    Module[{rules = HEFTWCReadParamValueRules[CQUn1]},
+      If[ListQ[rules],
+        Print["  M$Parameters CQUn1[1,1] = ", CQUn1[1, 1] /. rules]
+      ]
+    ]
+  ]
+];
+
+HEFTLoadWCxfFile::missing = "WCxf file not found: `1`.";
+HEFTLoadWCxfFile::fmt = "WCxf input must be JSON (use *_wcxf.json naming; got extension `1`).";
+HEFTInitializeWCxf::nooutput =
+  "WCxf output file not found: `1`. Run cell 3, edit wcxf/wcxf_output.json in cell 4, then cell 5.";
+
+HEFTWCGenScalarKeys[prefix_String, nmin_Integer] :=
+  Table[prefix <> ToString[heftN], {heftN, nmin, HiggsMaxOrder}];
+
+(* Combine2Derivatives -> True key generator: one key per combined WC, "prime" suffix, indexed
+   by the total number of Higgs fields in the term (the extraPow differentiated ones included;
+   see combinedDerivFlareSpecs in parameters_NLO.fr). The range matches
+   MakeCombinedCoeffTable's exactly: extraPow..extraPow*HiggsMaxOrder. *)
+HEFTWCGenCombinedScalarKeys[prefix_String, extraPow_Integer] :=
+  Table[prefix <> ToString[heftNH] <> "prime", {heftNH, extraPow, extraPow*HiggsMaxOrder}];
+
+(* ---------- WCxf template generation (cell 3, before LoadModel) ---------- *)
+
+HEFTWCLoFlatKeys[] := Module[{syms = HEFTLOSymbols[]},
+  Flatten @ Join[
+    SymbolName /@ Select[
+      syms,
+      !StringMatchQ[SymbolName[#], ("CQU" | "CQD" | "CLE") ~~ "n" ~~ NumberString] &
+    ],
+    Flatten @ Table[
+      HEFTWCFlatKey[sym, heftIdx, heftJ],
+      {sym, Select[
+        syms,
+        StringMatchQ[SymbolName[#], ("CQU" | "CQD" | "CLE") ~~ "n" ~~ NumberString] &
+      ]},
+      {heftIdx, 1, 3}, {heftJ, 1, 3}
+    ]
+  ]
+];
+
+HEFTWCConfiguredFlatKeys[] := Select[
+  Join[
+    HEFTWCLoFlatKeys[],
+    Flatten[HEFTWCOperatorKeys /@ HEFTActiveNLOPieces]
+  ],
+  StringQ
+];
+
+(* The couplings that already exist in the SM keep their SM value whatever InitialiseWCs says -
+   they are rescalings/deviations of SM interactions, not new effective operators.  In the
+   Kappa framework the SM point is Kappa = 1 (a rescaling); in the Delta framework it is
+   Delta = 0 (a deviation), so "the SM value" is 0 there, not 1.  Everything else - every
+   NLO/NNLO Wilson coefficient and the h^n Yukawa/F-function expansion coefficients
+   CQUn, CQDn, CLEn, CFCn, CFTn, CVn, none of which exist in the SM - follows InitialiseWCs. *)
+HEFTWCSMCouplingNames[] := SymbolName /@ If[TrueQ[KappaFramework],
+  {KappaV, Kappa2V, Kappa3H, Kappa4H,
+   KappaLE, KappaLM, KappaLT, KappaQU, KappaQC, KappaQT, KappaQD, KappaQS, KappaQB},
+  {DeltaFCn1, DeltaFCn2, DeltaLam3, DeltaLam4,
+   DeltaYLE, DeltaYLM, DeltaYLT, DeltaYQU, DeltaYQC, DeltaYQT, DeltaYQD, DeltaYQS, DeltaYQB}
+];
+
+HEFTWCSMCouplingValue[] := If[TrueQ[KappaFramework], 1, 0];
+
+HEFTWCDefaultTemplateValue[key_String] :=
+  If[MemberQ[HEFTWCSMCouplingNames[], key], HEFTWCSMCouplingValue[], HEFTWCInitValue[]];
+
+HEFTBuildWCxfTemplateDocument[role_String:"input_template"] := Module[{keys, vals, lam},
+  lam = HEFTWCxfDefaultScale[];
+  keys = HEFTWCConfiguredFlatKeys[];
+  vals = Join[
+    Association @@ Map[# -> HEFTWCDefaultTemplateValue[#] &, keys],
+    <|"LamHEFT" -> lam|>
+  ];
+  <|
+    "eft" -> "HEFT",
+    "basis" -> HEFTNLOBasis,
+    "scale" -> lam,
+    "metadata" -> <|
+      "role" -> role,
+      "generator" -> "HEFT-FR",
+      "description" -> "Wilson coefficients for this HEFT configuration. SM couplings are at their SM value (Kappa framework: 1; Delta framework: 0); every effective coefficient is at InitialiseWCs. Edit the values in wcxf/wcxf_output.json (cell 4) to change them. A value of 0 is simply 0 in the exported model; operator selection is NLOOperators alone. Cell 3 rewrites this file back to the defaults.",
+      "kappa_framework" -> KappaFramework,
+      "initialise_wcs" -> HEFTWCInitValue[],
+      "nlo_operators" -> HEFTActiveNLOPieces,
+      "nflavour" -> 3,
+      "higgs_max_order" -> HiggsMaxOrder,
+      "created" -> DateString[{"ISODateTime"}]
+    |>,
+    "values" -> vals
+  |>
+];
+
+HEFTWCxfValueSameQ[a_, b_] := If[NumericQ[a] && NumericQ[b], TrueQ[N[a] == N[b]], a === b];
+
+(* Compares the Wilson coefficients in an existing WCxf JSON with the defaults for the current
+   configuration. Used twice: to say what the model is about to run with (cell 5), and to say
+   what cell 3 is about to reset when it rewrites wcxf_output.json. "missing" matters after an
+   operator-selection change - a key absent from the file is read as 0, not as its default. *)
+HEFTWCxfCompareToDefaults[path_String] := Module[{empty, data, vals, defaults, common},
+  defaults = HEFTBuildWCxfTemplateDocument["output"]["values"];
+  empty = <|"changed" -> {}, "missing" -> {}, "extra" -> {}, "values" -> <||>|>;
+  If[!FileExistsQ[path], Return[empty]];
+  data = Quiet @ Check[Import[path, "RawJSON"], $Failed];
+  If[data === $Failed || Head[data] =!= Association ||
+     !KeyExistsQ[data, "values"] || Head[data["values"]] =!= Association,
+    Return[empty]
+  ];
+  vals = data["values"];
+  common = Intersection[Keys[defaults], Keys[vals]];
+  <|
+    "changed" -> Select[common, !HEFTWCxfValueSameQ[vals[#], defaults[#]] &],
+    "missing" -> Complement[Keys[defaults], Keys[vals]],
+    "extra"   -> Complement[Keys[vals], Keys[defaults]],
+    "values"  -> vals
+  |>
+];
+
+(* showMissing: False when called from HEFTWriteWCxfPointFiles, which is itself about to
+   regenerate the file and so would be advising a fix it is already performing. *)
+HEFTWCxfPrintDiff[cmp_Association, showMissing_:True] := Module[{changed, shown, k},
+  changed = cmp["changed"];
+  If[changed =!= {},
+    shown = Take[changed, UpTo[12]];
+    Do[Print["[HEFT WCxf]     ", k, " = ", cmp["values"][k]], {k, shown}];
+    If[Length[changed] > Length[shown],
+      Print["[HEFT WCxf]     ... and ", Length[changed] - Length[shown], " more"]
+    ]
+  ];
+  If[showMissing && cmp["missing"] =!= {},
+    Print[Style["[HEFT WCxf] WARNING: " <> ToString[Length[cmp["missing"]]] <>
+      " coefficient(s) of the current operator selection are absent from this file and " <>
+      "would be read as 0 (first: " <> ToString[First[cmp["missing"]]] <> "). Re-run cell 3 " <>
+      "to regenerate the file for the current selection.", Orange, Bold]]
+  ];
+];
+
+(* Always writes both files from the current configuration, every call: wcxf_init.json as the
+   untouched reference copy of the defaults, wcxf_output.json as the file the model reads in
+   cell 5. Editing wcxf_output.json is the only way to change Wilson coefficients - and since
+   this call resets it, any edits it contained are listed before being overwritten. *)
+HEFTWriteWCxfPointFiles[inputPath_String, outputPath_String] := Module[
+  {inputDoc, outputDoc, dir, cmp},
+  inputDoc = HEFTBuildWCxfTemplateDocument["input_template"];
+  dir = DirectoryName[inputPath];
+  If[StringQ[dir] && dir =!= "" && !DirectoryQ[dir],
+    CreateDirectory[dir, CreateIntermediateDirectories -> True]
+  ];
+  Export[inputPath, inputDoc, "JSON"];
+  Print["[HEFT WCxf] Defaults (", Length@inputDoc["values"],
+    " Wilson coefficients, reference copy): ", inputPath];
+  cmp = HEFTWCxfCompareToDefaults[outputPath];
+  If[cmp["changed"] =!= {},
+    Print[Style["[HEFT WCxf] NOTE: " <> outputPath <> " held " <>
+      ToString[Length[cmp["changed"]]] <> " edited value(s); resetting them to the defaults:",
+      Orange, Bold]];
+    HEFTWCxfPrintDiff[cmp, False]
+  ];
+  outputDoc = HEFTBuildWCxfTemplateDocument["output"];
+  Export[outputPath, outputDoc, "JSON"];
+  Print["[HEFT WCxf] Values used by the model (edit these): ", outputPath];
+  {inputPath, outputPath}
+];
+
+(* ---------- WCxf export (optional snapshot after LoadModel) ---------- *)
+
+HEFTWCReadParamValue[sym_Symbol] := Module[{opts = HEFTWCParamOptions[sym]},
+  If[!ListQ[opts], Return[Missing[]]];
+  Lookup[Association @@ opts, Value, Missing[]]
+];
+
+HEFTWCTensorValueLookup[sym_Symbol, idx_List] := Module[{wcVal, assoc},
+  wcVal = HEFTWCReadParamValue[sym];
+  If[!ListQ[wcVal], Return[Missing[]]];
+  assoc = Association @ Cases[wcVal, Rule[sym[heftI__], wcNum_] :> (List[heftI] -> wcNum)];
+  Lookup[assoc, idx, Missing[]]
+];
+
+HEFTWCFormatExportNumber[wcNum_] :=
+  Which[
+    IntegerQ[wcNum], wcNum,
+    NumericQ[wcNum], N[wcNum, 12],
+    True, wcNum
+  ];
+
+HEFTWCFlattenParamValue[sym_Symbol, wcVal_?NumericQ] :=
+  If[HEFTWCZeroQ[wcVal], <||>, <|SymbolName[sym] -> HEFTWCFormatExportNumber[wcVal]|>];
+
+HEFTWCFlattenParamValue[sym_Symbol, wcVal_Complex] :=
+  If[HEFTWCZeroQ[wcVal], <||>,
+    <|SymbolName[sym] -> <|
+      "Re" -> HEFTWCFormatExportNumber[Re[wcVal]],
+      "Im" -> HEFTWCFormatExportNumber[Im[wcVal]]
+    |>|>
+  ];
+
+HEFTWCFlattenParamValue[sym_Symbol, wcVal_List] := Association @ Select[
+  (With[{idx = List @@ (#[[1]] /. sym -> Sequence)},
+     HEFTWCFlatKey[sym, Sequence @@ idx] -> HEFTWCFormatExportNumber[#[[2]]]
+   ] & /@ Cases[wcVal, Rule[sym[idx__], wcNum_] :> {sym[idx], wcNum}]),
+  !HEFTWCZeroQ[#[[2]]] &
+];
+
+HEFTWCFlattenParamValue[_, _] := <||>;
+
+HEFTWCIsSMDefaultLOKey[wcKey_String, wcVal_] := Module[{sym, idx},
+  {sym, idx} = HEFTWCParseFlatKey[wcKey];
+  If[TrueQ[KappaFramework],
+    Which[
+      MatchQ[sym, KappaV | Kappa2V | Kappa3H | Kappa4H | KappaLE | KappaLM | KappaLT |
+             KappaQU | KappaQC | KappaQT | KappaQD | KappaQS | KappaQB], wcVal == 1,
+      True, HEFTWCZeroQ[wcVal]
+    ],
+    HEFTWCZeroQ[wcVal]
+  ]
+];
+
+HEFTWCCollectLOFromParameters[] := Module[{assoc = <||>},
+  Scan[
+    Function[sym,
+      Module[{val},
+        val = HEFTWCReadParamValue[sym];
+        If[val =!= Missing[], assoc = Join[assoc, HEFTWCFlattenParamValue[sym, val]]]
+      ]
+    ],
+    HEFTLOSymbols[]
+  ];
+  assoc
+];
+
+HEFTWCExportLOValues[] := HEFTWCCollectLOFromParameters[];
+
+HEFTWCGetExportValue[key_String] := Module[{sym, idx, wcVal},
+  If[TrueQ[HEFTWCxfLoadedQ] && KeyExistsQ[HEFTWCValues, key],
+    Return[HEFTWCValues[key]]
+  ];
+  {sym, idx} = HEFTWCParseFlatKey[key];
+  wcVal = If[idx === {}, HEFTWCReadParamValue[sym], HEFTWCTensorValueLookup[sym, idx]];
+  If[wcVal === Missing[], Missing[], HEFTWCFormatExportNumber[wcVal]]
+];
+
+HEFTWCCollectNLOFromParameters[] := Module[{assoc = <||>},
+  Scan[
+    Function[op,
+      If[HEFTPieceActiveQ[op],
+        Scan[
+          Function[wcKey,
+            Module[{wcVal = HEFTWCGetExportValue[wcKey]},
+              If[wcVal =!= Missing && !HEFTWCZeroQ[wcVal], assoc[wcKey] = wcVal]
+            ]
+          ],
+          HEFTWCOperatorKeys[op]
+        ]
+      ]
+    ],
+    HEFTActiveNLOPieces
+  ];
+  assoc
+];
+
+HEFTCollectUsedWCValues[] := Join[HEFTWCExportLOValues[], HEFTWCCollectNLOFromParameters[]];
+
+HEFTBuildWCxfDocument[] := Module[{scale},
+  scale = HEFTWCxfDefaultScale[];
+  <|
+    "eft" -> "HEFT",
+    "basis" -> If[ValueQ[HEFTNLOBasis], HEFTNLOBasis, "1604.06801"],
+    "scale" -> scale,
+    "metadata" -> <|
+      "generator" -> "HEFT-FR",
+      "description" -> "Wilson coefficients used in this model build (auto-export)",
+      "nlo_operators" -> HEFTActiveNLOPieces,
+      "active_nlo_operators" -> Select[HEFTActiveNLOPieces, HEFTPieceActiveQ],
+      "nflavour" -> 3,
+      "higgs_max_order" -> HiggsMaxOrder,
+      "input_file" -> If[
+        StringQ[HEFTWCxfOutputFile] && HEFTWCxfOutputFile =!= None && HEFTWCxfOutputFile =!= "",
+        HEFTWCxfOutputFile,
+        Null
+      ],
+      "exported" -> DateString[{"ISODateTime"}]
+    |>,
+    "values" -> Join[<|"LamHEFT" -> scale|>, HEFTCollectUsedWCValues[]]
+  |>
+];
+
+HEFTExportWCxf[path_String] := Module[{doc, dir},
+  If[!ValueQ[M$Parameters],
+    Message[HEFTExportWCxf::noparams];
+    Return[$Failed]
+  ];
+  doc = HEFTBuildWCxfDocument[];
+  dir = DirectoryName[path];
+  If[StringQ[dir] && dir =!= "", CreateDirectory[dir, CreateIntermediateDirectories -> True]];
+  Export[path, doc, "JSON"];
+  Print["[HEFT WCxf] Wrote ", Length@Lookup[doc, "values", <||>],
+    " Wilson coefficient(s) to ", path];
+  path
+];
+
+HEFTExportWCxf::noparams = "M$Parameters is not available; load the model before exporting WCxf.";

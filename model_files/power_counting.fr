@@ -1,0 +1,38 @@
+(* Power-counting parameters for HEFT (Brivio et al. 1604.06801).
+   Max-expansion integers, set in the notebook Configuration and passed on by heft_fr.wl:
+     HEFTMaxOrder       — chiral catalogue layer (ChiralOrder^n truncation)
+     HiggsMaxOrder      — H/vev truncation for F-functions (internal NEFT)
+   GoldstoneMaxOrder (the LamGold / U-matrix series order) is no longer among them: it is
+   fixed at 1 in HEFT_Model.fr and only the unimplemented Rxi branch reads it.
+   LamHEFT (Λ) is declared in LO/parameters_LO.fr. *)
+
+powerCountingParams = {
+  ChiralOrder == {
+    ParameterType    -> External,
+    BlockName        -> HEFT,
+    Value            -> 1,
+    InteractionOrder -> {ExpansionChiral, 1},
+    Description      -> "Chiral-dimension bookkeeper N_chi (LO=0, NLO=1, NNLO=2, ...)"
+  },
+  LamF == {
+    ParameterType    -> External,
+    BlockName        -> HEFTEXP,
+    Value            -> 1,
+    InteractionOrder -> {ExpansionF, 1},
+    Description      -> "H/v form-factor expansion counting parameter (LamF)"
+  },
+  LamGold == {
+    ParameterType    -> External,
+    BlockName        -> HEFTGold,
+    Value            -> 1,
+    Description      -> "Goldstone matrix expansion counting parameter (LamGold)"
+  }
+};
+
+(* Append power-counting parameters to the global parameter list. *)
+If[ValueQ[M$Parameters],
+  M$Parameters = Join[M$Parameters, powerCountingParams],
+  M$Parameters = powerCountingParams
+];
+
+powercountingreplacements = {LamF -> 1, LamGold -> 1};

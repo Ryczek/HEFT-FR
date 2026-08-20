@@ -1,0 +1,991 @@
+(* LO + HEFT parameters (copied from HEFT_2025_FRULES_19_11_2025.fr). *)
+
+(* KappaFramework: set in the notebook Configuration (passed on by heft_fr.wl) before
+   LoadModel; default True if unset. *)
+If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
+If[!ValueQ[KappaFramework], KappaFramework = True];
+
+(* EWInputScheme: see the block comment above the G1/GW/GS/vev/hlambda declarations below. *)
+If[ValueQ[Global`EWInputScheme], EWInputScheme = Global`EWInputScheme];
+If[!ValueQ[EWInputScheme], EWInputScheme = "heft"];
+
+M$Parameters = {
+
+  (* External parameters *)
+  aEWM1 == {
+    ParameterType    -> External,
+    BlockName        -> SMINPUTS,
+    OrderBlock       -> 1,
+    Value            -> 127.95,
+    InteractionOrder -> {QED, -2},
+    Description      -> "Inverse of the EW coupling constant at p^2=0"
+  },
+
+  aEWM == {
+    ParameterType    -> External,
+    BlockName        -> SMINPUTS,
+    OrderBlock       -> 1,
+    Value            -> 1/127.95,
+    InteractionOrder -> {QED, 2},
+    Description      -> "EW coupling constant at p^2=0"
+  },
+
+  Gf == {
+    ParameterType    -> External,
+    BlockName        -> SMINPUTS,
+    OrderBlock       -> 2,
+    Value            -> 1.1663787*^-5,
+    InteractionOrder -> {QED, 2},
+    TeX              -> Subscript[G, f],
+    Description      -> "Fermi constant"
+  },
+
+  aS == {
+    ParameterType    -> External,
+    BlockName        -> SMINPUTS,
+    OrderBlock       -> 3,
+    Value            -> 0.1179,
+    InteractionOrder -> {QCD, 2},
+    TeX              -> Subscript[\[Alpha], s],
+    Description      -> "Strong coupling constant at MZ scale"
+  },
+
+  thetaS == {
+    ParameterType    -> External,
+    BlockName        -> SMINPUTS,
+    OrderBlock       -> 4,
+    Value            -> 0,
+    TeX              -> Subscript[\[Theta], s],
+    Description      -> "QCD CPV theta"
+  },
+
+  CKMlambda == {
+    ParameterType -> External,
+    BlockName     -> CKMBLOCK,
+    OrderBlock    -> 1,
+    Value         -> 0.2265,
+    TeX           -> Subscript[\[Lambda], CKM],
+    Description   -> "CKM Lambda parameter"
+  },
+
+  CKMA == {
+    ParameterType -> External,
+    BlockName     -> CKMBLOCK,
+    OrderBlock    -> 2,
+    Value         -> 0.79,
+    TeX           -> Subscript[A, CKM],
+    Description   -> "CKM A parameter"
+  },
+
+  CKMrho == {
+    ParameterType -> External,
+    BlockName     -> CKMBLOCK,
+    OrderBlock    -> 3,
+    Value         -> 0.141,
+    TeX           -> Subscript[\[Rho], CKM],
+    Description   -> "CKM Rho parameter"
+  },
+
+  CKMeta == {
+    ParameterType -> External,
+    BlockName     -> CKMBLOCK,
+    OrderBlock    -> 4,
+    Value         -> 0.357,
+    TeX           -> Subscript[\[Eta], CKM],
+    Description   -> "CKM Eta parameter"
+  },
+
+  (* HEFT parameters *)
+
+  (* FC/VHiggs scaling parameters, bosonic - exactly one framework's 4 names ever exist as
+     M$Parameters entries (so a UFO/FeynArts export never shows both KappaV/Kappa2V/Kappa3H/
+     Kappa4H and DeltaFCn1/DeltaFCn2/DeltaLam3/DeltaLam4 side by side; same idiom as the
+     yuH/ydH/ylH Sequence @@ If[...] below, just with differently-named branches instead of
+     shared names with different Definitions). Lagrangian_LO.fr's own KappaFramework branch
+     (FC/VHiggs) already only ever *uses* one side - this makes the declared parameter list
+     match what's actually used. *)
+  Sequence @@ If[TrueQ[KappaFramework],
+  {
+    KappaV == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaV coefficient (FC 2*H/vev term scaling, SM = 0)"
+    },
+    Kappa2V == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "Kappa2V coefficient (FC H^2/vev^2 term scaling, SM = 0)"
+    },
+    Kappa3H == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "Kappa3H coefficient (Higgs cubic coupling scaling, SM = 1)"
+    },
+    Kappa4H == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "Kappa4H coefficient (Higgs quartic coupling scaling, SM = 1)"
+    }
+  },
+  {
+    DeltaFCn1 == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaCFCn1 coefficient (FC 2*H/vev term scaling, SM = 0)"
+    },
+    DeltaFCn2 == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaCFCn1 coefficient (FC H^2/vev^2 term scaling, SM = 0)"
+    },
+    DeltaLam3 == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaLam3 coefficient (Higgs cubic coupling scaling, SM = 0)"
+    },
+    DeltaLam4 == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaLam4 coefficient (Higgs quartic coupling scaling, SM = 0)"
+    }
+  }
+  ],
+
+  (* Fermion Yukawa scaling parameters - same one-framework-only idiom as above. *)
+  Sequence @@ If[TrueQ[KappaFramework],
+  {
+    KappaLE == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaLE coefficient (e lepton Yukawa scaling, SM = 1)"
+    },
+    KappaLM == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaLM coefficient (mu lepton Yukawa scaling, SM = 1)"
+    },
+    KappaLT == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaLT coefficient (tau lepton Yukawa scaling, SM = 1)"
+    },
+    KappaQU == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQU coefficient (u quark Yukawa scaling, SM = 1)"
+    },
+    KappaQC == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQC coefficient (c quark Yukawa scaling, SM = 1)"
+    },
+    KappaQT == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQT coefficient (t quark Yukawa scaling, SM = 1)"
+    },
+    KappaQD == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQD coefficient (d quark Yukawa scaling, SM = 1)"
+    },
+    KappaQS == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQS coefficient (s quark Yukawa scaling, SM = 1)"
+    },
+    KappaQB == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 1,
+      Description   -> "KappaQB coefficient (b quark Yukawa scaling, SM = 1)"
+    }
+  },
+  {
+    DeltaYLE == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYLE coefficient (e lepton Yukawa scaling, SM = 0)"
+    },
+    DeltaYLM == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYLM coefficient (mu lepton Yukawa scaling, SM = 0)"
+    },
+    DeltaYLT == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYLT coefficient (tau lepton Yukawa scaling, SM = 0)"
+    },
+    DeltaYQU == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQU coefficient (u quark Yukawa scaling, SM = 0)"
+    },
+    DeltaYQC == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQC coefficient (c quark Yukawa scaling, SM = 0)"
+    },
+    DeltaYQT == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQT coefficient (t quark Yukawa scaling, SM = 0)"
+    },
+    DeltaYQD == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQD coefficient (d quark Yukawa scaling, SM = 0)"
+    },
+    DeltaYQS == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQS coefficient (s quark Yukawa scaling, SM = 0)"
+    },
+    DeltaYQB == {
+      ParameterType -> External,
+      BlockName     -> HEFT,
+      Value         -> 0,
+      Description   -> "DeltaYQB coefficient (b quark Yukawa scaling, SM = 0)"
+    }
+  }
+  ],
+
+  LamHEFT == {
+    ParameterType -> External,
+    BlockName     -> HEFT,
+    Value         -> 1000,
+    (* Symbolic, not the string "\\Lambda": FeynRules composes TeX names into larger
+       expressions, and a string leaks its escaping into the output as ("\\Lambda")^2.
+       Every other parameter in this file already uses a symbolic TeX expression. *)
+    TeX           -> Subscript[\[CapitalLambda], HEFT],
+    Description   -> "HEFT cutoff scale Lambda (Brivio et al. 1604.06801); override via wcxf / LamHEFT"
+  },
+
+  MQD == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 1,
+    Value         -> 5.04*^-3,
+    Description   -> "Down Yukawa mass"
+  },
+  MQU == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 2,
+    Value         -> 2.55*^-3,
+    Description   -> "Up Yukawa mass"
+  },
+  MQS == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 3,
+    Value         -> 0.101,
+    Description   -> "Strange Yukawa mass"
+  },
+  MQC == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 4,
+    Value         -> 1.27,
+    Description   -> "Charm Yukawa mass"
+  },
+  MQB == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 5,
+    Value         -> 4.7,
+    Description   -> "Bottom Yukawa mass"
+  },
+  MQT == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 6,
+    Value         -> 172,
+    Description   -> "Top Yukawa mass"
+  },
+  MLE == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 11,
+    Value         -> 5.11*^-4,
+    Description   -> "Electron Yukawa mass"
+  },
+  MLM == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 13,
+    Value         -> 0.10566,
+    Description   -> "Muon Yukawa mass"
+  },
+  MLT == {
+    ParameterType -> External,
+    BlockName     -> YUKAWA,
+    OrderBlock    -> 15,
+    Value         -> 1.777,
+    Description   -> "Tau Yukawa mass"
+  },
+
+(* initial SM couplings before redefinitions needed from FA to work properly*)
+
+Wnorm == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {Wnorm :> Wnormaux},
+  Description   -> "Wnorm coupling constant"
+},
+
+WnormINV == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {WnormINV :> WnormINVaux},
+  Description   -> "WnormINV coupling constant"
+},
+
+Bnorm == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {Bnorm :> Bnormaux},
+  Description   -> "Bnorm coupling constant"
+},
+
+BnormINV == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {BnormINV :> BnormINVaux},
+  Description   -> "BnormINV coupling constant"
+},
+
+Gnorm == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {Gnorm :> Gnormaux},
+  Description   -> "Gnorm coupling constant"
+},
+
+GnormINV == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {GnormINV :> GnormINVaux},
+  Description   -> "GnormINV coupling constant"
+},
+
+AZnorm1x1 == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {AZnorm1x1 :> AZnorm1x1aux},
+  Description   -> "AZnorm1x1 coupling constant"
+},
+
+AZnorm1x2 == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {AZnorm1x2 :> AZnorm1x2aux},
+  Description   -> "AZnorm1x2 coupling constant"
+},
+
+AZnorm2x1 == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {AZnorm2x1 :> AZnorm2x1aux},
+  Description   -> "AZnorm2x1 coupling constant"
+},
+
+AZnorm2x2 == {
+  ParameterType -> Internal,
+  ComplexParameter -> False,
+  Definitions      -> {AZnorm2x2 :> AZnorm2x2aux},
+  Description   -> "AZnorm2x2 coupling constant"
+},
+
+gw == {
+  ParameterType    -> Internal,
+  InteractionOrder -> {QED,1},
+  ComplexParameter -> False,
+  Definitions      -> {gw :> Wnorm GW},
+  TeX              -> Subscript[g,W],
+  Description      -> "Weak SU(2) coupling constant"
+},
+
+g1 == {
+  ParameterType    -> Internal,
+  InteractionOrder -> {QED,1},
+  ComplexParameter -> False,
+  Definitions      -> {g1 :> Bnorm G1},
+  TeX              -> Subscript[g,1],
+  Description      -> "U(1)Y coupling constant"
+},
+
+gs == {
+  ParameterType    -> Internal,
+  InteractionOrder -> {QCD,1},
+  ComplexParameter -> False,
+  Definitions      -> {gs :> Gnorm GS},
+  TeX              -> Subscript[g,s],
+  Description      -> "Strong sU(3) coupling constant"
+},
+
+(* effective gauge coupling constants, vev and Higgs quartic - EWInputScheme-gated.
+
+   "heft" (default): these are the model's OWN native inputs, so they are declared External
+   with a plain numeric SM-benchmark default (computed once below from the same Gf/MW/MZ/MH/aS
+   values used elsewhere in this file) - genuinely independent/settable, and the Lagrangian
+   (already correctly left untouched for this scheme - HEFTEWInputRepl = {} in input_scheme.fr)
+   stays written in terms of the bare symbols G1/GW/GS/vev/hlambda, so FeynArts/UFO exports are
+   too. A plain number needs no Python-izing, so this is also immune to bug #2 below.
+
+   "gf" and "aem": these are DERIVED quantities, not independent inputs, so they are declared
+   Internal, with the tree-level relation of that scheme as their value.
+
+   THERE IS NO Value BELOW for those two schemes, deliberately (2026-08-13).  input_scheme.fr
+   is the single source: after it builds EWinputrepl - the same list HEFT_Model.fr applies to
+   the Lagrangian - it writes each rule into this M$Parameters entry
+   (HEFTApplyEWInputToParameters), inserting the Value.  What this file owns is the DECLARATION
+   alone: ParameterType, InteractionOrder, TeX, Description.  A tree-level Value here would be
+   a second, always-superseded encoding of the same relation - dead weight, and actively
+   misleading to read, since it is never what the export ships.  input_scheme.fr aborts
+   (HEFTEWInputPatch::novalue) if any Internal parameter is left with neither Value nor
+   Definitions, so a rule that fails to land cannot pass silently.  Do not add an NLO shift
+   here either: the Wilson coefficients do not exist yet at this point in the load
+   (parameters_NLO.fr comes later), which is exactly why the patch lives in input_scheme.fr.
+
+   Before that patch was generalised (2026-08-12, previously MW-only) the tree-level Value here
+   was also what MR$Definitions resolved at vertex extraction, which runs after LHEFTMassBasis -
+   so the Yukawa definitions below (all Sqrt[2] M<f>/vev) escaped the input scheme and the
+   fermion mass term picked up a spurious (1 + ChiralOrder dvev).  See input_scheme.fr.
+
+   FIXED 2026-08-12 - Value, NOT Definitions.  These used to be declared with
+   Definitions -> {GW :> ...} etc.  FeynRules puts Definitions (and only Definitions) into
+   MR$Definitions, which ExpandIndices applies while HEFTLHEFTMassBasisRaw builds the mass
+   basis - i.e. BEFORE HEFT_Model.fr applies HEFTEWInputRepl.  So the tree-level rule fired
+   first and consumed every GW/G1/vev/hlambda in the Lagrangian, and input_scheme.fr's rules,
+   which are the ones carrying the ChiralOrder-order NLO shift, then had nothing left to match.
+   The whole NLO half of the "gf" scheme was silently inert from 2026-08-10 (when these five
+   were changed from External to Internal + Definitions) until this fix; the scheme quietly
+   degraded to its tree-level relations.  Confirmed directly: `GW in MR$Definitions` was True
+   and the raw mass-basis Lagrangian contained no GW/G1/vev/hlambda at all, and a real build's
+   Z mass term came out at MZ^2 plus exactly the NLO operator contribution the shift was meant
+   to absorb.  With Value the symbols survive to the end of LHEFTMassBasis, HEFTEWInputRepl
+   applies, and the parameter card still gets the same tree-level numbers.
+
+     gf  : inputs Gf, MW, MZ, MH (+ aS).
+     aem : inputs alpha_EM (as aEWM1 = 1/alpha_EM), Gf, MZ, MH (+ aS).  MW is NOT an input in
+           this scheme - it is a prediction, so it is declared Internal in fields_LO.fr
+           (Mass -> {MW, Internal}) and given its value at the bottom of this block, exactly
+           the way FeynRules' own SM.fr does it in its alpha-scheme.
+
+   An unrecognised EWInputScheme falls back to the "heft" block, matching input_scheme.fr's
+   EWInputScheme::invalid message ("falling back to heft").  Before 2026-08-12 the two
+   disagreed: the message said no replacement would be applied (heft) while this file silently
+   produced a "gf" parameter card.
+
+   Before the 2026-08-10 fix, all of these were unconditionally External with a symbolic
+   multi-parameter Value formula (the "gf" tree-level relation) regardless of EWInputScheme - so
+   choosing "heft" never actually produced a heft-native parameter card (it silently matched
+   "gf"'s), and WriteUFO's PYIntParameters.m formats non-numeric External values via
+   Mathematica's CForm (used for exactly one thing here: it renders Power[x,y] as the literal,
+   invalid-Python text "Power(x,y)", Sqrt[x] as "Sqrt(x)", and the symbol Pi as literal "Pi" -
+   none of which exist in the exported UFO package, so `import parameters` raised NameError).
+   Internal parameters are instead run through FeynRules' own PythonForm, which converts these
+   correctly (Power -> **, Sqrt -> cmath.sqrt, Pi -> a numeric literal). *)
+
+
+Sequence @@ Switch[EWInputScheme,
+
+(* NO Value -> HERE, ON PURPOSE, for "gf" and "aem".  input_scheme.fr is the single source:
+   it writes each parameter's value straight from EWinputrepl - the same list HEFT_Model.fr
+   applies to the Lagrangian - so the card and the Lagrangian are one expression by
+   construction.  Writing a tree-level Value here as well would be a second, always-superseded
+   encoding of the same relation: dead, and misleading to anyone reading the file, since it is
+   never what the export ships.  input_scheme.fr aborts (HEFTEWInputPatch::novalue) if any
+   derived parameter is left without one, so the omission cannot pass silently.
+   Only "heft" keeps values below - there these five are genuine External inputs. *)
+
+"gf",
+{
+  G1 == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,1],
+    Description      -> "Effective U(1)Y coupling constant (gf: derived from Gf/MW/MZ)"
+  },
+  GW == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,W],
+    Description      -> "Effective SU(2) coupling constant (gf: derived from Gf/MW)"
+  },
+  GS == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QCD,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,s],
+    Description      -> "Effective SU(3) coupling constant at the Z pole (gf: derived from aS)"
+  },
+  vev == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED, -1},
+    Description      -> "Higgs vacuum expectation value (gf: derived from Gf)"
+  },
+  hlambda == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED, 2},
+    Description      -> "Higgs quartic coupling (gf: derived from Gf/MH)"
+  }
+},
+
+"aem",
+{
+  (* Same as "gf": no Value here, input_scheme.fr supplies all of them.
+     HEFTaemS0 / HEFTaemD0 / HEFTgWSM / HEFTgPSM were removed on 2026-08-13.  They existed to
+     keep the alpha-scheme's nested radicals out of the Lagrangian as single symbols; the "aem"
+     branch of input_scheme.fr now writes every rule inline in Gf/MZ/aEWM instead (user
+     request, same shape as "gf"), so nothing referenced them any more and they were exporting
+     as dead parameters. *)
+  G1 == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,1],
+    Description      -> "Effective U(1)Y coupling constant (aem: derived from Gf/MZ/aEWM)"
+  },
+  GW == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,W],
+    Description      -> "Effective SU(2) coupling constant (aem: derived from Gf/MZ/aEWM)"
+  },
+  GS == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QCD,1},
+    ComplexParameter -> False,
+    TeX              -> Subscript[G,s],
+    Description      -> "Effective SU(3) coupling constant at the Z pole (aem: derived from aS)"
+  },
+  vev == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED, -1},
+    Description      -> "Higgs vacuum expectation value (aem: derived from Gf)"
+  },
+  hlambda == {
+    ParameterType    -> Internal,
+    InteractionOrder -> {QED, 2},
+    Description      -> "Higgs quartic coupling (aem: derived from Gf/MH)"
+  },
+  (* MW is a PREDICTION here, not an input: MW = GW vev/2, the W mass term of the Lagrangian
+     being GW^2 vev^2/4 exactly (no NLO operator contributes to it).
+     fields_LO.fr declares Mass -> {MW, Internal} for this scheme so that the propagator mass
+     and this parameter are one and the same object; EWinputrepl carries a rule for MW in both
+     its branches, so the propagator mass, the exported card and the Lagrangian-level
+     replacement are the same order-consistent expression. *)
+  MW == {
+    ParameterType -> Internal,
+    TeX           -> Subscript[M,W],
+    Description   -> "W mass (aem: predicted, MW = GW vev/2 from aEWM/Gf/MZ, not an input)"
+  }
+},
+
+(* "heft" and anything unrecognised *)
+_,
+{
+  G1 == {
+    ParameterType    -> External,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    Value            -> 0.34966947648018554,
+    TeX              -> Subscript[G,1],
+    Description      -> "Effective U(1)Y coupling constant (heft: independent input)"
+  },
+  GW == {
+    ParameterType    -> External,
+    InteractionOrder -> {QED,1},
+    ComplexParameter -> False,
+    Value            -> 0.652969815696888,
+    TeX              -> Subscript[G,W],
+    Description      -> "Effective SU(2) coupling constant (heft: independent input)"
+  },
+  GS == {
+    ParameterType    -> External,
+    InteractionOrder -> {QCD,1},
+    ComplexParameter -> False,
+    Value            -> 1.2171996941475736,
+    TeX              -> Subscript[G,s],
+    Description      -> "Effective SU(3) coupling constant at the Z pole (heft: independent input)"
+  },
+  vev == {
+    ParameterType    -> External,
+    Value            -> 246.21965079413738,
+    InteractionOrder -> {QED, -1},
+    Description      -> "Higgs vacuum expectation value (heft: independent input)"
+  },
+  hlambda == {
+    ParameterType    -> External,
+    Value            -> 0.12905349405143485,
+    InteractionOrder -> {QED, 2},
+    Description      -> "Higgs quartic coupling (heft: independent input)"
+  }
+}
+],
+
+  (* Always derived (standard EWSB relation muH^2 = hlambda*vev^2), in both schemes - Internal
+     so it Python-izes correctly (see block comment above), and using hlambda (this used to
+     read the undeclared symbol "lhambda", a typo - always undefined, so this parameter's
+     value could never resolve to a number and broke every UFO export regardless of scheme). *)
+  muH == {
+    ParameterType -> Internal,
+    Definitions   -> {muH :> Sqrt[vev^2*hlambda]},
+    TeX           -> \[Mu],
+    Description   -> "Coefficient of the quadratic piece of the Higgs potential"
+  },
+
+  CKM == {
+    ParameterType -> Internal,
+    Indices       -> {Index[Generation], Index[Generation]},
+    Unitary       -> True,
+    Value         -> {
+      CKM[1, 1] -> 1 - CKMlambda^2/2, CKM[1, 2] -> CKMlambda,
+      CKM[1, 3] -> CKMA CKMlambda^3 (CKMrho - I CKMeta),
+      CKM[2, 1] -> -CKMlambda,       CKM[2, 2] -> 1 - CKMlambda^2/2,
+      CKM[2, 3] -> CKMA CKMlambda^2,
+      CKM[3, 1] -> CKMA CKMlambda^3 (1 - CKMrho - I CKMeta),
+      CKM[3, 2] -> -(CKMA CKMlambda^2), CKM[3, 3] -> 1
+    },
+    TeX         -> Superscript[V, CKM],
+    Description -> "CKM-Matrix"
+  },
+
+  (* Yukawa tensors.  Two separate objects, mirroring how FC keeps its SM "1" apart from
+     KappaV (see Lagrangian_LO.fr):
+
+       yu / yd / yl    the SM Yukawa - the FERMION MASS TERM.  No Kappa/Delta here, so the
+                       mass in the Lagrangian always equals the declared particle mass.
+       yuH / ydH / ylH the coefficient of the single-Higgs (H/vev) vertex, which is where
+                       KappaQU... (Kappa framework) or DeltaYQU... (Delta framework) act.
+
+     Before 2026-08-06 there was only yu/yd/yl, carrying the Kappa/Delta factor, so the same
+     number scaled BOTH the mass and the h-f-fbar coupling: the 2F-Higgs interaction could not
+     be varied on its own, and any Kappa != 1 also shifted the fermion mass away from MQU...,
+     disagreeing with the mass used for the propagator. *)
+  Sequence @@ {
+    yl == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        yl[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        yl[1, 1] :> Sqrt[2] MLE/vev,
+        yl[2, 2] :> Sqrt[2] MLM/vev,
+        yl[3, 3] :> Sqrt[2] MLT/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, l],
+      Description      -> "Lepton Yukawa couplings (SM: fermion mass term)"
+    },
+    yu == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        yu[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        yu[1, 1] :> Sqrt[2] MQU/vev,
+        yu[2, 2] :> Sqrt[2] MQC/vev,
+        yu[3, 3] :> Sqrt[2] MQT/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, u],
+      Description      -> "Up-type Yukawa couplings (SM: fermion mass term)"
+    },
+    yd == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        yd[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        yd[1, 1] :> Sqrt[2] MQD/vev,
+        yd[2, 2] :> Sqrt[2] MQS/vev,
+        yd[3, 3] :> Sqrt[2] MQB/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, d],
+      Description      -> "Down-type Yukawa couplings (SM: fermion mass term)"
+    }
+  },
+
+  Sequence @@ If[TrueQ[KappaFramework],
+  {
+    ylH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        ylH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        ylH[1, 1] :> KappaLE Sqrt[2] MLE/vev,
+        ylH[2, 2] :> KappaLM Sqrt[2] MLM/vev,
+        ylH[3, 3] :> KappaLT Sqrt[2] MLT/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, l],
+      Description      -> "Lepton Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    },
+    yuH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        yuH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        yuH[1, 1] :> KappaQU Sqrt[2] MQU/vev,
+        yuH[2, 2] :> KappaQC Sqrt[2] MQC/vev,
+        yuH[3, 3] :> KappaQT Sqrt[2] MQT/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, u],
+      Description      -> "Up-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    },
+    ydH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        ydH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        ydH[1, 1] :> KappaQD Sqrt[2] MQD/vev,
+        ydH[2, 2] :> KappaQS Sqrt[2] MQS/vev,
+        ydH[3, 3] :> KappaQB Sqrt[2] MQB/vev
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, d],
+      Description      -> "Down-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    }
+  },
+  {
+    ylH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        ylH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        ylH[1, 1] :> Sqrt[2] MLE/vev + DeltaYLE,
+        ylH[2, 2] :> Sqrt[2] MLM/vev + DeltaYLM,
+        ylH[3, 3] :> Sqrt[2] MLT/vev + DeltaYLT
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, l],
+      Description      -> "Lepton Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    },
+    yuH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        yuH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        yuH[1, 1] :> Sqrt[2] MQU/vev + DeltaYQU,
+        yuH[2, 2] :> Sqrt[2] MQC/vev + DeltaYQC,
+        yuH[3, 3] :> Sqrt[2] MQT/vev + DeltaYQT
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, u],
+      Description      -> "Up-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    },
+    ydH == {
+      ParameterType    -> Internal,
+      Indices          -> {Index[Generation], Index[Generation]},
+      Definitions      -> {
+        ydH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
+        ydH[1, 1] :> Sqrt[2] MQD/vev + DeltaYQD,
+        ydH[2, 2] :> Sqrt[2] MQS/vev + DeltaYQS,
+        ydH[3, 3] :> Sqrt[2] MQB/vev + DeltaYQB
+      },
+      InteractionOrder -> {QED, 1},
+      TeX              -> Superscript[y, d],
+      Description      -> "Down-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+    }
+  }
+  ]
+};
+
+
+(* Fermion F-functions for H/vev expansion (when NEFT>=2).
+   These are defined here in LO parameters since they modify LO Yukawa couplings. *)
+
+(* NEFT: maximum expansion order in H/vev for fermion form factors. *)
+If[ValueQ[Global`HiggsMaxOrder], NEFT = Global`HiggsMaxOrder];
+If[!ValueQ[NEFT], NEFT = 3];
+
+(* LOYukawaExpansion - configuration option (default True).
+   Governs the higher-order fermion-Higgs terms of the LO Yukawa sector, i.e. the F-functions
+
+     FQU[H, NEFT, ff1, ff2] = Sum_{n=2}^{NEFT} CQUn<n>[ff1, ff2] (LamF H/vev)^n
+
+   and likewise FQD / FLE.  False makes all three identically 0 AND skips the declaration of
+   the CQUn / CQDn / CLEn tensors below, so no coefficient that cannot appear in the
+   Lagrangian reaches wcxf_output.json or the export.
+
+   The SM part is untouched either way: the fermion mass term and the single-Higgs coupling
+   both come from yu / yd / yl, whose strength is set by KappaQU... (Kappa framework) or
+   DeltaYQU... (Delta framework) - see yu[1,1] :> KappaQU Sqrt[2] MQU/vev below.  That is
+   also why the sums start at n = 2: an independent n = 1 coefficient would duplicate
+   KappaQU / DeltaYQU. *)
+If[ValueQ[Global`LOYukawaExpansion], LOYukawaExpansion = Global`LOYukawaExpansion];
+If[!ValueQ[LOYukawaExpansion], LOYukawaExpansion = True];
+
+(* IncludeCustodialT: keep the custodial-breaking operator PT (Lagrangian_LO.fr).  PT is the
+   only user of FT / FFT / CFTn, so with it off the CFTn coefficients below are not declared. *)
+If[ValueQ[Global`IncludeCustodialT], IncludeCustodialT = Global`IncludeCustodialT];
+If[!ValueQ[IncludeCustodialT], IncludeCustodialT = True];
+
+FQU[h_, neft_, ff1_, ff2_] :=
+  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+    Sum[Symbol["CQUn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
+    0
+  ];
+
+FQD[h_, neft_, ff1_, ff2_] :=
+  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+    Sum[Symbol["CQDn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
+    0
+  ];
+
+FLE[h_, neft_, ff1_, ff2_] :=
+  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+    Sum[Symbol["CLEn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
+    0
+  ];
+
+
+(* F-function for FC expansion: F_C(h) = sum_{n=3} C_FC^(n) (h/v)^n *)
+FFC[h_, neft_] :=
+  If[neft >= 3,
+    Sum[Symbol["CFCn" <> ToString[n]]*(LamF*h/vev)^n, {n, 3, neft}],
+    0
+  ];
+
+(* F-function for FT expansion: F_T(h) = sum_{n=0} C_FT^(n) (h/v)^n *)
+FFT[h_, neft_] :=
+  Sum[Symbol["CFTn" <> ToString[n]]*(LamF*h/vev)^n, {n, 0, neft}];
+
+(* F-function for VHiggs expansion (starts from n=5, i.e., H^5/vev) *)
+FVHiggs[h_, neft_] :=
+  If[neft >= 5,
+    Sum[Symbol["CVn" <> ToString[n]]*(LamF*h/vev)^n, {n, 5, neft}],
+    0
+  ];
+
+(* Dynamically generate NEFT-dependent fermion Wilson coefficients.
+   Gated on LOYukawaExpansion and starting at n = 2, matching FQU/FQD/FLE above exactly:
+   with the option off nothing is declared, and n = 1 is never declared at all because the
+   single-Higgs Yukawa strength is KappaQU.../DeltaYQU..., not a CQUn1 tensor.  Declaring
+   coefficients the Lagrangian cannot contain is what used to put dead CQUn1/CQDn1/CLEn1
+   entries into wcxf_output.json and the exported cards. *)
+fermionNeftParams = If[!TrueQ[LOYukawaExpansion], {}, Flatten[{
+    (* CQUn: n from 2 to NEFT *)
+    Table[
+      Symbol["CQUn" <> ToString[n]] == {
+        ParameterType -> External,
+        Indices       -> {Index[Generation], Index[Generation]},
+        BlockName     -> HEFT,
+        ComplexParameter -> False,
+        Value         -> Flatten@Table[
+          Symbol["CQUn" <> ToString[n]][i, j] -> 0,
+          {i, 1, 3}, {j, 1, 3}
+        ],
+        Description   -> "CQUn" <> ToString[n] <> " HEFT coefficient (up quark Yukawa expansion)"
+      },
+      {n, 2, NEFT}
+    ],
+    (* CQDn: n from 2 to NEFT *)
+    Table[
+      Symbol["CQDn" <> ToString[n]] == {
+        ParameterType -> External,
+        Indices       -> {Index[Generation], Index[Generation]},
+        BlockName     -> HEFT,
+        ComplexParameter -> False,
+        Value         -> Flatten@Table[
+          Symbol["CQDn" <> ToString[n]][i, j] -> 0,
+          {i, 1, 3}, {j, 1, 3}
+        ],
+        Description   -> "CQDn" <> ToString[n] <> " HEFT coefficient (down quark Yukawa expansion)"
+      },
+      {n, 2, NEFT}
+    ],
+    (* CLEn: n from 2 to NEFT *)
+    Table[
+      Symbol["CLEn" <> ToString[n]] == {
+        ParameterType -> External,
+        Indices       -> {Index[Generation], Index[Generation]},
+        ComplexParameter -> False,
+        BlockName     -> HEFT,
+        Value         -> Flatten@Table[
+          Symbol["CLEn" <> ToString[n]][i, j] -> 0,
+          {i, 1, 3}, {j, 1, 3}
+        ],
+        Description   -> "CLEn" <> ToString[n] <> " HEFT coefficient (electron Yukawa expansion)"
+      },
+      {n, 2, NEFT}
+    ]
+  }]];
+
+(* Dynamically generate NEFT-dependent coefficients for FC, FT, and VHiggs *)
+gaugeHiggsNeftParams = Flatten[{
+  (* C_FC^(n): n from 3 to NEFT (for FC expansion, CFCn in code) *)
+  If[NEFT >= 3,
+    Table[
+      Symbol["CFCn" <> ToString[n]] == {
+        ParameterType -> External,
+        BlockName     -> HEFT,
+        Value         -> 0,
+        Description   -> "C_FC^(" <> ToString[n] <> ") HEFT coefficient (FC expansion)"
+      },
+      {n, 3, NEFT}
+    ],
+    {}
+  ],
+  (* C_FT^(n): n from 0 to NEFT (for FT expansion, CFTn in code).
+     PT is the only user of FT, so with IncludeCustodialT = False these do not exist. *)
+  If[!TrueQ[IncludeCustodialT], {},
+    Table[
+      Symbol["CFTn" <> ToString[n]] == {
+        ParameterType -> External,
+        BlockName     -> HEFT,
+        Value         -> 0,
+        Description   -> "C_FT^(" <> ToString[n] <> ") HEFT coefficient (FT expansion)"
+      },
+      {n, 0, NEFT}
+    ]
+  ],
+  (* CVn: n from 5 to NEFT (for VHiggs expansion) *)
+  If[NEFT >= 5,
+    Table[
+      Symbol["CVn" <> ToString[n]] == {
+        ParameterType -> External,
+        BlockName     -> HEFT,
+        Value         -> 0,
+        Description   -> "CVn" <> ToString[n] <> " HEFT coefficient (VHiggs expansion)"
+      },
+      {n, 5, NEFT}
+    ],
+    {}
+  ]
+}];
+
+(* Append fermion NEFT-dependent coefficients to the global parameter list *)
+M$Parameters = Join[M$Parameters, fermionNeftParams, gaugeHiggsNeftParams];
+
+

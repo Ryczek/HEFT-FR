@@ -1,0 +1,43 @@
+{
+	"eft":"HEFT",
+	"basis":"1604.06801",
+	"scale":1000,
+	"metadata":{
+		"role":"input_template",
+		"generator":"HEFT-FR",
+		"description":"Wilson coefficients for this HEFT configuration. SM couplings are at their SM value (Kappa framework: 1; Delta framework: 0); every effective coefficient is at InitialiseWCs. Edit the values in wcxf\/wcxf_output.json (cell 4) to change them. A value of 0 is simply 0 in the exported model; operator selection is NLOOperators alone. Cell 3 rewrites this file back to the defaults.",
+		"kappa_framework":true,
+		"initialise_wcs":0,
+		"nlo_operators":[
+			"GHNLO"
+		],
+		"nflavour":3,
+		"higgs_max_order":3,
+		"created":"2026-08-20T17:39:49"
+	},
+	"values":{
+		"KappaV":1,
+		"Kappa2V":1,
+		"Kappa3H":1,
+		"Kappa4H":1,
+		"KappaLE":1,
+		"KappaLM":1,
+		"KappaLT":1,
+		"KappaQU":1,
+		"KappaQC":1,
+		"KappaQT":1,
+		"KappaQD":1,
+		"KappaQS":1,
+		"KappaQB":1,
+		"CFCn3":0,
+		"CFTn0":0,
+		"CFTn1":0,
+		"CFTn2":0,
+		"CFTn3":0,
+		"CGHNLOn0":0,
+		"CGHNLOn1":0,
+		"CGHNLOn2":0,
+		"CGHNLOn3":0,
+		"LamHEFT":1000
+	}
+}

@@ -1,0 +1,126 @@
+(* Gauge-field normalization and A–Z mixing for HEFT.
+   ----------------------------------------------------------------------
+   This module is the dedicated place to compute the normalization
+   factors
+
+     - Wnorm   : overall normalization of SU(2)_L gauge fields
+     - Bnorm   : overall normalization of U(1)_Y gauge field
+     - Gnorm   : overall normalization of SU(3)_c gluon fields
+     - AZnorm  : 2×2 mixing matrix between (W^3, B) and (Z, A)
+
+   The idea is that these quantities can depend dynamically on:
+
+     - the HEFT expansion order (NEFT, ChiralOrder, LamF, ...)
+     - the chosen NLO basis HEFTNLOBasis
+     - the active NLO operators in HEFTActiveNLOPieces
+
+   They are *used* in `fields_LO.fr` via the `Definitions` of the
+   unphysical gauge fields `B`, `Wi`, and `Gl`, and in `parameters_LO.fr`
+   via the replacement rules for `gw`, `g1`, `gs` in terms of the
+   effective couplings `GW`, `G1`, `GS`.
+
+   This file currently only provides the hook where you can implement
+   those relations. By default, the update is a no-op so that the model
+   behaves exactly as before until you add your expressions.
+   ---------------------------------------------------------------------- *)
+
+(* Main hook: called from LHEFT before assembling the full Lagrangian.
+   You can redefine this function in this file to set Wnorm, Bnorm,
+   Gnorm and AZnorm (and any related effective couplings) as functions
+   of the expansion order and active operators.
+
+   By default we leave Wnorm, Bnorm, Gnorm and AZnorm as free HEFT
+   parameters. For the 1604.06801 basis we fix a specific rule for the
+   gluon normalization:
+     - if GHNLO is NOT active: Gnorm = 1
+     - if GHNLO IS active:     Gnorm = (1 + CGHNLOn0)^(1/2)
+   *)
+
+HEFTUpdateGaugeNormalizations[] :=
+    Module[{X,a,b,c,d,cos,sin, P12norm, P12normINV, eps},
+      (* 1604.06801 basis: set gluon normalization according to whether
+         GHNLO is active. *)
+      If[ValueQ[HEFTNLOBasis] && HEFTNLOBasis === "1604.06801",
+        If[ValueQ[HEFTActiveNLOPieces] &&
+          HEFTPieceActiveQ[ "GHNLO"],
+          Gnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CGHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
+          GnormINVaux = Normal[Series[1/Gnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
+          Gnormaux = 1;
+          GnormINVaux = 1
+        ];
+        If[ValueQ[HEFTActiveNLOPieces] &&
+          HEFTPieceActiveQ[ "WHNLO"],
+          Wnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CWHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
+          WnormINVaux = Normal[Series[1/Wnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
+          Wnormaux = 1;
+          WnormINVaux = 1
+        ];
+        If[ValueQ[HEFTActiveNLOPieces] &&
+          HEFTPieceActiveQ[ "BHNLO"],
+          Bnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CBHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
+          BnormINVaux = Normal[Series[1/Bnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
+          Bnormaux  = 1;
+          BnormINVaux = 1
+        ];
+        If[ValueQ[HEFTActiveNLOPieces] &&
+          HEFTPieceActiveQ[ "P12NLO"],
+          P12norm =  Normal[Series[Sqrt[1 - 4*ChiralOrder*CP12NLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
+          P12normINV = Normal[Series[1/P12norm,{ChiralOrder,0,HEFTMaxOrder}]],
+          P12norm = 1;
+          P12normINV = 1
+        ];
+        If[ValueQ[HEFTActiveNLOPieces] &&
+          HEFTPieceActiveQ[ "P1NLO"],
+          (* eps is the OFF-DIAGONAL ENTRY of the kinetic matrix after the diagonal rescaling,
+             i.e. the epsilon of {{1,eps},{eps,1}}, which is what the {{a,b},{c,d}} block below
+             is built to undo.  With TT = PauliSigma[3] and FSWi = sigma^a W^a/2 (definitions.fr)
+             one has Tr[TT.FSWi] = W3_{mu nu}, so LP1NLO = chi CP1NLOn0 B_{mu nu} W3^{mu nu}
+             contributes K12 = -2 chi CP1NLOn0 to L = -1/4 V^T K V, and the normalised entry is
+             -2 chi CP1NLOn0 WnormINV BnormINV P12normINV.
+             FIXED 2026-08-12: this read -4 instead of -2.  With -4 the kinetic terms are NOT
+             canonically normalised - X^T K X - I left a residual A-Z KINETIC mixing
+             2 chi CP1 (GW^2-G1^2)/(G1^2+GW^2) and mis-set the A and Z kinetic terms by
+             -/+ 4 chi CP1 G1 GW/(G1^2+GW^2).  With -2 it is exactly the identity.
+             The mass sector could not catch this: the photon mass and the A-Z MASS mixing
+             vanish identically for any eps (their common prefactor is zero for G1, GW > 0). *)
+          eps = Normal[Series[-2*ChiralOrder*CP1NLOn0*WnormINVaux*BnormINVaux*P12normINV,{ChiralOrder,0,HEFTMaxOrder}]],
+          eps = 0
+        ];
+        If[ValueQ[HEFTActiveNLOPieces] && (
+          HEFTPieceActiveQ[ "P1NLO"]
+          || HEFTPieceActiveQ[ "WHNLO"]
+          || HEFTPieceActiveQ[ "BHNLO"]
+          || HEFTPieceActiveQ[ "P12NLO"])
+          ,
+          (* {{a,b},{c,d}} undoes the off-diagonal kinetic matrix {{1,eps},{eps,1}}:
+             M^T.{{1,eps},{eps,1}}.M == I identically in eps.  That condition is QUADRATIC in
+             M, so it fixes M only up to an overall sign - both this M and -M satisfy it.
+             FIXED 2026-08-13: the signs read a = -1/Sqrt[1-eps^2], c = +eps/Sqrt[1-eps^2],
+             d = -1, i.e. M = -I at eps = 0, so this branch returned exactly MINUS the
+             AZnorm of the else-branch below.  Turning on any of P1NLO/WHNLO/BHNLO/P12NLO
+             therefore flipped Z and A relative to a run without them (a global
+             (Z,A) -> (-Z,-A) redefinition: unphysical on its own, but inconsistent with the
+             other branch of this same If), and it made the extracted photon coupling come out
+             as -e: at LO -G1 GW/Sqrt[G1^2+GW^2], numerically -0.308 at GW = 0.65, G1 = 0.35,
+             against the +e recorded in README SS "Input scheme (EW)".  The NLO structure of e
+             was right - only the overall sign was wrong.  With M = +I at eps = 0 the two
+             branches agree and e comes out positive. *)
+          a = 1/(1-eps^2)^(1/2);
+          b = 0;
+          c = -eps/(1-eps^2)^(1/2);
+          d = 1;
+          cos = Normal[Series[(GW + eps*G1*P12norm)/Sqrt[GW^2+2*eps*GW*G1*P12norm+P12norm^2*G1^2],{ChiralOrder,0,HEFTMaxOrder}]];
+          sin = Normal[Series[Sqrt[1-cos^2],{ChiralOrder,0,HEFTMaxOrder}]];
+          X = Normal[Series[{{WnormINVaux,0},{0,BnormINVaux}}.{{P12normINV,0},{0,1}}.{{a,b},{c,d}}.{{cos,sin},{-sin,cos}},{ChiralOrder,0,HEFTMaxOrder}]];
+          X = Simplify[X, Assumptions->{GW>0,GW\[Element]Reals,G1>0,G1\[Element]Reals, ChiralOrder>0, ChiralOrder\[Element]Reals}];
+          AZnorm1x1aux = X[[1,1]];
+          AZnorm1x2aux = X[[1,2]];
+          AZnorm2x1aux = X[[2,1]];
+          AZnorm2x2aux = X[[2,2]];,
+          AZnorm1x1aux = GW/(GW^2+G1^2)^(1/2);
+          AZnorm1x2aux = G1/(GW^2+G1^2)^(1/2);
+          AZnorm2x1aux = -G1/(GW^2+G1^2)^(1/2);
+          AZnorm2x2aux = GW/(GW^2+G1^2)^(1/2);
+          ];
+      ]; 
+    ];

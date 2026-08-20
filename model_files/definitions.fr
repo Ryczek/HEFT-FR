@@ -1,0 +1,136 @@
+(* Common HEFT building blocks: DU, FSWi, TT, etc.                        *)
+(* These are intended to depend on the gauge choice via HEFTGauge.        *)
+(* For now only \"unitary\" is implemented.                                *)
+
+(* Gauge selector: prefer value set in heft_fr.wl; if unset, default to unitary. *)
+If[ValueQ[Global`HEFTGauge], HEFTGauge = Global`HEFTGauge];
+If[!ValueQ[HEFTGauge], HEFTGauge = "unitary"];
+(* Normalize to lowercase so "Unitary" and "unitary" both work. *)
+HEFTGauge = ToLowerCase[HEFTGauge];
+
+HEFTGauge::wrong = "Wrong gauge choice `1`. Supported options are \"unitary\" or \"Rxi\".";
+
+(* Lagrangian .fr files call FeynRules ExpandIndices[..., NoDefinitions -> True] directly
+   when building operators (see README). That defers parameter Definitions until LHEFTMassBasis. *)
+
+Switch[HEFTGauge,
+
+  "unitary",
+  (
+    (* VU is the chiral covariant derivative in unitary gauge. (DU in 1611) *)
+
+    U[] = IdentityMatrix[2];
+
+
+    VU[mu_] = Module[{ii},
+      I*gw/2*Sum[PauliSigma[ii]*Wi[mu, ii], {ii, 1, 3}] -
+      I*g1/2*PauliSigma[3]*B[mu]];
+    (* Custodial-breaking spurion T. *)
+
+    TT = PauliSigma[3];
+
+PauliSigmaFerm[1, 1, 1] = 0;
+PauliSigmaFerm[1, 1, 2] = 1;
+PauliSigmaFerm[1, 2, 1] = 1;
+PauliSigmaFerm[1, 2, 2] = 0;
+
+PauliSigmaFerm[2, 1, 1] = 0;
+PauliSigmaFerm[2, 1, 2] = -I;
+PauliSigmaFerm[2, 2, 1] = I;
+PauliSigmaFerm[2, 2, 2] = 0;
+
+PauliSigmaFerm[3, 1, 1] = 1;
+PauliSigmaFerm[3, 1, 2] = 0;
+PauliSigmaFerm[3, 2, 1] = 0;
+PauliSigmaFerm[3, 2, 2] = -1;
+
+VUFerm[mu_, ii_, jj_] =
+    I*gw/2*Sum[PauliSigmaFerm[k, ii, jj]*Wi[mu, k], {k, 1, 3}] -
+    I*g1/2*B[mu]*PauliSigmaFerm[3, ii, jj];
+
+  TTFerm[jj_, kk_] = PauliSigmaFerm[3, jj, kk];
+
+  UFerm[ii_, jj_] = KroneckerDelta[ii, jj];
+
+  ),
+
+  "rxi",
+  (
+    (* Here U and VU are built in Rξ gauge. GoldstoneMaxOrder (fixed at 1 in
+       HEFT_Model.fr, no longer a Configuration option) is the truncation order
+       of the LamGold expansion. Revisit when Rξ gauge is actually implemented. *)
+
+    (* U = exp(i LamGold phi/vev); expand from order 0 (identity) so derivatives are well defined. *)
+    U[nexpgold_:GoldstoneMaxOrder] :=
+      Normal@Series[
+        MatrixExp[
+          LamGold I/vev {{G0 , Sqrt[2] GP},{Sqrt[2] GPbar , -G0}}
+        ],
+        {LamGold, 0, nexpgold}
+      ];
+
+    (* VU = (D_mu U) U^†.
+       We differentiate only the non-trivial Goldstone part by using U - 1,
+       which avoids spurious structures like del[0, mu] coming from the
+       identity piece in the series expansion. *)
+    
+    VU[mu_, nexpgold_:GoldstoneMaxOrder] := Module[{ii, aux, Uexp},
+      
+      aux =
+        (
+          del[U[nexpgold], mu] +
+          I*gw/2*Sum[PauliSigma[ii]*Wi[mu, ii], {ii, 1, 3}].U[nexpgold] -
+          I*g1/2*B[mu]*U[nexpgold].PauliSigma[3]
+        ).HC[U[nexpgold]] /. {HC[vev] -> vev, HC[LamGold] -> LamGold};
+      Normal@Series[aux, {LamGold, 0, nexpgold}]
+    ];
+
+    TT := Module[{aux},
+      aux = U[GoldstoneMaxOrder].PauliSigma[3].HC[U[GoldstoneMaxOrder]] /. {HC[vev] -> vev, HC[LamGold] -> LamGold};
+      Normal@Series[aux, {LamGold, 0, GoldstoneMaxOrder}]
+    ];
+
+  ),
+
+  _,
+  (
+    Message[HEFTGauge::wrong, HEFTGauge];
+  )
+];
+
+FSWi[mu_, nu_] := 1/2*Sum[PauliSigma[ii]*FS[Wi, mu, nu, ii], {ii, 1, 3}];
+
+Sigma[mu_,nu_,sp1_,sp2_] := I/2 (Gamma[mu,sp1,sp2].Gamma[nu,sp1,sp2] - Gamma[nu,sp1,sp2].Gamma[mu,sp1,sp2]);
+
+
+(* Self-dual / anti-self-dual field strengths (Sun et al. Eq. (B.1)):
+   X_L = 1/2 (X - i Xtilde),  X_R = 1/2 (X + i Xtilde),
+   Xtilde_{mu nu} = 1/2 eps_{mu nu rho sigma} X^{rho sigma}. *)
+
+If[ValueQ[HEFTNLOBasis] && HEFTNLOBasis === "2206.07722",
+  Bdual[mu_, nu_] := 1/2 Eps[mu, nu, al, be] FS[B, al, be];
+  Gdual[mu_, nu_, a_] := 1/2 Eps[mu, nu, al, be] FS[Gl, al, be, a];
+  FSWiDual[mu_, nu_] := 1/2 Eps[mu, nu, al, be] FSWi[al, be];
+
+  BL[mu_, nu_] := 1/2 (FS[B, mu, nu] - I*Bdual[mu, nu]);
+  BR[mu_, nu_] := 1/2 (FS[B, mu, nu] + I*Bdual[mu, nu]);
+
+  GL[mu_, nu_, a_] := 1/2 (FS[Gl, mu, nu, a] - I*Gdual[mu, nu, a]);
+  GR[mu_, nu_, a_] := 1/2 (FS[Gl, mu, nu, a] + I*Gdual[mu, nu, a]);
+
+  WL[mu_, nu_] := 1/2 (FSWi[mu, nu] - I*FSWiDual[mu, nu]);
+  WR[mu_, nu_] := 1/2 (FSWi[mu, nu] + I*FSWiDual[mu, nu]);
+];
+
+If[ValueQ[HEFTNLOBasis] && HEFTNLOBasis === "2206.07722",
+  (* Short-hands for traces of the chiral building blocks (2206 basis only). *)
+  Clear[vv, tv, ttvv];
+
+  vv[mu_, nu_] := Tr[VU[mu] . VU[nu]];
+
+  tv[mu_]      := Tr[TT . VU[mu]];
+
+  ttvv[mu_,nu_] := Tr[TT . VU[mu] . VU[nu]];
+];
+
+
