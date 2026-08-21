@@ -68,8 +68,8 @@ The implementation follows the notation and conventions of Brivio et al. through
 
 **Power counting.** Two bookkeeping parameters organise the Lagrangian:
 
-- **`LamHEFT`** — chiral dimension. LO operators carry no factor, NLO carries `LamHEFT^1`,
-  NNLO `LamHEFT^2`. `HEFTMaxOrder` truncates the series.
+- **`ChiralOrder`** — chiral dimension. LO operators carry no factor, NLO carries `ChiralOrder^1`,
+  NNLO `ChiralOrder^2`. `HEFTMaxOrder` truncates the series.
 - **`LamF`** — the `h/v` expansion inside every flare function. `HiggsMaxOrder` (internally
   `NEFT`) truncates it.
 
@@ -510,7 +510,7 @@ So the notebook refuses rather than resets:
 Cells 1, 2, 3, 4, 6, 7 and 8 are all safe to re-run; only Cell 5 carries this restriction.
 Restarting costs almost nothing — `LHEFT` is on disk, so Cell 5 reloads it in seconds.
 
-## Known limitations
+## Known limitations and planned improvements
 
 - **Unitary gauge only.** An Rξ branch exists in the source (`definitions.fr`), with the
   Goldstone expansion pinned at order 1, but it is unfinished and unsupported. Setting
@@ -550,11 +550,4 @@ Padova, Via F. Marzolo 8, I-35131 Padova, Italy*
 
 Released under the MIT License — see [LICENSE](LICENSE).
 
-If you use HEFT-FR in published work, please cite the HEFT basis
-([arXiv:1604.06801](https://arxiv.org/abs/1604.06801)) and FeynRules
-([arXiv:1310.1921](https://arxiv.org/abs/1310.1921)) alongside this repository.
-
 ---
-
-*v0.5 — the complete NLO sector of the 1604.06801 basis, bosonic and fermionic (2F and 4F),
-with example operators at chiral dimension 2.*
