@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules 2.3.49
 # Mathematica version: 14.0.0 for Mac OS X x86 (64-bit) (December 13, 2023)
-# Date: Thu 20 Aug 2026 17:46:06
+# Date: Fri 21 Aug 2026 15:35:16
 
 
 
@@ -257,14 +257,13 @@ LamGold = Parameter(name = 'LamGold',
                     lhablock = 'HEFTGold',
                     lhacode = [ 1 ])
 
-aEWM = Parameter(name = 'aEWM',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.007815552950371238,
-                 texname = '\\text{aEWM}',
-                 lhablock = 'SMINPUTS',
-                 lhacode = [ 1 ])
-
+aEWM1 = Parameter(name = 'aEWM1',
+                  nature = 'external',
+                  type = 'real',
+                  value = 127.95,
+                  texname = '\\text{aEWM1}',
+                  lhablock = 'SMINPUTS',
+                  lhacode = [ 1 ])
 
 Gf = Parameter(name = 'Gf',
                nature = 'external',
@@ -290,78 +289,6 @@ thetaS = Parameter(name = 'thetaS',
                    lhablock = 'SMINPUTS',
                    lhacode = [ 4 ])
 
-MQD = Parameter(name = 'MQD',
-                nature = 'external',
-                type = 'real',
-                value = 0.00504,
-                texname = '\\text{MQD}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 1 ])
-
-MQU = Parameter(name = 'MQU',
-                nature = 'external',
-                type = 'real',
-                value = 0.00255,
-                texname = '\\text{MQU}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 2 ])
-
-MQS = Parameter(name = 'MQS',
-                nature = 'external',
-                type = 'real',
-                value = 0.101,
-                texname = '\\text{MQS}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 3 ])
-
-MQC = Parameter(name = 'MQC',
-                nature = 'external',
-                type = 'real',
-                value = 1.27,
-                texname = '\\text{MQC}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 4 ])
-
-MQB = Parameter(name = 'MQB',
-                nature = 'external',
-                type = 'real',
-                value = 4.7,
-                texname = '\\text{MQB}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 5 ])
-
-MQT = Parameter(name = 'MQT',
-                nature = 'external',
-                type = 'real',
-                value = 172,
-                texname = '\\text{MQT}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 6 ])
-
-MLE = Parameter(name = 'MLE',
-                nature = 'external',
-                type = 'real',
-                value = 0.000511,
-                texname = '\\text{MLE}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 11 ])
-
-MLM = Parameter(name = 'MLM',
-                nature = 'external',
-                type = 'real',
-                value = 0.10566,
-                texname = '\\text{MLM}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 13 ])
-
-MLT = Parameter(name = 'MLT',
-                nature = 'external',
-                type = 'real',
-                value = 1.777,
-                texname = '\\text{MLT}',
-                lhablock = 'YUKAWA',
-                lhacode = [ 15 ])
-
 MZ = Parameter(name = 'MZ',
                nature = 'external',
                type = 'real',
@@ -370,14 +297,77 @@ MZ = Parameter(name = 'MZ',
                lhablock = 'MASS',
                lhacode = [ 23 ])
 
+MLE = Parameter(name = 'MLE',
+                nature = 'external',
+                type = 'real',
+                value = 0.000511,
+                texname = '\\text{MLE}',
+                lhablock = 'MASS',
+                lhacode = [ 11 ])
 
+MLM = Parameter(name = 'MLM',
+                nature = 'external',
+                type = 'real',
+                value = 0.10566,
+                texname = '\\text{MLM}',
+                lhablock = 'MASS',
+                lhacode = [ 13 ])
 
+MLT = Parameter(name = 'MLT',
+                nature = 'external',
+                type = 'real',
+                value = 1.777,
+                texname = '\\text{MLT}',
+                lhablock = 'MASS',
+                lhacode = [ 15 ])
 
+MQU = Parameter(name = 'MQU',
+                nature = 'external',
+                type = 'real',
+                value = 0.00216,
+                texname = '\\text{MQU}',
+                lhablock = 'MASS',
+                lhacode = [ 2 ])
 
+MQC = Parameter(name = 'MQC',
+                nature = 'external',
+                type = 'real',
+                value = 1.27,
+                texname = '\\text{MQC}',
+                lhablock = 'MASS',
+                lhacode = [ 4 ])
 
+MQT = Parameter(name = 'MQT',
+                nature = 'external',
+                type = 'real',
+                value = 172.76,
+                texname = '\\text{MQT}',
+                lhablock = 'MASS',
+                lhacode = [ 6 ])
 
+MQD = Parameter(name = 'MQD',
+                nature = 'external',
+                type = 'real',
+                value = 0.00467,
+                texname = '\\text{MQD}',
+                lhablock = 'MASS',
+                lhacode = [ 1 ])
 
+MQS = Parameter(name = 'MQS',
+                nature = 'external',
+                type = 'real',
+                value = 0.093,
+                texname = '\\text{MQS}',
+                lhablock = 'MASS',
+                lhacode = [ 3 ])
 
+MQB = Parameter(name = 'MQB',
+                nature = 'external',
+                type = 'real',
+                value = 4.18,
+                texname = '\\text{MQB}',
+                lhablock = 'MASS',
+                lhacode = [ 5 ])
 
 MH = Parameter(name = 'MH',
                nature = 'external',
@@ -419,6 +409,12 @@ WH = Parameter(name = 'WH',
                lhablock = 'DECAY',
                lhacode = [ 25 ])
 
+aEWM = Parameter(name = 'aEWM',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '1/aEWM1',
+                 texname = '\\text{aEWM}')
+
 Wnorm = Parameter(name = 'Wnorm',
                   nature = 'internal',
                   type = 'real',
@@ -455,18 +451,6 @@ GnormINV = Parameter(name = 'GnormINV',
                      value = '1 - (CGHNLOn0*ChiralOrder)/2.',
                      texname = '\\text{GnormINV}')
 
-G1 = Parameter(name = 'G1',
-               nature = 'internal',
-               type = 'real',
-               value = '2**0.75*cmath.sqrt(Gf*MZ**2 - MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))) - (CFTn0*ChiralOrder*(1 - (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt(Gf*MZ**2 - MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))))/2**0.25',
-               texname = 'G_1')
-
-GW = Parameter(name = 'GW',
-               nature = 'internal',
-               type = 'real',
-               value = '2**0.75*cmath.sqrt(Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))) - (CFTn0*ChiralOrder*(1 + (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt(Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))))/2**0.25',
-               texname = 'G_W')
-
 GS = Parameter(name = 'GS',
                nature = 'internal',
                type = 'real',
@@ -484,12 +468,6 @@ hlambda = Parameter(name = 'hlambda',
                     type = 'real',
                     value = '(Gf*MH**2)/cmath.sqrt(2)',
                     texname = '\\text{hlambda}')
-
-MW = Parameter(name = 'MW',
-               nature = 'internal',
-               type = 'real',
-               value = 'cmath.sqrt((Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))/Gf)/cmath.sqrt(2) - (CFTn0*ChiralOrder*(1 + (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt((Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))/Gf))/(2.*cmath.sqrt(2))',
-               texname = 'M_W')
 
 CKM1x1 = Parameter(name = 'CKM1x1',
                    nature = 'internal',
@@ -545,6 +523,36 @@ CKM3x3 = Parameter(name = 'CKM3x3',
                    value = '1',
                    texname = '\\text{CKM3x3}')
 
+muH = Parameter(name = 'muH',
+                nature = 'internal',
+                type = 'real',
+                value = 'cmath.sqrt(hlambda*vev**2)',
+                texname = '\\mu')
+
+MW = Parameter(name = 'MW',
+               nature = 'internal',
+               type = 'real',
+               value = 'cmath.sqrt((Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))/Gf)/cmath.sqrt(2) - (CFTn0*ChiralOrder*(1 + (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt((Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))/Gf))/(2.*cmath.sqrt(2))',
+               texname = 'M_W')
+
+G1 = Parameter(name = 'G1',
+               nature = 'internal',
+               type = 'real',
+               value = '2**0.75*cmath.sqrt(Gf*MZ**2 - MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))) - (CFTn0*ChiralOrder*(1 - (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt(Gf*MZ**2 - MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))))/2**0.25',
+               texname = 'G_1')
+
+gs = Parameter(name = 'gs',
+               nature = 'internal',
+               type = 'real',
+               value = 'Gnorm*GS',
+               texname = 'g_s')
+
+GW = Parameter(name = 'GW',
+               nature = 'internal',
+               type = 'real',
+               value = '2**0.75*cmath.sqrt(Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))) - (CFTn0*ChiralOrder*(1 + (Gf*MZ)/cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2)))*cmath.sqrt(Gf*MZ**2 + MZ*cmath.sqrt(Gf**2*MZ**2 - 2*aEWM*cmath.pi*Gf*cmath.sqrt(2))))/2**0.25',
+               texname = 'G_W')
+
 AZnorm1x1 = Parameter(name = 'AZnorm1x1',
                       nature = 'internal',
                       type = 'real',
@@ -569,23 +577,11 @@ AZnorm2x2 = Parameter(name = 'AZnorm2x2',
                       value = 'GW/cmath.sqrt(G1**2 + GW**2)',
                       texname = '\\text{AZnorm2x2}')
 
-muH = Parameter(name = 'muH',
-                nature = 'internal',
-                type = 'real',
-                value = 'cmath.sqrt(hlambda*vev**2)',
-                texname = '\\mu')
-
 g1 = Parameter(name = 'g1',
                nature = 'internal',
                type = 'real',
                value = 'Bnorm*G1',
                texname = 'g_1')
-
-gs = Parameter(name = 'gs',
-               nature = 'internal',
-               type = 'real',
-               value = 'Gnorm*GS',
-               texname = 'g_s')
 
 gw = Parameter(name = 'gw',
                nature = 'internal',

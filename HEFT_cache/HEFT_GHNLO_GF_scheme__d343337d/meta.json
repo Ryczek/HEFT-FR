@@ -1,0 +1,26 @@
+{
+	"outputName":"HEFT_GHNLO_GF_scheme",
+	"operators":[
+		"GHNLO"
+	],
+	"basis":"1604.06801",
+	"heftMaxOrder":1,
+	"higgsMaxOrder":3,
+	"gauge":"unitary",
+	"ewScheme":"heft",
+	"kappaFramework":true,
+	"loYukawaExpansion":false,
+	"includeCustodialT":true,
+	"combine2Derivatives":true,
+	"massless":false,
+	"diagonalCKM":false,
+	"modelDigest":"75b3316d",
+	"configHash":"d343337d",
+	"builtAt":"2026-08-21T15:55:25",
+	"buildSeconds":1.2057983999999998e1,
+	"mathematica":"14.0.0 for Mac OS X x86 (64-bit) (December 13, 2023)",
+	"names":[
+		"HEFT_GHNLO_GF_scheme",
+		"HEFT_GHNLO_heft_scheme"
+	]
+}

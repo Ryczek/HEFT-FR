@@ -640,15 +640,6 @@ Module[{ufoOutDir},
         CreateDirectory::eexist];
       CPUTime = TimeUsed[];
       WriteUFO[LHEFT, Output -> ufoOutDir, Sequence @@ HEFT$VertexLegOptions[]];
-      (* ufo_cleanup.py lives in additional_scripts/, not at the workspace root. *)
-      Module[{cleanup = FileNameJoin[{HEFT$WorkspaceRoot, "additional_scripts", "ufo_cleanup.py"}]},
-        If[FileExistsQ[cleanup],
-          Run["python3 \"" <> cleanup <> "\" \"" <>
-            FileNameJoin[{ufoOutDir, "parameters.py"}] <> "\""],
-          Print[Style["[HEFT] WARNING: ufo_cleanup.py not found at " <> cleanup <>
-            "; parameters.py left as written by WriteUFO.", Orange, Bold]]
-        ]
-      ];
       Print[Style["[HEFT] UFO written to " <> ufoOutDir <> " in ", Bold], TimeUsed[] - CPUTime, " seconds"];
 ];
 

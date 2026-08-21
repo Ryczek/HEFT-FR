@@ -7,12 +7,6 @@ from an operator set you choose — and exports it as a **UFO** model for MadGra
 **FeynArts** model files. It is organised as a double expansion: in **chiral dimension** and
 in **powers of `h/v`**.
 
-Unlike a linear (SMEFT-style) EFT, HEFT does not assume the Higgs sits in an electroweak
-doublet. The Goldstone bosons live in the chiral matrix **U**, and the physical Higgs `h`
-enters through *flare functions* — arbitrary polynomials in `h/v` multiplying every operator.
-That second expansion is what makes HEFT able to describe a Higgs whose couplings deviate
-from the SM pattern non-linearly, and it is why every Wilson coefficient in this model carries
-an `h`-power index.
 
 - **Version 0.5** · MIT licensed · see [Authors](#authors)
 - **Entry point:** [`heft_fr_notebook.wl`](heft_fr_notebook.wl) — open it in Mathematica and
@@ -88,9 +82,6 @@ carries exactly one Wilson coefficient**, named after its operator and its `h`-p
 - **Mathematica** (any version FeynRules supports).
 - **FeynRules** — install it yourself and point `$FeynRulesPath` at the directory containing
   `FeynRules.m`. This is the first line of the Configuration cell.
-- **Python 3** — optional, used only to tidy `parameters.py` after a UFO export
-  ([`additional_scripts/ufo_cleanup.py`](additional_scripts/ufo_cleanup.py)). A missing
-  interpreter costs you the cleanup, not the export.
 
 No installation step: clone the repository and open the notebook.
 
@@ -376,7 +367,7 @@ There is no `OutputFormat` option — the cell you evaluate *is* the choice.
 | Cell | Writes | Notes |
 |---|---|---|
 | **6** | `output/FeynmanRules/<OutputName>/` | `.mx` (reload with `Get`), `.txt` (every vertex in plain text), `latex/<OutputName>.tex` (a standalone LaTeX document). Optional — Cells 7 and 8 never read it. |
-| **7** | `output/UFO/<OutputName>/` | For MadGraph. `ufo_cleanup.py` is applied to `parameters.py` afterwards. |
+| **7** | `output/UFO/<OutputName>/` | For MadGraph. |
 | **8** | `output/FeynArts/<OutputName>/` | `.mod`, `.gen`, `.pars`. For FeynArts / FeynCalc. |
 
 ## The LHEFT cache
@@ -493,7 +484,6 @@ model_files/               the model source
 
 wcxf/                      Wilson coefficients: wcxf_init.json (reference) + wcxf_output.json (read)
 restrictions/              Massless.rst, DiagonalCKM.rst
-additional_scripts/        ufo_cleanup.py
 HEFT_cache/                built Lagrangians, one folder per configuration  (generated)
 output/                    UFO/, FeynArts/, FeynmanRules/ exports              (generated)
 ```

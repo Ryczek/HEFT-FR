@@ -22,10 +22,8 @@ M$Parameters = {
   },
 
   aEWM == {
-    ParameterType    -> External,
-    BlockName        -> SMINPUTS,
-    OrderBlock       -> 1,
-    Value            -> 1/127.95,
+    ParameterType    -> Internal,
+    Value            -> 1/aEWM1,
     InteractionOrder -> {QED, 2},
     Description      -> "EW coupling constant at p^2=0"
   },
@@ -286,69 +284,24 @@ M$Parameters = {
     Description   -> "HEFT cutoff scale Lambda (Brivio et al. 1604.06801); override via wcxf / LamHEFT"
   },
 
-  MQD == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 1,
-    Value         -> 5.04*^-3,
-    Description   -> "Down Yukawa mass"
-  },
-  MQU == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 2,
-    Value         -> 2.55*^-3,
-    Description   -> "Up Yukawa mass"
-  },
-  MQS == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 3,
-    Value         -> 0.101,
-    Description   -> "Strange Yukawa mass"
-  },
-  MQC == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 4,
-    Value         -> 1.27,
-    Description   -> "Charm Yukawa mass"
-  },
-  MQB == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 5,
-    Value         -> 4.7,
-    Description   -> "Bottom Yukawa mass"
-  },
-  MQT == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 6,
-    Value         -> 172,
-    Description   -> "Top Yukawa mass"
-  },
-  MLE == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 11,
-    Value         -> 5.11*^-4,
-    Description   -> "Electron Yukawa mass"
-  },
-  MLM == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 13,
-    Value         -> 0.10566,
-    Description   -> "Muon Yukawa mass"
-  },
-  MLT == {
-    ParameterType -> External,
-    BlockName     -> YUKAWA,
-    OrderBlock    -> 15,
-    Value         -> 1.777,
-    Description   -> "Tau Yukawa mass"
-  },
+  (* Fermion masses MQU/MQC/MQT/MQD/MQS/MQB/MLE/MLM/MLT are declared ONCE ONLY, by the
+     Mass -> {...} lists of fields_LO.fr, which is what puts them in the LHA MASS block.
+
+     They used to ALSO be declared here as External BlockName -> YUKAWA parameters, with
+     DIFFERENT values (e.g. MQT: 172 here against 172.76 in fields_LO.fr).  One symbol
+     cannot hold two values: FeynRules emitted two Parameter blocks per fermion and a UFO
+     post-processing script (since removed) deleted the second, so the YUKAWA value
+     silently won and became the PROPAGATOR mass - the exported top mass was 172, and the
+     UFO had no MASS-block entry for any fermion at all.  Removed 2026-08-21.
+
+     Nothing needs a separate Yukawa value: the Yukawas are DEFINED as sqrt(2) m / vev
+     (see yu/yuH/yl below), and independent variation of the h-f-fbar vertex relative to
+     the mass is what KappaQU.../DeltaYQU... are for - see README SS "2F-Higgs interactions:
+     mass and hff coupling are now independent".  Reintroducing a YUKAWA block would be a
+     second knob on the same vertex.
+
+     If a Yukawa at a scale different from the pole mass is ever wanted, it must be a
+     SEPARATE SYMBOL (SM.fr's ymt-vs-MT pattern), never a second declaration of this one. *)
 
 (* initial SM couplings before redefinitions needed from FA to work properly*)
 
@@ -600,7 +553,7 @@ Sequence @@ Switch[EWInputScheme,
     Description      -> "Higgs quartic coupling (aem: derived from Gf/MH)"
   },
   (* MW is a PREDICTION here, not an input: MW = GW vev/2, the W mass term of the Lagrangian
-     being GW^2 vev^2/4 exactly (no NLO operator contributes to it).
+     being GW^2 vev^2/4 exactly (no NLO operator contributes to it - see TESTS.md T1/T11).
      fields_LO.fr declares Mass -> {MW, Internal} for this scheme so that the propagator mass
      and this parameter are one and the same object; EWinputrepl carries a rule for MW in both
      its branches, so the propagator mass, the exported card and the Lagrangian-level

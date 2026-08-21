@@ -35,7 +35,7 @@
 (*A side branch off Cell 5: computes RulesHEFT = FeynmanRules[LHEFT], prints the vertex count, and saves it to output/FeynmanRules/<OutputName>/ - <OutputName>.mx (a Mathematica-reloadable dump), <OutputName>.txt (a plain-text listing of every vertex), and latex/<OutputName>.tex (a standalone LaTeX document, in its own subfolder). Cell 7 does NOT read RulesHEFT - it computes whatever it needs from LHEFT itself - so this step can always be skipped unless you want the rules themselves.*)
 (**)
 (*CELLS 7 and 8 - export: Cell 7 (UFO) and/or Cell 8 (FeynArts)*)
-(*Both need only LHEFT from Cell 5,  and you may run both. Cell 7 writes output/UFO/<OutputName>/ (with ufo_cleanup.py applied to parameters.py); Cell 8 writes output/FeynArts/<OutputName>/ (.mod/.gen/.pars).*)
+(*Both need only LHEFT from Cell 5,  and you may run both. Cell 7 writes output/UFO/<OutputName>/; Cell 8 writes output/FeynArts/<OutputName>/ (.mod/.gen/.pars).*)
 (**)
 (*WHERE THINGS ARE*)
 (*  model_files/    model source (HEFT_Model.fr, LO/, NLO/, heft_fr.wl and helpers)*)
@@ -91,7 +91,7 @@ Combine2Derivatives=True;           (* False (default) = unchanged behaviour. Tr
    only, so at HEFTMaxOrder >= 2 they would hand you silently NLO-accurate inputs inside an NNLO
    Lagrangian. Cell 3 aborts on that combination, and so does LoadModel in Cell 5. Use "heft" at
    NNLO and beyond. *)
-EWInputScheme="aem";                (* "heft" - (g, g', v, hlambda) treated as external parameters. "gf" - expressed in terms of (Gf, MW, MZ, MH). "aem" - expressed in terms of (alpha_EM, Gf, MZ, MH), with MW then a PREDICTION rather than an input. "gf"/"aem" rewrite the Lagrangian via HEFTEWInputRepl and are NLO-only (see the note above); see README SS "Input scheme (EW)" *)
+EWInputScheme="heft";                (* "heft" - (g, g', v, hlambda) treated as external parameters. "gf" - expressed in terms of (Gf, MW, MZ, MH). "aem" - expressed in terms of (alpha_EM, Gf, MZ, MH), with MW then a PREDICTION rather than an input. "gf"/"aem" rewrite the Lagrangian via HEFTEWInputRepl and are NLO-only (see the note above); see README SS "Input scheme (EW)" *)
 Massless=False;                      (* True -> load restrictions/Massless.rst before Feynman rules (zeroes light fermion masses, only tau, b, and t are massive) *)
 DiagonalCKM=False;                   (* True -> load restrictions/DiagonalCKM.rst before Feynman rules (CKM -> identity) *)
 
@@ -99,7 +99,7 @@ DiagonalCKM=False;                   (* True -> load restrictions/DiagonalCKM.rs
 HEFTNLOBasis="1604.06801";           (* the only implemented basis; "2206.07722" (Sun et al.) is refused as not yet implemented *)
 NLOOperators={"GHNLO"}; (* Active NLO/NNLO operator labels; {} = LO only. Must be a subset of the catalogue printed above; NNLO labels need HEFTMaxOrder >= 2 *)
 
-OutputName="HEFT_GHNLO_AEM_scheme";              (* Output subdirectory name under output/ *)
+OutputName="HEFT_GHNLO_heft_scheme";              (* Output subdirectory name under output/ *)
 
 MaxVertexLegs=Automatic;             (* Export-time cut on vertex multiplicity, honoured by Cells 6, 7 AND 8. Automatic (default) = no cut. An integer n >= 3 keeps only vertices with at most n legs (it becomes FeynRules' MaxParticles, which the UFO and FeynArts writers forward to their internal FeynmanRules call - unlike SmeftFR's option of the same name, this one does reach the exported model). NOT part of the cache key: Cell 5 builds the full Lagrangian either way, so changing this never forces a rebuild. Beware: quartics are the vertices that unitarise VV->VV, and in HEFT the h-expansion is what makes high multiplicities, so a cut also truncates the flare tower in the output while the WCxf files still list every coefficient. See README *)
 
@@ -219,3 +219,5 @@ Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
 HEFT$NotebookCell=8;
 
 Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
+
+
