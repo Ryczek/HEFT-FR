@@ -1,0 +1,284 @@
+(* ============================================================================================
+   EFT parameters - shared machinery, and the loader for the three sector files
+   ============================================================================================
+
+   Split into sectors 2026-09-18 (was one file), mirroring Lagrangian/Lagrangian_EFT_*.fr:
+
+     parameters_EFT_Bosonic.fr   scalarFlareSpecs, combinedDerivFlareSpecs  (+ their coeff specs)
+     parameters_EFT_2F.fr        ferm2FFlareSpecs, ferm2FCombinedFlareSpecs (+ their coeff specs)
+     parameters_EFT_4F.fr        ferm4FFlareSpecs                          (+ its coeff specs)
+
+   THIS file keeps everything the three share - the H/vev truncation NEFT, the flavour-tensor
+   value rules, the LHA block conventions (bosonicWCProps / tensorWCProps), the five flare
+   builders and the four coefficient-table builders -
+   and, after Get-ing the three, assembles them in HEFTBuildNLOParameterEntries[] and registers
+   them with HEFTRegisterNLOWilsonCoefficients[].  The builders must be defined BEFORE the three
+   Gets: each sector file ends by Scan-ing its own spec list through them.
+
+   Load order is unchanged for everyone else: HEFT_Model.fr still Gets this one file, and
+   parameters_User.fr still runs afterwards and appends its rows to scalarFlareSpecs /
+   scalarCoeffSpecs (defined in the bosonic file, so they exist by then).
+
+   Every Wilson coefficient of a fermionic operator lives INSIDE its flare function and carries
+   the operator's flavour indices - exactly the shape the LO Yukawa flares FQU / FQD / FLE
+   already use in parameters/parameters_SM.fr:
+
+     FC<op>[h, neft, ff1, ff2] = Sum_{n=nmin}^{neft} C<op>n<n>[ff1, ff2] (LamF h/vev)^n
+
+   so each term of the expanded Lagrangian carries exactly one Wilson coefficient.  The operator
+   body is just the field structure times the flare - there is no separate coefficient tensor
+   multiplying it any more (that used to be C<op>n0RE[ff1, ff2]).
+
+   All coefficients are REAL: the Cn0RE / Cn0IM split is gone, and with it the CP-odd imaginary
+   parts of the chirality-flipping and dipole operators.  Restoring them is tracked in TODO.md -
+   see "Complex (CP-odd) Wilson coefficients". *)
+
+(* NEFT: internal H/vev truncation (configuration option HiggsMaxOrder). *)
+If[ValueQ[Global`HiggsMaxOrder], NEFT = Global`HiggsMaxOrder];
+If[!ValueQ[NEFT], NEFT = 3];
+
+(* -------- Active-operator gated flare functions and coefficients -------- *)
+If[!ValueQ[HEFTActiveEFTPieces], HEFTActiveEFTPieces = {}];
+(* HEFTPieceActiveQ is defined in wcxf_input.fr (operator list + WCxf zeros). *)
+
+(* FeynRules needs tensor Value as replacement rules, not Value -> 1 for indexed params.
+   Flavour indices run over the 3 fermion generations (fixed, not configurable). *)
+HEFT2FermValueRules[param_Symbol] :=
+  Flatten@Table[
+    param[i, j] -> HEFTWCGetFlat[HEFTWCFlatKey[param, i, j],
+                                 HEFTWCDefaultTemplateValue[HEFTWCFlatKey[param, i, j]]],
+    {i, 1, 3}, {j, 1, 3}
+  ];
+
+HEFT4FermValueRules[param_Symbol] :=
+  Flatten@Table[
+    param[i, j, k, l] -> HEFTWCGetFlat[HEFTWCFlatKey[param, i, j, k, l],
+                                       HEFTWCDefaultTemplateValue[HEFTWCFlatKey[param, i, j, k, l]]],
+    {i, 1, 3}, {j, 1, 3}, {k, 1, 3}, {l, 1, 3}
+  ];
+
+(* SCALAR Wilson coefficients of the EFT OPERATORS go in their own LHA block, HEFTBOSONIC -
+   never in HEFT, which is reserved for the parameters that exist in every build (the Kappa /
+   Delta set, LamHEFT, WCOrder, ChiralOrder; parameters_SM.fr and power_counting.fr).
+
+   Why the two are separated.  Neither block declares an OrderBlock, so FeynRules numbers each
+   positionally (AddOrderBlock, Core/ClassDeclarations.m) - the lhacode is just the parameter's
+   rank in its own block.  A card line is "<lhacode> <value> # <name>" and the NAME IS A COMMENT
+   (write_param_card.py), so the code alone identifies the parameter on the way back in.  Which
+   bosonic coefficients exist depends on EFTOperators, so their codes necessarily move with the
+   selection; that is fine for a card generated from the model it belongs to.  What is NOT fine
+   is letting that motion drag the always-present parameters around with it: before this split,
+   adding one operator renumbered Kappa3H.  Now HEFT holds a fixed set with fixed codes, and only
+   HEFTBOSONIC is selection-dependent.
+
+   Still all-or-nothing per block: if ONE parameter of a block declares OrderBlock, FeynRules
+   rebuilds that block from its OrderBlock registry alone and every entry without one is silently
+   dropped.  So do not give a single parameter of HEFT or HEFTBOSONIC an OrderBlock.  (SMINPUTS
+   and CKMBLOCK in parameters_SM.fr pin every one of their codes explicitly instead - the other
+   consistent choice.) *)
+bosonicWCProps[] := {ParameterType -> External, Type -> Real, ComplexParameter -> False,
+  BlockName -> HEFTBOSONIC};
+
+(* TENSOR Wilson coefficients use tensorWCProps[sym] instead - ONE LHA BLOCK PER TENSOR, never
+   the shared HEFT block.  Defined in parameters/parameters_SM.fr (the first parameters file
+   loaded, and the home of the LO Yukawa tensors that need the same treatment); the full
+   explanation of what sharing a block costs is in the comment there.  In this file it is used by
+   MakeFermCoeffTable (2F and 4F) and MakeFermCombinedCoeffTable below. *)
+If[DownValues[tensorWCProps] === {},
+  Print[Style["[HEFT] ERROR: tensorWCProps undefined - parameters/parameters_SM.fr must be " <>
+    "loaded before parameters/parameters_EFT.fr.", Red, Bold]];
+  Abort[]
+];
+
+(* Bosonic flare: flavour-blind, one scalar coefficient per power of h/vev. *)
+DefineScalarFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+(* Fermionic flares: the coefficient of every power of h/vev is a flavour tensor, so the
+   operator body needs no coefficient factor of its own.  See the block comment above. *)
+Define2FermFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_, f1_, f2_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]][f1, f2]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+Define4FermFlare[fun_Symbol, op_String, prefix_String, nmin_Integer] :=
+  (fun[h_, neft_, f1_, f2_, f3_, f4_] :=
+    If[HEFTPieceActiveQ[op],
+      Sum[Symbol[prefix <> ToString[n]][f1, f2, f3, f4]*(LamF*h/vev)^n, {n, nmin, neft}],
+      0
+    ]);
+
+(* ---- Combined derivative flares (PDH, P8, P20, P21, P22; NQ9, NQ10, NL3) ----------------
+   PDH, P8, P20, P21 and P22 are written in the paper with a derivative on each of TWO flare
+   functions (del[F1,mu] del[F2,nu]-type; PDH is the square of that bilinear). Expanded to a
+   fixed power of h/vev, that form makes every vertex coefficient a SUM OF PRODUCTS of the two
+   (four, for PDH) families' Wilson coefficients - e.g. P8's h^2 term was
+   3 CP8an3 CP8bn1 + 4 CP8an2 CP8bn2 + 3 CP8an1 CP8bn3.  A vertex only ever depends on that
+   one sum, so the model gives each of the 5 operators ONE combined WC family instead
+   (C<op>n<nh>prime, "prime" spelled out because a literal "'" is not a valid identifier
+   character and would break UFO/FeynArts/WCxf): one Wilson coefficient per vertex.
+
+   This is the ONLY form since 2026-09-17 (user decision): the option Combine2Derivatives and
+   the two-family form (FC<op>a / FC<op>b, C<op>an<n> / C<op>bn<n>) were removed, because the
+   model keeps a single EFT insertion per vertex and a product of two coefficient families in
+   one vertex is not that.  The same day the fermionic NQ9, NQ10 and NL3 (Lagrangian_EFT_2F.fr),
+   which had the same del[FC..a] del[FC..b] structure with flavour-tensor coefficients, got the
+   same treatment: ferm2FCombinedFlareSpecs (parameters_EFT_2F.fr), coefficient tensors
+   C<op>n<nh>prime[f1, f2] (the derivation holds entry by entry in flavour space).
+
+   NUMBERING: nh is the TOTAL number of Higgs fields the term puts into the vertex, counting
+   the ones carried by the explicit del[H,..] factors - exactly the convention the ordinary
+   scalar flares already follow, where C<op>n<n> multiplies (LamF h/vev)^n. So for the
+   quadratic operators (extraPow = 2, two del[H,..]) nh runs 2..2N and CP8n4prime is the
+   4-Higgs term del[H,mu] del[H,nu] (LamF h/vev)^2; for PDH (extraPow = 4) nh runs 4..4N.
+   Term count is unchanged: extraPow*(N-1)+1.
+
+   The exact rewritten form (verified symbolically term-by-term, not just dimensionally):
+   with F1(h) = Sum_{n=1}^{N} C1n (LamF h/vev)^n, F2(h) likewise, and y = LamF h/vev,
+
+     dF1/dh * dF2/dh = (LamF/vev)^2 * Sum_{nh=2}^{2N} D[nh] * y^(nh-2),
+                       D[nh] = Sum_{n1+n2=nh} n1 n2 C1[n1] C2[n2]
+
+   so del[F1,mu] del[F2,nu] === del[H,mu] del[H,nu] * (LamF/vev)^2 * Sum_nh (C<op>n<nh>prime) y^(nh-2)
+   once C<op>n<nh>prime is understood to equal D[nh] - the new parameter is free to take ANY
+   value, D[nh] is only what makes the two representations describe the same physics for a given
+   choice of the retired C1/C2. PDH is the same bilinear squared, so its combined family runs to
+   4N-3 terms (not 2N-1) with an extra (LamF/vev)^2 factor (i.e. (LamF/vev)^4 total). *)
+
+(* Bosonic combined-derivative flare: extraPow = 2 for the quadratic operators (P8/P20/P21/
+   P22 - one bilinear), 4 for PDH (the bilinear squared). The index nh counts all Higgs fields
+   in the term, the extraPow derivative ones included, so it starts at extraPow rather than
+   at 1 and the plain h/vev power is nh - extraPow. Term count = extraPow*(NEFT-1)+1. *)
+DefineCombinedDerivFlare[fun_Symbol, op_String, prefix_String, extraPow_Integer] :=
+  (fun[h_, neft_] :=
+    If[HEFTPieceActiveQ[op],
+      (LamF/vev)^extraPow *
+        Sum[Symbol[prefix <> ToString[nh] <> "prime"]*(LamF*h/vev)^(nh - extraPow),
+          {nh, extraPow, extraPow*neft}],
+      0
+    ]);
+
+(* Fermionic combined flare (NQ9, NQ10, NL3):
+     FC<op>Combined[h, neft, f1, f2] = (LamF/vev)^2 Sum_{nh=2}^{2 neft} C<op>n<nh>prime[f1, f2] y^(nh-2)
+   and the Lagrangian carries del[H,mu] del[H,mu] FC<op>Combined[H, NEFT, ff1, ff2]. *)
+Define2FermCombinedFlare[fun_Symbol, op_String, prefix_String, extraPow_Integer] :=
+  (fun[h_, neft_, f1_, f2_] :=
+    If[HEFTPieceActiveQ[op],
+      (LamF/vev)^extraPow *
+        Sum[Symbol[prefix <> ToString[nh] <> "prime"][f1, f2]*(LamF*h/vev)^(nh - extraPow),
+          {nh, extraPow, extraPow*neft}],
+      0
+    ]);
+
+(* ---- Coefficient tables ---------------------------------------------------------------- *)
+
+MakeScalarCoeffTable[op_String, prefix_String, nmin_Integer, withValue_:True] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      Symbol[prefix <> ToString[n]] == Join[
+        bosonicWCProps[],
+        If[TrueQ[withValue], {Value -> 1}, {}],
+        {Description -> prefix <> ToString[n] <> " HEFT coefficient"}
+      ],
+      {n, nmin, NEFT}
+    ],
+    {}
+  ];
+
+MakeCombinedCoeffTable[op_String, prefix_String, extraPow_Integer, withValue_:True] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      Symbol[prefix <> ToString[nh] <> "prime"] == Join[
+        bosonicWCProps[],
+        If[TrueQ[withValue], {Value -> 1}, {}],
+        {Description -> prefix <> ToString[nh] <> "prime HEFT coefficient (" <> ToString[nh] <>
+          " Higgs fields, the " <> ToString[extraPow] <> " differentiated ones included; " <>
+          "combines " <> ToString[extraPow] <>
+          " independent derivative-flare factors into one, see combinedDerivFlareSpecs)"}
+      ],
+      {nh, extraPow, extraPow*NEFT}
+    ],
+    {}
+  ];
+
+(* One real flavour tensor per power of h/vev, matching the flare built from the same spec.
+   nIdx is 2 (two-fermion operators) or 4 (four-fermion operators). *)
+MakeFermCoeffTable[op_String, prefix_String, nmin_Integer, nIdx_Integer] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      With[{sym = Symbol[prefix <> ToString[n]]},
+        sym == Join[
+          tensorWCProps[sym],
+          {Indices -> ConstantArray[Index[Generation], nIdx],
+           Value -> If[nIdx === 2, HEFT2FermValueRules[sym], HEFT4FermValueRules[sym]],
+           Description -> prefix <> ToString[n] <> " HEFT coefficient"}
+        ]
+      ],
+      {n, nmin, NEFT}
+    ],
+    {}
+  ];
+
+MakeFermCombinedCoeffTable[op_String, prefix_String, extraPow_Integer] :=
+  If[HEFTPieceActiveQ[op],
+    Table[
+      With[{sym = Symbol[prefix <> ToString[nh] <> "prime"]},
+        sym == Join[
+          tensorWCProps[sym],
+          {Indices -> {Index[Generation], Index[Generation]},
+           Value -> HEFT2FermValueRules[sym],
+           Description -> prefix <> ToString[nh] <> "prime HEFT coefficient (" <> ToString[nh] <>
+             " Higgs fields, the " <> ToString[extraPow] <> " differentiated ones included; " <>
+             "combines the two derivative flares of " <> op <> " into one, see ferm2FCombinedFlareSpecs)"}
+        ]
+      ],
+      {nh, extraPow, extraPow*NEFT}
+    ],
+    {}
+  ];
+
+(* ---- The three sector files -------------------------------------------------------------
+   Each declares its spec lists, derives its coefficient specs, and Scans its flares through
+   the builders above.  They must come AFTER the builders and BEFORE
+   HEFTBuildNLOParameterEntries[]. *)
+HEFTLoad[{"parameters", "parameters_EFT_Bosonic.fr"}];
+HEFTLoad[{"parameters", "parameters_EFT_2F.fr"}];
+HEFTLoad[{"parameters", "parameters_EFT_4F.fr"}];
+
+(* ---- Registration ----------------------------------------------------------------------- *)
+
+UniqueParameterEntries[list_] := Module[{keys},
+  keys = list /. (lhs_ == _rhs_) :> HoldForm[lhs];
+  Values@AssociationThread[keys, list]
+];
+
+HEFTBuildNLOParameterEntries[] := Flatten@Join[
+  (MakeScalarCoeffTable @@ #) & /@ scalarCoeffSpecs,
+  (MakeCombinedCoeffTable @@ #) & /@ combinedDerivCoeffSpecs,
+  (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 2] &) /@ ferm2FCoeffSpecs,
+  (MakeFermCombinedCoeffTable @@ #) & /@ ferm2FCombinedCoeffSpecs,
+  (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 4] &) /@ ferm4FCoeffSpecs
+];
+
+(* Register NLO Wilson coefficients for operators in HEFTActiveEFTPieces.
+   Call after HEFTActiveEFTPieces is set (heft_fr.wl sets it before LoadModel). *)
+HEFTRegisterNLOWilsonCoefficients[] := Module[{np},
+  If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
+  Scan[(DefineScalarFlare @@ #) &, scalarFlareSpecs];
+  Scan[(DefineCombinedDerivFlare @@ #) &, combinedDerivFlareSpecs];
+  Scan[(Define2FermFlare @@ #) &, ferm2FFlareSpecs];
+  Scan[(Define2FermCombinedFlare @@ #) &, ferm2FCombinedFlareSpecs];
+  Scan[(Define4FermFlare @@ #) &, ferm4FFlareSpecs];
+  np = HEFTBuildNLOParameterEntries[];
+  If[ValueQ[M$Parameters] && np =!= {},
+    M$Parameters = UniqueParameterEntries@Join[M$Parameters, np]
+  ]
+];
+
+HEFTRegisterNLOWilsonCoefficients[];

@@ -1,126 +1,63 @@
-(* Gauge-field normalization and A–Z mixing for HEFT.
+(* A–Z mixing for HEFT.
    ----------------------------------------------------------------------
-   This module is the dedicated place to compute the normalization
-   factors
+   This module is the dedicated place to compute
 
-     - Wnorm   : overall normalization of SU(2)_L gauge fields
-     - Bnorm   : overall normalization of U(1)_Y gauge field
-     - Gnorm   : overall normalization of SU(3)_c gluon fields
-     - AZnorm  : 2×2 mixing matrix between (W^3, B) and (Z, A)
+     - AZnorm  : 2×2 mixing matrix between (W^3, B) and (Z, A), (W^3, B)^T = AZnorm . (Z, A)^T
 
-   The idea is that these quantities can depend dynamically on:
+   as a function of the active operators P1 and P12, at FIRST ORDER in WCOrder: the model keeps a
+   single EFT insertion per vertex (fixed since 2026-09-17), so AZnorm is linear in CP1n0 and
+   CP12n0 and written out explicitly below - no Series, no square roots of EFT coefficients.
+   AZnorm is *used* in `fields.fr` via the `Definitions` of the unphysical gauge fields `B` and
+   `Wi`.
 
-     - the HEFT expansion order (NEFT, ChiralOrder, LamF, ...)
-     - the chosen NLO basis HEFTNLOBasis
-     - the active NLO operators in HEFTActiveNLOPieces
+   Which operators enter.  There are no Wnorm / Bnorm / Gnorm any more (removed 2026-09-16): PG,
+   PB and PW use Fbar(h) = F(h) - 1 (nmin = 1, 1604.06801 eqs. C.14-C.16), so they vanish at h = 0
+   and never touch the gauge kinetic terms, and gw :> GW, g1 :> G1, gs :> GS carry no
+   normalisation.  Only P1 (W3-B kinetic mixing, S) and P12 (W3 kinetic rescaling, U) modify the
+   kinetic matrix; their h^0 parts are physical, so F-bar is not available for them.
 
-   They are *used* in `fields_LO.fr` via the `Definitions` of the
-   unphysical gauge fields `B`, `Wi`, and `Gl`, and in `parameters_LO.fr`
-   via the replacement rules for `gw`, `g1`, `gs` in terms of the
-   effective couplings `GW`, `G1`, `GS`.
+   Derivation.  With TT = PauliSigma[3] and FSWi = sigma^a W^a/2 (definitions.fr),
+   Tr[TT.FSWi] = W3_{mu nu}, so in L = -1/4 V^T K V, V = (W3, B),
 
-   This file currently only provides the hook where you can implement
-   those relations. By default, the update is a no-op so that the model
-   behaves exactly as before until you add your expressions.
-   ---------------------------------------------------------------------- *)
+       K = {{1 - 4 x c12, -2 x c1}, {-2 x c1, 1}},    x = WCOrder, c1 = CP1n0, c12 = CP12n0.
 
-(* Main hook: called from LHEFT before assembling the full Lagrangian.
-   You can redefine this function in this file to set Wnorm, Bnorm,
-   Gnorm and AZnorm (and any related effective couplings) as functions
-   of the expansion order and active operators.
+   AZnorm = diag(P12normINV, 1) . M . R(theta) makes X^T K X = 1 and the photon massless:
+     - W3 rescaling   P12normINV = 1/Sqrt[1 - 4 x c12]            = 1 + 2 x c12
+     - mixing         eps = -2 x c1 P12normINV                    = -2 x c1       (c12 drops out)
+     - de-mixing      M = {{a, 0}, {c, 1}}, a = 1/Sqrt[1-eps^2]   = 1,  c = -eps = 2 x c1
+     - rotation       cos(theta) = (GW + eps G1 P12norm)/Sqrt[GW^2 + 2 eps GW G1 P12norm + P12norm^2 G1^2]
+                                 = cW + 2 x sW^2 (c12 cW - c1 sW)
+                      sin(theta) = sW - 2 x sW cW (c12 cW - c1 sW)
+   with cW = GW/Sqrt[GW^2+G1^2], sW = G1/Sqrt[GW^2+G1^2] (every "=" on the right is at first
+   order in x).  Multiplying out and dropping x^2 gives the four entries below.  At x = 0, or with
+   neither P1 nor P12 selected, they are exactly the SM rotation {{cW, sW}, {-sW, cW}} - so there
+   is no separate SM branch.  P1 and P12 contribute independently: no c1 c12 term survives at one
+   insertion.  Checked against the previous Series-based construction for all four P1/P12
+   selections, and X^T K X = 1 + O(x^2), massless photon to O(x) (TESTS.md T31).
 
-   By default we leave Wnorm, Bnorm, Gnorm and AZnorm as free HEFT
-   parameters. For the 1604.06801 basis we fix a specific rule for the
-   gluon normalization:
-     - if GHNLO is NOT active: Gnorm = 1
-     - if GHNLO IS active:     Gnorm = (1 + CGHNLOn0)^(1/2)
-   *)
+   History (the signs and factors above are the result of two fixes in the former exact /
+   Series-based construction, kept here because the explicit form inherits them):
+     - FIXED 2026-08-12: eps read -4 x c1 instead of -2 x c1.  The kinetic terms were then not
+       canonically normalised - X^T K X - I left a residual A-Z kinetic mixing
+       2 x c1 (GW^2-G1^2)/(G1^2+GW^2) - and the mass sector could not catch it, because the photon
+       mass and the A-Z mass mixing vanish identically for any eps.
+     - FIXED 2026-08-13: M had an overall minus sign (M = -I at eps = 0), which flipped (Z, A)
+       relative to a run without P1/P12 and made the extracted photon coupling come out as -e.
+     - 2026-09-17: the exact square-root construction, expanded with Series, was replaced by
+       these explicit first-order entries (identical at first order). *)
+
+(* Main hook: called from HEFT_Model.fr before assembling the full Lagrangian. *)
 
 HEFTUpdateGaugeNormalizations[] :=
-    Module[{X,a,b,c,d,cos,sin, P12norm, P12normINV, eps},
-      (* 1604.06801 basis: set gluon normalization according to whether
-         GHNLO is active. *)
-      If[ValueQ[HEFTNLOBasis] && HEFTNLOBasis === "1604.06801",
-        If[ValueQ[HEFTActiveNLOPieces] &&
-          HEFTPieceActiveQ[ "GHNLO"],
-          Gnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CGHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
-          GnormINVaux = Normal[Series[1/Gnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
-          Gnormaux = 1;
-          GnormINVaux = 1
-        ];
-        If[ValueQ[HEFTActiveNLOPieces] &&
-          HEFTPieceActiveQ[ "WHNLO"],
-          Wnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CWHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
-          WnormINVaux = Normal[Series[1/Wnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
-          Wnormaux = 1;
-          WnormINVaux = 1
-        ];
-        If[ValueQ[HEFTActiveNLOPieces] &&
-          HEFTPieceActiveQ[ "BHNLO"],
-          Bnormaux = Normal[Series[Sqrt[1 + ChiralOrder*CBHNLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
-          BnormINVaux = Normal[Series[1/Bnormaux,{ChiralOrder,0,HEFTMaxOrder}]],
-          Bnormaux  = 1;
-          BnormINVaux = 1
-        ];
-        If[ValueQ[HEFTActiveNLOPieces] &&
-          HEFTPieceActiveQ[ "P12NLO"],
-          P12norm =  Normal[Series[Sqrt[1 - 4*ChiralOrder*CP12NLOn0],{ChiralOrder,0,HEFTMaxOrder}]];
-          P12normINV = Normal[Series[1/P12norm,{ChiralOrder,0,HEFTMaxOrder}]],
-          P12norm = 1;
-          P12normINV = 1
-        ];
-        If[ValueQ[HEFTActiveNLOPieces] &&
-          HEFTPieceActiveQ[ "P1NLO"],
-          (* eps is the OFF-DIAGONAL ENTRY of the kinetic matrix after the diagonal rescaling,
-             i.e. the epsilon of {{1,eps},{eps,1}}, which is what the {{a,b},{c,d}} block below
-             is built to undo.  With TT = PauliSigma[3] and FSWi = sigma^a W^a/2 (definitions.fr)
-             one has Tr[TT.FSWi] = W3_{mu nu}, so LP1NLO = chi CP1NLOn0 B_{mu nu} W3^{mu nu}
-             contributes K12 = -2 chi CP1NLOn0 to L = -1/4 V^T K V, and the normalised entry is
-             -2 chi CP1NLOn0 WnormINV BnormINV P12normINV.
-             FIXED 2026-08-12: this read -4 instead of -2.  With -4 the kinetic terms are NOT
-             canonically normalised - X^T K X - I left a residual A-Z KINETIC mixing
-             2 chi CP1 (GW^2-G1^2)/(G1^2+GW^2) and mis-set the A and Z kinetic terms by
-             -/+ 4 chi CP1 G1 GW/(G1^2+GW^2).  With -2 it is exactly the identity.
-             The mass sector could not catch this: the photon mass and the A-Z MASS mixing
-             vanish identically for any eps (their common prefactor is zero for G1, GW > 0). *)
-          eps = Normal[Series[-2*ChiralOrder*CP1NLOn0*WnormINVaux*BnormINVaux*P12normINV,{ChiralOrder,0,HEFTMaxOrder}]],
-          eps = 0
-        ];
-        If[ValueQ[HEFTActiveNLOPieces] && (
-          HEFTPieceActiveQ[ "P1NLO"]
-          || HEFTPieceActiveQ[ "WHNLO"]
-          || HEFTPieceActiveQ[ "BHNLO"]
-          || HEFTPieceActiveQ[ "P12NLO"])
-          ,
-          (* {{a,b},{c,d}} undoes the off-diagonal kinetic matrix {{1,eps},{eps,1}}:
-             M^T.{{1,eps},{eps,1}}.M == I identically in eps.  That condition is QUADRATIC in
-             M, so it fixes M only up to an overall sign - both this M and -M satisfy it.
-             FIXED 2026-08-13: the signs read a = -1/Sqrt[1-eps^2], c = +eps/Sqrt[1-eps^2],
-             d = -1, i.e. M = -I at eps = 0, so this branch returned exactly MINUS the
-             AZnorm of the else-branch below.  Turning on any of P1NLO/WHNLO/BHNLO/P12NLO
-             therefore flipped Z and A relative to a run without them (a global
-             (Z,A) -> (-Z,-A) redefinition: unphysical on its own, but inconsistent with the
-             other branch of this same If), and it made the extracted photon coupling come out
-             as -e: at LO -G1 GW/Sqrt[G1^2+GW^2], numerically -0.308 at GW = 0.65, G1 = 0.35,
-             against the +e recorded in README SS "Input scheme (EW)".  The NLO structure of e
-             was right - only the overall sign was wrong.  With M = +I at eps = 0 the two
-             branches agree and e comes out positive. *)
-          a = 1/(1-eps^2)^(1/2);
-          b = 0;
-          c = -eps/(1-eps^2)^(1/2);
-          d = 1;
-          cos = Normal[Series[(GW + eps*G1*P12norm)/Sqrt[GW^2+2*eps*GW*G1*P12norm+P12norm^2*G1^2],{ChiralOrder,0,HEFTMaxOrder}]];
-          sin = Normal[Series[Sqrt[1-cos^2],{ChiralOrder,0,HEFTMaxOrder}]];
-          X = Normal[Series[{{WnormINVaux,0},{0,BnormINVaux}}.{{P12normINV,0},{0,1}}.{{a,b},{c,d}}.{{cos,sin},{-sin,cos}},{ChiralOrder,0,HEFTMaxOrder}]];
-          X = Simplify[X, Assumptions->{GW>0,GW\[Element]Reals,G1>0,G1\[Element]Reals, ChiralOrder>0, ChiralOrder\[Element]Reals}];
-          AZnorm1x1aux = X[[1,1]];
-          AZnorm1x2aux = X[[1,2]];
-          AZnorm2x1aux = X[[2,1]];
-          AZnorm2x2aux = X[[2,2]];,
-          AZnorm1x1aux = GW/(GW^2+G1^2)^(1/2);
-          AZnorm1x2aux = G1/(GW^2+G1^2)^(1/2);
-          AZnorm2x1aux = -G1/(GW^2+G1^2)^(1/2);
-          AZnorm2x2aux = GW/(GW^2+G1^2)^(1/2);
-          ];
-      ]; 
+    Module[{c1, c12, cW, sW},
+      If[True,
+        c1  = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],  CP1n0,  0];
+        c12 = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"], CP12n0, 0];
+        cW = GW/Sqrt[GW^2 + G1^2];
+        sW = G1/Sqrt[GW^2 + G1^2];
+        AZnorm1x1aux =  cW + 2*WCOrder*(c12*cW*(1 + sW^2) - c1*sW^3);
+        AZnorm1x2aux =  sW + 2*WCOrder*sW^2*(c12*sW + c1*cW);
+        AZnorm2x1aux = -sW + 2*WCOrder*cW^2*(c12*sW + c1*cW);
+        AZnorm2x2aux =  cW + 2*WCOrder*sW*cW*(c12*sW + c1*cW);
+      ];
     ];

@@ -7,7 +7,7 @@
      3. LoadModel reads that file via Global`HEFTWCxfOutputFile; values replace LO and NLO.
    Listed coefficients only; absent keys -> 0.  A value of 0 is just the number 0 in the
    exported model - it does not remove anything from the Lagrangian.  Which operators exist
-   is decided solely by NLOOperators. *)
+   is decided solely by EFTOperators. *)
 
 If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
 If[!ValueQ[KappaFramework], KappaFramework = True];
@@ -19,8 +19,8 @@ If[HEFTWCxfOutputFile === None && ValueQ[Global`HEFTWCxfFile],
   HEFTWCxfOutputFile = Global`HEFTWCxfFile
 ];
 
-If[ValueQ[Global`HEFTActiveNLOPieces], HEFTActiveNLOPieces = Global`HEFTActiveNLOPieces];
-If[!ValueQ[HEFTActiveNLOPieces], HEFTActiveNLOPieces = {}];
+If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
+If[!ValueQ[HEFTActiveEFTPieces], HEFTActiveEFTPieces = {}];
 
 If[ValueQ[Global`HiggsMaxOrder], HiggsMaxOrder = Global`HiggsMaxOrder];
 If[!ValueQ[HiggsMaxOrder], HiggsMaxOrder = 2];
@@ -30,7 +30,7 @@ If[!ValueQ[HiggsMaxOrder], HiggsMaxOrder = 2];
 (* InitialiseWCs: the default numerical value written into the WCxf files for the *effective*
    (beyond-SM) coefficients - 0 or 1.  Accepts the integers or the strings "0"/"1".
    It only decides the numbers in wcxf_output.json; it never changes which operators are in
-   the Lagrangian (that is NLOOperators alone, via HEFTPieceActiveQ) and so is deliberately
+   the Lagrangian (that is EFTOperators alone, via HEFTPieceActiveQ) and so is deliberately
    NOT part of the LHEFT cache key. *)
 If[ValueQ[Global`InitialiseWCs], InitialiseWCs = Global`InitialiseWCs];
 If[!ValueQ[InitialiseWCs], InitialiseWCs = 1];
@@ -40,19 +40,10 @@ InitialiseWCs::invalid =
 
 (* Higher-order fermion-Higgs terms of the LO Yukawa sector (FQU/FQD/FLE and their
    CQUn/CQDn/CLEn tensors).  Off -> those coefficients do not exist, so no WCxf key is
-   generated for them.  Defined in LO/parameters_LO.fr; mirrored here because Cell 3 writes
+   generated for them.  Defined in parameters/parameters_SM.fr; mirrored here because Cell 3 writes
    the WCxf files before LoadModel. *)
 If[ValueQ[Global`LOYukawaExpansion], LOYukawaExpansion = Global`LOYukawaExpansion];
 If[!ValueQ[LOYukawaExpansion], LOYukawaExpansion = True];
-
-(* Custodial-breaking operator PT; the only user of the CFTn coefficients. *)
-If[ValueQ[Global`IncludeCustodialT], IncludeCustodialT = Global`IncludeCustodialT];
-If[!ValueQ[IncludeCustodialT], IncludeCustodialT = True];
-
-(* DH/P8NLO/P20NLO/P21NLO/P22NLO: see combinedDerivFlareSpecs in
-   NLO/basis_1604_06801/parameters_NLO.fr for what this controls. *)
-If[ValueQ[Global`Combine2Derivatives], Combine2Derivatives = Global`Combine2Derivatives];
-If[!ValueQ[Combine2Derivatives], Combine2Derivatives = False];
 
 HEFTWCInitValue[] := Which[
   InitialiseWCs === 0 || InitialiseWCs === "0", 0,
@@ -66,18 +57,20 @@ HEFTWCxfDefaultScale[] := Which[
   True, 1000
 ];
 
-If[ValueQ[Global`HEFTNLOBasis], HEFTNLOBasis = Global`HEFTNLOBasis];
-If[!ValueQ[HEFTNLOBasis], HEFTNLOBasis = "1604.06801"];
+(* The operator basis is fixed: Brivio et al. 1604.06801.  Not a configuration option (the
+   HEFTNLOBasis switch was removed 2026-09-18).  "basis" is still written into the WCxf
+   documents below because the WCxf format requires the field. *)
+HEFTWCxfBasis = "1604.06801";
 
 HEFTWCValues = <||>;
 HEFTWCxfLoadedQ = False;
 HEFTWCxfScale = None;
 
 (* Bookkeepers: never assign numeric values to these symbols during WCxf load. *)
-HEFTWCProtectedParameterSymbols = {ChiralOrder, LamF, LamGold};
+HEFTWCProtectedParameterSymbols = {ChiralOrder, WCOrder, LamF};
 
 (* LO Yukawa-expansion tensors: present only when LOYukawaExpansion is on, and only for
-   n >= 2, mirroring FQU/FQD/FLE and the M$Parameters declarations in LO/parameters_LO.fr.
+   n >= 2, mirroring FQU/FQD/FLE and the M$Parameters declarations in parameters/parameters_SM.fr.
    n = 1 does not exist - the single-Higgs Yukawa strength is KappaQU.../DeltaYQU... *)
 HEFTLOYukawaSymbols[] :=
   If[!TrueQ[LOYukawaExpansion], {},
@@ -93,8 +86,6 @@ HEFTLOSymbols[] := If[TrueQ[KappaFramework],
      KappaLE, KappaLM, KappaLT, KappaQU, KappaQC, KappaQT, KappaQD, KappaQS, KappaQB},
     HEFTLOYukawaSymbols[],
     If[HiggsMaxOrder >= 3, Table[Symbol["CFCn" <> ToString[heftN]], {heftN, 3, HiggsMaxOrder}], {}],
-    If[TrueQ[IncludeCustodialT],
-      Table[Symbol["CFTn" <> ToString[heftN]], {heftN, 0, HiggsMaxOrder}], {}],
     If[HiggsMaxOrder >= 5, Table[Symbol["CVn" <> ToString[heftN]], {heftN, 5, HiggsMaxOrder}], {}]
   ],
   Join[
@@ -102,8 +93,6 @@ HEFTLOSymbols[] := If[TrueQ[KappaFramework],
      DeltaYLE, DeltaYLM, DeltaYLT, DeltaYQU, DeltaYQC, DeltaYQT, DeltaYQD, DeltaYQS, DeltaYQB},
     HEFTLOYukawaSymbols[],
     If[HiggsMaxOrder >= 3, Table[Symbol["CFCn" <> ToString[heftN]], {heftN, 3, HiggsMaxOrder}], {}],
-    If[TrueQ[IncludeCustodialT],
-      Table[Symbol["CFTn" <> ToString[heftN]], {heftN, 0, HiggsMaxOrder}], {}],
     If[HiggsMaxOrder >= 5, Table[Symbol["CVn" <> ToString[heftN]], {heftN, 5, HiggsMaxOrder}], {}]
   ]
 ];
@@ -135,93 +124,88 @@ HEFTWCGetFlat[wcKey_String, default_:0] :=
 HEFTWCGetSymbol[sym_Symbol, default_:0] :=
   HEFTWCGetFlat[SymbolName[sym], default];
 
-(* 1604.06801 operator -> scalar flare prefixes {prefix, nMin}.  DH/P8NLO/P20NLO/P21NLO/
-   P22NLO are NOT here - each multiplies two (DH: the square of a bilinear, so four)
-   independently-truncated flares together, so they need a different key shape; see
-   heft1604DerivProductOpPrefixes / heft1604CombinedDerivOpPrefixes below, selected by
-   Combine2Derivatives exactly as parameters_NLO.fr selects which parameters to declare. *)
+(* 1604.06801 operator -> scalar flare prefixes {prefix, nMin}.  PDH/P8/P20/P21/
+   P22 are NOT here - they use one combined WC family each, with a different key shape; see
+   heft1604CombinedDerivOpPrefixes below (the only form since 2026-09-17, when the
+   Combine2Derivatives option and the two-family keys C<op>an<n> / C<op>bn<n> were removed). *)
 HEFT1604ScalarOpPrefixes = {
-  {"GHNLO", "CGHNLOn", 0}, {"GHtildeNLO", "CGHtildeNLOn", 0},
-  {"GHNNLO1", "CGHNNLOn1", 0}, {"GHNNLO2", "CGHNNLOn2", 0},
-  {"GHtildeNNLO", "CGHtildeNNLOn", 0},
-  {"WL2h2D2NNLO", "CWL2h2D2NNLOn", 0}, {"WL2h2T2D2NNLO", "CWL2h2T2D2NNLOn", 0},
-  {"BL2h2D2NNLO", "CBL2h2D2NNLOn", 0}, {"WLh2WRD2NNLO", "CWL2h2DRD2NNLOn", 0},
-  {"WLh3D4NNLO", "CWLh3D4NNLOn", 0},
-  {"h4D6NNLOv1", "Ch4D6NNLOv1n", 0}, {"h4D6NNLOv2", "Ch4D6NNLOv2n", 0},
-  {"h4T2D6NNLOv1", "Ch4T2D6NNLOv1n", 0}, {"h4T2D6NNLOv2", "Ch4T2D6NNLOv2n", 0},
-  {"P1NLO", "CP1NLOn", 0}, {"S1NLO", "CS1NLOn", 0},
-  {"BHNLO", "CBHNLOn", 0}, {"BtildeHNLO", "CBtildeHNLOn", 0},
-  (* CWtildeHNLOn, not CWtildeNLOn: the prefix here must match the one parameters_NLO.fr
+  {"PT", "CPTn", 0},
+  {"PG", "CPGn", 1}, {"SG", "CSGn", 1},
+  {"PGHD1", "CPGHD1n", 0}, {"PGHD2", "CPGHD2n", 0},
+  {"SGHD", "CSGHDn", 0},
+  (* User-defined operators (parameters_User.fr / Lagrangian_User.fr): add one row per
+     operator here, with the same label, prefix and nmin as its userScalarFlareSpecs row
+     (HEFTFlareSpecCheck in HEFT_Model.fr aborts the load if they disagree). *)
+  {"P1", "CP1n", 0}, {"S1", "CS1n", 0},
+  {"PB", "CPBn", 1}, {"SB", "CSBn", 1},
+  (* CSWn (then CWtildeHNLOn), not CWtildeNLOn: the prefix here must match the one parameters_EFT.fr
      declares, or the generated WCxf key names a parameter the model does not have and the
      value silently never reaches the Lagrangian.  This one was wrong (missing the H) from
      the start and was found 2026-08-20 by diffing this table against scalarCoeffSpecs. *)
-  {"WHNLO", "CWHNLOn", 0}, {"WtildeHNLO", "CWtildeHNLOn", 0},
-  {"WWWNLO", "CWWWNLOn", 0}, {"GGGNLO", "CGGGNLOn", 0},
-  {"WWWtildeNLO", "CWWWtildeNLOn", 0}, {"GGGtildeNLO", "CGGGtildeNLOn", 0},
-  {"P2NLO", "CP2NLOn", 0}, {"P3NLO", "CP3NLOn", 0}, {"P4NLO", "CP4NLOn", 0},
-  {"P5NLO", "CP5NLOn", 0}, {"P6NLO", "CP6NLOn", 0},
-  {"P11NLO", "CP11NLOn", 0}, {"P12NLO", "CP12NLOn", 0},
-  {"P13NLO", "CP13NLOn", 0}, {"P14NLO", "CP14NLOn", 0},
-  {"P17NLO", "CP17NLOn", 1}, {"P18NLO", "CP18NLOn", 1},
-  {"P23NLO", "CP23NLOn", 0}, {"P24NLO", "CP24NLOn", 0}, {"P26NLO", "CP26NLOn", 0},
-  {"S2DNLO", "CS2DNLOn", 1}, {"S2NLO", "CS2NLOn", 1}, {"S3NLO", "CS3NLOn", 1},
-  {"S4NLO", "CS4NLOn", 0}, {"S5NLO", "CS5NLOn", 1}, {"S6NLO", "CS6NLOn", 1},
-  {"S7NLO", "CS7NLOn", 1}, {"S8NLO", "CS8NLOn", 0}, {"S9NLO", "CS9NLOn", 1},
-  {"S15NLO", "CS15NLOn", 1},
-  {"NQ9NLO", "CNQ9NLO1n", 1}, {"NQ9NLO", "CNQ9NLO2n", 1},
-  {"NQ10NLO", "CNQ10NLO1n", 1}, {"NQ10NLO", "CNQ10NLO2n", 1},
-  {"NL3NLO", "CNL3NLO1n", 1}, {"NL3NLO", "CNL3NLO2n", 1}
+  {"PW", "CPWn", 1}, {"SW", "CSWn", 1},
+  {"PWWW", "CPWWWn", 0}, {"PGGG", "CPGGGn", 0},
+  {"SWWW", "CSWWWn", 0}, {"SGGG", "CSGGGn", 0},
+  {"P2", "CP2n", 0}, {"P3", "CP3n", 0}, {"P4", "CP4n", 1},
+  {"P5", "CP5n", 1}, {"P6", "CP6n", 0},
+  {"P11", "CP11n", 0}, {"P12", "CP12n", 0},
+  {"P13", "CP13n", 0}, {"P14", "CP14n", 0},
+  {"P17", "CP17n", 1}, {"P18", "CP18n", 1},
+  {"P23", "CP23n", 0}, {"P24", "CP24n", 0}, {"P26", "CP26n", 0},
+  {"S2D", "CS2Dn", 1}, {"S2", "CS2n", 1}, {"S3", "CS3n", 1},
+  {"S4", "CS4n", 0}, {"S5", "CS5n", 1}, {"S6", "CS6n", 1},
+  {"S7", "CS7n", 1}, {"S8", "CS8n", 0}, {"S9", "CS9n", 1},
+  {"S15", "CS15n", 1}
 };
 
-(* {op, prefix, nMin} for Combine2Derivatives -> False (current/default), mirroring
-   derivProductFlareSpecs in parameters_NLO.fr exactly. *)
-heft1604DerivProductOpPrefixes = {
-  {"DH", "CDHn1", 1}, {"DH", "CDHn2", 1},
-  {"P8NLO", "CP8NLO1n", 1}, {"P8NLO", "CP8NLO2n", 1},
-  {"P20NLO", "CP20NLO1n", 1}, {"P20NLO", "CP20NLO2n", 1},
-  {"P21NLO", "CP21NLO1n", 1}, {"P21NLO", "CP21NLO2n", 1},
-  {"P22NLO", "CP22NLO1n", 1}, {"P22NLO", "CP22NLO2n", 1}
-};
-
-(* {op, prefix, extraPow} for Combine2Derivatives -> True, mirroring combinedDerivFlareSpecs
-   in parameters_NLO.fr exactly (extraPow = 2 for the quadratic operators, 4 for DH). *)
+(* {op, prefix, extraPow}, mirroring combinedDerivFlareSpecs
+   in parameters_EFT.fr exactly (extraPow = 2 for the quadratic operators, 4 for PDH). *)
 heft1604CombinedDerivOpPrefixes = {
-  {"DH", "CDHn", 4},
-  {"P8NLO", "CP8NLOn", 2}, {"P20NLO", "CP20NLOn", 2},
-  {"P21NLO", "CP21NLOn", 2}, {"P22NLO", "CP22NLOn", 2}
+  {"PDH", "CPDHn", 4},
+  {"P8", "CP8n", 2}, {"P20", "CP20n", 2},
+  {"P21", "CP21n", 2}, {"P22", "CP22n", 2}
 };
 
 (* There is no real/complex split any more: every fermionic Wilson coefficient is a real
    flavour tensor living inside its flare function (see the block comment in
-   NLO/basis_1604_06801/parameters_NLO.fr).  The old HEFT1604Fermion{2F,4F}{Real,Complex}Ops
+   parameters/parameters_EFT.fr).  The old HEFT1604Fermion{2F,4F}{Real,Complex}Ops
    lists, which existed only to decide whether to emit an extra n0IM key, are gone. *)
 
 HEFT1604Fermion4FScalarOps = Join[
-  Table["RQ" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 26}],
-  Table["RQL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 23}],
-  Table["RL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 7}]
+  Table["RQ" <> ToString[heftIdx], {heftIdx, 1, 26}],
+  Table["RQL" <> ToString[heftIdx], {heftIdx, 1, 23}],
+  Table["RL" <> ToString[heftIdx], {heftIdx, 1, 7}]
 ];
 
 HEFT1604Fermion2FScalarOps = Join[
-  Table["NQ" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 36}],
-  Table["NL" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 17}],
-  Table["NLF" <> ToString[heftIdx] <> "NLO", {heftIdx, 1, 3}]
+  Table["NQ" <> ToString[heftIdx], {heftIdx, 1, 36}],
+  Table["NL" <> ToString[heftIdx], {heftIdx, 1, 17}]
 ];
+
+(* 2F operators whose flare sits under a derivative - single source for BOTH the flare specs in
+   parameters/parameters_EFT.fr (loaded after this file) and the WCxf keys below (2026-09-17):
+     - HEFT1604Fermion2FCombinedOps: a derivative on each of TWO flares, del[F,mu] del[F',mu];
+       one combined flare FC<op>Combined, coefficient tensors C<op>n<nh>prime[f1,f2], nh = 2..2N;
+     - HEFT1604Fermion2FDerivOps: a derivative on ONE flare; it starts at n = 1 (the constant term
+       drops out).
+   HEFT_Model.fr checks both lists against the Lagrangian at load time (HEFTFlareSpecCheck). *)
+HEFT1604Fermion2FCombinedOps = {"NQ9", "NQ10", "NL3"};
+HEFT1604Fermion2FDerivOps = {"NQ11", "NQ12", "NQ13", "NQ14", "NQ21", "NQ22", "NQ23", "NQ24",
+  "NL4", "NL5", "NL8", "NL9"};
+HEFT2FFlareNmin[op_String] := If[MemberQ[HEFT1604Fermion2FDerivOps, op], 1, 0];
 
 HEFT1604FermionPrefix[op_String] := Module[{wcMatch},
   wcMatch = StringCases[op, {
-    "NLF" ~~ heftNum : NumberString ~~ "NLO" :> ("CNLF" <> heftNum <> "NLO"),
-    "NL" ~~ heftNum : NumberString ~~ "NLO" :> ("CNL" <> heftNum <> "NLO"),
-    "NQ" ~~ heftNum : NumberString ~~ "NLO" :> ("CNQ" <> heftNum <> "NLO"),
-    "RQL" ~~ heftNum : NumberString ~~ "NLO" :> ("CRQL" <> heftNum <> "NLO"),
-    "RQ" ~~ heftNum : NumberString ~~ "NLO" :> ("CRQ" <> heftNum <> "NLO"),
-    "RL" ~~ heftNum : NumberString ~~ "NLO" :> ("CL" <> heftNum <> "NLO")
+    "NL" ~~ heftNum : NumberString :> ("CNL" <> heftNum),
+    "NQ" ~~ heftNum : NumberString :> ("CNQ" <> heftNum),
+    "RQL" ~~ heftNum : NumberString :> ("CRQL" <> heftNum),
+    "RQ" ~~ heftNum : NumberString :> ("CRQ" <> heftNum),
+    "RL" ~~ heftNum : NumberString :> ("CRL" <> heftNum)
   }];
   If[wcMatch === {}, "", First[wcMatch]]
 ];
 
 (* One flat key per (power of h/vev, flavour tuple), mirroring the flare functions in
-   parameters_NLO.fr one for one: C<op>n<n>_<f1>_<f2>[_<f3>_<f4>], n = nmin..HiggsMaxOrder,
+   parameters_EFT.fr one for one: C<op>n<n>_<f1>_<f2>[_<f3>_<f4>], n = nmin..HiggsMaxOrder,
    each flavour index over the 3 generations.  nIdx is 2 or 4. *)
 HEFTWCGenFermKeys[prefix_String, nmin_Integer, nIdx_Integer] :=
   Flatten @ Table[
@@ -230,19 +214,20 @@ HEFTWCGenFermKeys[prefix_String, nmin_Integer, nIdx_Integer] :=
     {heftTuple, Tuples[Range[3], nIdx]}
   ];
 
-(* NQ9 / NQ10 / NL3 are the dual-flare operators (del[F] del[F']): two flares, each with its
-   own coefficient tensor, both starting at n = 1 because a constant under del[...] drops. *)
+(* Combined 2F keys (NQ9, NQ10, NL3): C<op>n<nh>prime_<f1>_<f2>, nh = extraPow..extraPow*HiggsMaxOrder,
+   mirroring MakeFermCombinedCoeffTable in parameters_EFT.fr. *)
+HEFTWCGenFermCombinedKeys[prefix_String, extraPow_Integer, nIdx_Integer] :=
+  Flatten @ Table[
+    prefix <> ToString[heftNH] <> "prime" <> StringJoin[("_" <> ToString[#]) & /@ heftTuple],
+    {heftNH, extraPow, extraPow*HiggsMaxOrder},
+    {heftTuple, Tuples[Range[3], nIdx]}
+  ];
+
 HEFTWCGen2FermKeys[op_String] := Module[{base = HEFT1604FermionPrefix[op]},
   If[base === "", Return[{}]];
-  Which[
-    op === "NQ9NLO",
-      Join[HEFTWCGenFermKeys["CNQ9NLO1n", 1, 2], HEFTWCGenFermKeys["CNQ9NLO2n", 1, 2]],
-    op === "NQ10NLO",
-      Join[HEFTWCGenFermKeys["CNQ10NLO1n", 1, 2], HEFTWCGenFermKeys["CNQ10NLO2n", 1, 2]],
-    op === "NL3NLO",
-      Join[HEFTWCGenFermKeys["CNL3NLO1n", 1, 2], HEFTWCGenFermKeys["CNL3NLO2n", 1, 2]],
-    True,
-      HEFTWCGenFermKeys[base <> "n", 0, 2]
+  If[MemberQ[HEFT1604Fermion2FCombinedOps, op],
+    HEFTWCGenFermCombinedKeys[base <> "n", 2, 2],
+    HEFTWCGenFermKeys[base <> "n", HEFT2FFlareNmin[op], 2]
   ]
 ];
 
@@ -253,13 +238,11 @@ HEFTWCGen4FermKeys[op_String] := Module[{base = HEFT1604FermionPrefix[op]},
 
 HEFTWCOperatorKeys[op_String] := Module[
   {scalar = Select[HEFT1604ScalarOpPrefixes, #[[1]] === op &],
-   derivProduct = If[TrueQ[Combine2Derivatives], {}, Select[heft1604DerivProductOpPrefixes, #[[1]] === op &]],
-   combinedDeriv = If[TrueQ[Combine2Derivatives], Select[heft1604CombinedDerivOpPrefixes, #[[1]] === op &], {}]},
+   combinedDeriv = Select[heft1604CombinedDerivOpPrefixes, #[[1]] === op &]},
   Which[
     MemberQ[HEFT1604Fermion2FScalarOps, op], HEFTWCGen2FermKeys[op],
     MemberQ[HEFT1604Fermion4FScalarOps, op], HEFTWCGen4FermKeys[op],
     combinedDeriv =!= {}, Flatten @ Map[HEFTWCGenCombinedScalarKeys[#[[2]], #[[3]]] &, combinedDeriv],
-    derivProduct =!= {}, Flatten @ Map[HEFTWCGenScalarKeys[#[[2]], #[[3]]] &, derivProduct],
     scalar =!= {}, Flatten @ Map[HEFTWCGenScalarKeys[#[[2]], #[[3]]] &, scalar],
     True, {}
   ]
@@ -270,12 +253,12 @@ HEFTWCSeedOperatorDefaults[op_String] := Module[{keys},
   Scan[(If[!KeyExistsQ[HEFTWCValues, #], HEFTWCValues[#] = HEFTWCDefaultTemplateValue[#]]) &, keys]
 ];
 
-(* Operator selection is NLOOperators and nothing else.  Wilson-coefficient *values* never
+(* Operator selection is EFTOperators and nothing else.  Wilson-coefficient *values* never
    change which operators are in the Lagrangian - a coefficient of 0 is simply a coefficient
    of 0 in the exported model.  (Until 2026-08-05 zeroing every coefficient of an operator
    also deleted it from the Lagrangian, and the LO terms had a matching HEFTLOIf gate; both
-   were removed on request - if you don't want an operator, leave it out of NLOOperators.) *)
-HEFTPieceActiveQ[op_] := MemberQ[HEFTActiveNLOPieces, op];
+   were removed on request - if you don't want an operator, leave it out of EFTOperators.) *)
+HEFTPieceActiveQ[op_] := MemberQ[HEFTActiveEFTPieces, op];
 
 HEFTWCImportJSON[path_String] := Import[path, "RawJSON"];
 
@@ -296,7 +279,7 @@ HEFTWCNormalizeComplexEntries[assoc_Association] := Module[{wcOut = assoc, wcKey
 HEFTWCAllowedFlatKeys[] := Select[
   Join[
     HEFTWCLoFlatKeys[],
-    Flatten[HEFTWCOperatorKeys /@ HEFTActiveNLOPieces],
+    Flatten[HEFTWCOperatorKeys /@ HEFTActiveEFTPieces],
     {"LamHEFT"}
   ],
   StringQ
@@ -332,10 +315,9 @@ HEFTWCIsWilsonCoefficientSymbol[sym_Symbol] :=
   !MemberQ[HEFTWCProtectedParameterSymbols, sym];
 
 HEFTWCSeedNLODefaults[] := Scan[
-  If[MemberQ[HEFTActiveNLOPieces, #], HEFTWCSeedOperatorDefaults[#]] &,
+  If[MemberQ[HEFTActiveEFTPieces, #], HEFTWCSeedOperatorDefaults[#]] &,
   Union@Join[
     HEFT1604ScalarOpPrefixes[[All, 1]],
-    heft1604DerivProductOpPrefixes[[All, 1]],
     heft1604CombinedDerivOpPrefixes[[All, 1]],
     HEFT1604Fermion2FScalarOps,
     HEFT1604Fermion4FScalarOps
@@ -469,7 +451,7 @@ HEFTWCPrintApplySummary[] := Module[{wcCount, sample},
   If[!TrueQ[HEFTWCxfLoadedQ] || !ValueQ[M$Parameters], Return[]];
   wcCount = Length@HEFTWCValues;
   Print["[HEFT WCxf] Applied ", wcCount, " Wilson coefficient(s) from ", HEFTWCxfOutputFile];
-  sample = Select[Keys[HEFTWCValues], StringMatchQ[#, ("CQUn1_" | "CWHNLOn" | "KappaV") ~~ __] &];
+  sample = Select[Keys[HEFTWCValues], StringMatchQ[#, ("CQUn1_" | "CPWn" | "KappaV") ~~ __] &];
   Scan[Function[wcKey, Print["  ", wcKey, " -> ", HEFTWCValues[wcKey]]], Take[sample, UpTo[5]]];
   If[KeyExistsQ[HEFTWCValues, "CQUn1_1_1"],
     Module[{rules = HEFTWCReadParamValueRules[CQUn1]},
@@ -488,9 +470,9 @@ HEFTInitializeWCxf::nooutput =
 HEFTWCGenScalarKeys[prefix_String, nmin_Integer] :=
   Table[prefix <> ToString[heftN], {heftN, nmin, HiggsMaxOrder}];
 
-(* Combine2Derivatives -> True key generator: one key per combined WC, "prime" suffix, indexed
+(* Combined-derivative key generator: one key per combined WC, "prime" suffix, indexed
    by the total number of Higgs fields in the term (the extraPow differentiated ones included;
-   see combinedDerivFlareSpecs in parameters_NLO.fr). The range matches
+   see combinedDerivFlareSpecs in parameters_EFT.fr). The range matches
    MakeCombinedCoeffTable's exactly: extraPow..extraPow*HiggsMaxOrder. *)
 HEFTWCGenCombinedScalarKeys[prefix_String, extraPow_Integer] :=
   Table[prefix <> ToString[heftNH] <> "prime", {heftNH, extraPow, extraPow*HiggsMaxOrder}];
@@ -517,7 +499,7 @@ HEFTWCLoFlatKeys[] := Module[{syms = HEFTLOSymbols[]},
 HEFTWCConfiguredFlatKeys[] := Select[
   Join[
     HEFTWCLoFlatKeys[],
-    Flatten[HEFTWCOperatorKeys /@ HEFTActiveNLOPieces]
+    Flatten[HEFTWCOperatorKeys /@ HEFTActiveEFTPieces]
   ],
   StringQ
 ];
@@ -527,7 +509,7 @@ HEFTWCConfiguredFlatKeys[] := Select[
    Kappa framework the SM point is Kappa = 1 (a rescaling); in the Delta framework it is
    Delta = 0 (a deviation), so "the SM value" is 0 there, not 1.  Everything else - every
    NLO/NNLO Wilson coefficient and the h^n Yukawa/F-function expansion coefficients
-   CQUn, CQDn, CLEn, CFCn, CFTn, CVn, none of which exist in the SM - follows InitialiseWCs. *)
+   CQUn, CQDn, CLEn, CFCn, CVn (and CPTn, now an operator), none of which exist in the SM - follows InitialiseWCs. *)
 HEFTWCSMCouplingNames[] := SymbolName /@ If[TrueQ[KappaFramework],
   {KappaV, Kappa2V, Kappa3H, Kappa4H,
    KappaLE, KappaLM, KappaLT, KappaQU, KappaQC, KappaQT, KappaQD, KappaQS, KappaQB},
@@ -549,15 +531,15 @@ HEFTBuildWCxfTemplateDocument[role_String:"input_template"] := Module[{keys, val
   ];
   <|
     "eft" -> "HEFT",
-    "basis" -> HEFTNLOBasis,
+    "basis" -> HEFTWCxfBasis,
     "scale" -> lam,
     "metadata" -> <|
       "role" -> role,
-      "generator" -> "HEFT-FR",
-      "description" -> "Wilson coefficients for this HEFT configuration. SM couplings are at their SM value (Kappa framework: 1; Delta framework: 0); every effective coefficient is at InitialiseWCs. Edit the values in wcxf/wcxf_output.json (cell 4) to change them. A value of 0 is simply 0 in the exported model; operator selection is NLOOperators alone. Cell 3 rewrites this file back to the defaults.",
+      "generator" -> "HEFT_Frules",
+      "description" -> "Wilson coefficients for this HEFT configuration. SM couplings are at their SM value (Kappa framework: 1; Delta framework: 0); every effective coefficient is at InitialiseWCs. Edit the values in wcxf/wcxf_output.json (cell 4) to change them. A value of 0 is simply 0 in the exported model; operator selection is EFTOperators alone. Cell 3 rewrites this file back to the defaults.",
       "kappa_framework" -> KappaFramework,
       "initialise_wcs" -> HEFTWCInitValue[],
-      "nlo_operators" -> HEFTActiveNLOPieces,
+      "nlo_operators" -> HEFTActiveEFTPieces,
       "nflavour" -> 3,
       "higgs_max_order" -> HiggsMaxOrder,
       "created" -> DateString[{"ISODateTime"}]
@@ -728,7 +710,7 @@ HEFTWCCollectNLOFromParameters[] := Module[{assoc = <||>},
         ]
       ]
     ],
-    HEFTActiveNLOPieces
+    HEFTActiveEFTPieces
   ];
   assoc
 ];
@@ -739,13 +721,13 @@ HEFTBuildWCxfDocument[] := Module[{scale},
   scale = HEFTWCxfDefaultScale[];
   <|
     "eft" -> "HEFT",
-    "basis" -> If[ValueQ[HEFTNLOBasis], HEFTNLOBasis, "1604.06801"],
+    "basis" -> HEFTWCxfBasis,
     "scale" -> scale,
     "metadata" -> <|
-      "generator" -> "HEFT-FR",
+      "generator" -> "HEFT_Frules",
       "description" -> "Wilson coefficients used in this model build (auto-export)",
-      "nlo_operators" -> HEFTActiveNLOPieces,
-      "active_nlo_operators" -> Select[HEFTActiveNLOPieces, HEFTPieceActiveQ],
+      "nlo_operators" -> HEFTActiveEFTPieces,
+      "active_nlo_operators" -> Select[HEFTActiveEFTPieces, HEFTPieceActiveQ],
       "nflavour" -> 3,
       "higgs_max_order" -> HiggsMaxOrder,
       "input_file" -> If[

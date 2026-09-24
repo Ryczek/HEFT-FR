@@ -9,25 +9,28 @@
    Builds one big model out of several small ones without re-running the expensive
    LHEFTMassBasis pass.  ExpandIndices is linear in the Lagrangian, so with N sub-models
 
-       LHEFT(A u B)  =  LHEFT(A) + LHEFT(B) - LHEFT(LO)        (generally: sum - (N-1) LO)
+       LHEFT(A u B)  =  LHEFT(A) + LHEFT(B) - LHEFT(SM)        (generally: sum - (N-1) SM)
 
    and each LHEFT(x) is already sitting in HEFT_cache/<name>__<hash>/LHEFT.mx from an earlier
-   run.  The LO baseline must be subtracted explicitly: every sub-model contains the *whole*
-   LO Lagrangian, so adding N of them without it gives N x LO and every SM vertex comes out
+   run.  The SM baseline must be subtracted explicitly: every sub-model contains the *whole*
+   SM Lagrangian, so adding N of them without it gives N x SM and every SM vertex comes out
    scaled by N.
 
    WHEN IT IS EXACT
-   Only at linear order in ChiralOrder, hence the hard refusal at HEFTMaxOrder > 1.  The model
-   mixes operators non-linearly in two places: HEFTUpdateGaugeNormalizations[], where
-   eps = -2 chi CP1NLOn0 WnormINV BnormINV P12normINV is a *product* and the kinetic diagonal
-   is Wnorm^2 P12norm^2; and the EW input scheme, whose shifts mix CP1/CP12/CFTn0 and the
-   RL2/RL5 vev shift jointly.  At O(chi) all of that linearises and the identity above is
-   exact; at O(chi^2) a build with only P1NLO genuinely has a different A-Z rotation - i.e.
-   different physical fields - than a build with P1NLO + P12NLO, and no merge of separately
-   built models can recover the cross term.
+   Always, because the model keeps a single EFT insertion per vertex (fixed since 2026-09-17).
+   Operators could mix non-linearly in exactly two places: HEFTUpdateGaugeNormalizations[], where
+   the exact eps = -2 WCOrder CP1n0 P12normINV is a *product* of two operators' coefficients
+   (at one insertion it is -2 WCOrder CP1n0, and AZnorm is written out linear in CP1n0 and
+   CP12n0 separately, since 2026-09-17); and the EW input scheme, whose shifts mix
+   CP1/CP12/CPTn0 and the RL2/RL5 vev shift jointly.  At one
+   insertion all of that linearises - every cross term between two operators is WCOrder^2 and
+   is cut in every build alike - so the identity above is exact.  (Until 2026-09-17 the insertion
+   count was an option, EFTMaxOrder / MaxEFTInsertions, and merging refused anything above 1:
+   at two insertions a build with only P1 genuinely has a different A-Z rotation than a build
+   with P1 + P12, and no merge of separately built models can recover the cross term.)
 
    WHY THE MERGE IS PLAIN ARITHMETIC, AND NOT TERM MATCHING
-   The obvious implementation - match the LO terms of each sub-model against the baseline and
+   The obvious implementation - match the SM terms of each sub-model against the baseline and
    drop them - does not work, and the reason is worth recording because it looks like it
    should.  Two things defeat it, both measured on real builds (2026-08-18):
 
@@ -38,22 +41,22 @@
         factor order, which gives a different first-appearance order, which gives a different
         canonical form.  A Yukawa mass term matched this way came out as present in one build
         and absent in the other.
-     2. More fundamentally, the LO sector is not written the same way in the two builds.
-        Turning on any of P1NLO / P12NLO / WHNLO / BHNLO switches gauge_normalization.fr to
-        its other A-Z branch, whose cos/sin are algebraically equal to the LO ones but
+     2. More fundamentally, the SM sector is not written the same way in the two builds.
+        Turning on any of P1 / P12 / PW / PB switches gauge_normalization.fr to
+        its other A-Z branch, whose cos/sin are algebraically equal to the SM ones but
         syntactically different (1/Sqrt[1 + G1^2/GW^2] rather than GW/Sqrt[G1^2 + GW^2]).
-        Expand does not reconcile those, so 102 of the 149 LO terms of an LO-only build do
-        not appear verbatim in a {P1NLO} build at all.
+        Expand does not reconcile those, so 102 of the 149 SM terms of an SM-only build do
+        not appear verbatim in a {P1} build at all.
 
    Plain arithmetic is immune to both: adding expressions never requires matching terms, and
    dummy indices are summed *within* a term, so terms from different sub-models never
-   interact.  Algebraically L_i = LO + delta_i whatever form each is written in, so
-   sum - (N-1) LO = LO + sum(delta_i) exactly.
+   interact.  Algebraically L_i = SM + delta_i whatever form each is written in, so
+   sum - (N-1) SM = SM + sum(delta_i) exactly.
 
    The cost is that nothing cancels syntactically, so the merged Lagrangian is bigger than a
-   directly built one - measured +29% in LeafCount (39327 vs 30556) for {P1NLO} + {P12NLO}.
+   directly built one - measured +29% in LeafCount (39327 vs 30556) for {P1} + {P12}.
    FeynRules collapses it during vertex extraction, and the vertices are exact: 105 vertices
-   both ways, identical field content, and 0 of 105 couplings differing. *)
+   both ways, identical field content, and 0 of 105 couplings differing (TESTS.md T19). *)
 
 
 (* ============================================================================
@@ -65,8 +68,8 @@
    pins the .fr sources, so two sub-models built a week apart against different versions of
    gauge_normalization.fr can never be merged. *)
 HEFTMergeGroupKeys = {
-  "basis", "heftMaxOrder", "higgsMaxOrder", "gauge", "ewScheme",
-  "kappaFramework", "loYukawaExpansion", "includeCustodialT", "combine2Derivatives",
+  "higgsMaxOrder", "ewScheme",
+  "kappaFramework", "loYukawaExpansion",
   "massless", "diagonalCKM", "modelDigest"
 };
 
@@ -113,7 +116,7 @@ HEFTMergeDifferingKeys[a_Association, b_Association] := Select[
    ones with a reason.  Defensive on purpose: real caches contain a zero-byte meta.json next
    to a perfectly good .mx, and pre-2026-08-05 entries whose meta has no configHash at all.
    Local names avoid `dir`, `out`, `entry` and `ref`, which shadow FeynRules internals and
-   produce ::shdw noise on every run. *)
+   produce ::shdw noise on every run (TESTS.md trap 3). *)
 HEFTMergeCacheIndex[] := Module[
   {cacheDir, cacheDirs, entries = {}, skipped = {}, entryPaths, stored, missingKeys},
   cacheDir  = HEFTLHEFTCacheDir[];
@@ -159,7 +162,7 @@ HEFTMergeCompatibleEntries[index_Association, meta_Association] := Module[{h},
 ];
 
 HEFTMergeOperatorSummary[ops_List] :=
-  If[ops === {}, "(LO only - baseline)", StringRiffle[ops, ", "]];
+  If[ops === {}, "(SM only - baseline)", StringRiffle[ops, ", "]];
 
 
 (* ============================================================================
@@ -202,9 +205,9 @@ HEFTMergePrintCatalog[index_Association, meta_Association] := Module[
 
     loEntry = SelectFirst[compatible, #["operators"] === {} &, None];
     If[loEntry === None,
-      Print[Style["\n    No LO baseline in this group. Merging needs one: build once with " <>
-        "NLOOperators = {} and everything else exactly as configured here.", Bold, Darker[Red]]],
-      Print[Style["    LO baseline present: \"" <> loEntry["name"] <> "\".", Darker[Green]]]
+      Print[Style["\n    No SM baseline in this group. Merging needs one: build once with " <>
+        "EFTOperators = {} and everything else exactly as configured here.", Bold, Darker[Red]]],
+      Print[Style["    SM baseline present: \"" <> loEntry["name"] <> "\".", Darker[Green]]]
     ]
   ];
 
@@ -303,7 +306,7 @@ HEFTMergeTermList[expr_] := Module[{e},
    The merge
    ============================================================================ *)
 
-(* loExpr   the LO-only Lagrangian (the cached build with NLOOperators = {})
+(* loExpr   the SM-only Lagrangian (the cached build with EFTOperators = {})
    sources  {{label, expr}, ...} for the sub-models to merge
 
        merged = sum_i L_i - (N - 1) * L_LO
@@ -316,7 +319,7 @@ HEFTMergeTermList[expr_] := Module[{e},
 HEFTMergeLagrangians[loExpr_, sources_List] := Module[{merged, nSrc, report = {}},
 
   nSrc = Length[sources];
-  Print["    ", Style[StringPadRight["LO baseline", 38], Bold],
+  Print["    ", Style[StringPadRight["SM baseline", 38], Bold],
     Length[HEFTMergeTermList[loExpr]], " terms"];
 
   Do[
@@ -332,7 +335,7 @@ HEFTMergeLagrangians[loExpr_, sources_List] := Module[{merged, nSrc, report = {}
   Print["    ", Style[StringPadRight["merged", 38], Bold],
     Length[HEFTMergeTermList[merged]], " terms, LeafCount ", LeafCount[merged]];
   If[nSrc > 1,
-    Print[Style["    (" <> ToString[nSrc - 1] <> " x the LO baseline subtracted, so the SM " <>
+    Print[Style["    (" <> ToString[nSrc - 1] <> " x the SM baseline subtracted, so the SM " <>
       "sector is counted exactly once)", Gray]]
   ];
 
@@ -352,18 +355,6 @@ HEFTMergeLagrangians[loExpr_, sources_List] := Module[{merged, nSrc, report = {}
 HEFTMergeValidate[compatible_List, specs_List, meta_Association] := Module[
   {resolved, loEntry, ops, dupes},
 
-  If[!TrueQ[NumericQ[HEFTMaxOrder]] || HEFTMaxOrder > 1,
-    Print[Style["[HEFT merge] ERROR: merging is exact only at linear order in ChiralOrder, " <>
-      "but HEFTMaxOrder = " <> ToString[HEFTMaxOrder] <> ".", Red, Bold]];
-    Print[Style["  At HEFTMaxOrder >= 2 the gauge normalisations (eps is a product, the " <>
-      "kinetic diagonal is Wnorm^2 P12norm^2) and the EW input scheme mix operators " <>
-      "non-linearly, so a build with one operator has different physical fields than a " <>
-      "build with two. No merge of separately built models recovers the cross terms.", Red]];
-    Print[Style["  Use HEFTMaxOrder = 1, or build the full model directly with " <>
-      "heft_fr_notebook.wl.", Red, Bold]];
-    Return[$Failed]
-  ];
-
   If[specs === {},
     Print[Style["[HEFT merge] ERROR: MergeSources is empty - nothing to merge. " <>
       "Take the names from the table printed by Cell 3.", Red, Bold]];
@@ -372,11 +363,11 @@ HEFTMergeValidate[compatible_List, specs_List, meta_Association] := Module[
 
   loEntry = SelectFirst[compatible, #["operators"] === {} &, None];
   If[loEntry === None,
-    Print[Style["[HEFT merge] ERROR: no LO baseline (a cached build with " <>
-      "NLOOperators = {}) in this configuration group.", Red, Bold]];
-    Print[Style["  Every sub-model contains the whole LO Lagrangian, so merging N of them " <>
-      "without subtracting LO gives N x LO and every SM vertex is scaled by N.", Red]];
-    Print[Style["  Build it once in heft_fr_notebook.wl with NLOOperators = {} and exactly " <>
+    Print[Style["[HEFT merge] ERROR: no SM baseline (a cached build with " <>
+      "EFTOperators = {}) in this configuration group.", Red, Bold]];
+    Print[Style["  Every sub-model contains the whole SM Lagrangian, so merging N of them " <>
+      "without subtracting SM gives N x SM and every SM vertex is scaled by N.", Red]];
+    Print[Style["  Build it once in heft_fr_notebook.wl with EFTOperators = {} and exactly " <>
       "the configuration set in Cell 2 here. It is the cheapest build there is, and one " <>
       "serves every merge in this group.", Red, Bold]];
     Return[$Failed]
@@ -392,13 +383,13 @@ HEFTMergeValidate[compatible_List, specs_List, meta_Association] := Module[
   ];
 
   If[MemberQ[resolved, loEntry],
-    Print[Style["[HEFT merge] Note: the LO baseline is also listed in MergeSources. It is " <>
+    Print[Style["[HEFT merge] Note: the SM baseline is also listed in MergeSources. It is " <>
       "the baseline and contributes nothing on top of itself; dropping it.", Orange]];
     resolved = DeleteCases[resolved, loEntry]
   ];
 
   If[resolved === {},
-    Print[Style["[HEFT merge] ERROR: nothing left to merge after dropping the LO baseline.",
+    Print[Style["[HEFT merge] ERROR: nothing left to merge after dropping the SM baseline.",
       Red, Bold]];
     Return[$Failed]
   ];

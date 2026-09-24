@@ -1,0 +1,43 @@
+(* ============================================================================================
+   EFT parameters - FOUR-FERMION (4F) sector (1604.06801 eq. 2.22)
+   ============================================================================================
+
+   Loaded by parameters/parameters_EFT.fr, which defines every builder used here
+   (Define4FermFlare, HEFT4FermValueRules, tensorWCProps, MakeFermCoeffTable) and, after the three
+   sector files, assembles them all in HEFTBuildNLOParameterEntries[].
+
+   Same convention as the 2F sector: every coefficient lives inside its flare function and
+   carries all FOUR flavour indices,
+
+     FC<op>[h, neft, ff1, ff2, ff3, ff4] = Sum_{n=nmin}^{neft} C<op>n<n>[ff1,ff2,ff3,ff4] (LamF h/vev)^n
+
+   so each term of the expanded Lagrangian carries exactly one Wilson coefficient.  All 4F flares
+   start at nmin = 0: none of them appears under a derivative. *)
+
+HEFT4FRQCount  = 26;
+HEFT4FRQLCount = 23;
+HEFT4FRLCount  = 7;
+
+ferm4FFlareSpecs = Join[
+  Table[
+    {Symbol["FCRQ" <> ToString[i]], "RQ" <> ToString[i],
+     "CRQ" <> ToString[i] <> "n", 0},
+    {i, 1, HEFT4FRQCount}
+  ],
+  Table[
+    {Symbol["FCRQL" <> ToString[i]], "RQL" <> ToString[i],
+     "CRQL" <> ToString[i] <> "n", 0},
+    {i, 1, HEFT4FRQLCount}
+  ],
+  Table[
+    {Symbol["FCRL" <> ToString[i]], "RL" <> ToString[i],
+     "CRL" <> ToString[i] <> "n", 0},
+    {i, 1, HEFT4FRLCount}
+  ]
+];
+
+(* Coefficient specs mirror the flare specs exactly - same op, prefix and nmin - so a
+   flare and its M$Parameters tensors can never drift apart. *)
+ferm4FCoeffSpecs = Rest /@ ferm4FFlareSpecs;
+
+Scan[(Define4FermFlare @@ #) &, ferm4FFlareSpecs];

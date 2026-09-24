@@ -1,0 +1,62 @@
+(* ============================================================================================
+   USER-DEFINED OPERATORS - Lagrangian
+   ============================================================================================
+
+   THIS IS THE FILE WHERE YOU DEFINE YOUR OWN OPERATORS.  It is loaded after the SM and EFT
+   Lagrangians, so every building block of the model can be used here (H, del, FS, Eps, HC,
+   VU, TT, vev, gs, gw, g1, ...).  Its partner is parameters/parameters_User.fr.
+
+   The three operators below - the gluon-Higgs operators of chiral dimension two (NNLO) - are
+   shipped as the worked example.  Copy one, rename it, and follow README SS "Adding your own
+   operators".  Every operator needs four entries:
+
+     1. its Lagrangian term in this file, carrying WCOrder (every EFT operator, once) and
+        ChiralOrder^n with n from its W/V/d/D count (2 -> 0, 3 -> 1, 4 -> 2; the gluon-Higgs
+        examples below have four: n = 2), and multiplied by its flare function FC<label>[H, NEFT] -
+        ONE flare per term; if it sits under a derivative, its nmin must be 1 (checked at load);
+     2. one selection line in LUseraux AND one in HEFTRebuildLUser[], both below;
+     3. one row in userScalarFlareSpecs in parameters/parameters_User.fr;
+     4. one WCxf prefix row in wcxf_input.fr (HEFT1604ScalarOpPrefixes), its label in the
+        operator catalogue in heft_notebook_reference.wl (HEFT$Catalog1604Higher) and its chiral
+        order n in HEFT$OperatorChiralOrder there (a label only - nothing is cut on it).
+   ============================================================================================ *)
+
+If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
+If[!ValueQ[HEFTActiveEFTPieces], HEFTActiveEFTPieces = {}];
+
+(* Gluon-Higgs NNLO (Brivio / Grober basis). *)
+LPGHD1 := Block[{mu, nu, ga, a},
+  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, mu] del[H, nu] FS[Gl, mu, ga, a] FS[Gl, nu, ga, a]
+      FCPGHD1[H, NEFT]
+];
+
+LPGHD2 := Block[{mu, nu, ga, a},
+  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] FS[Gl, mu, nu, a] FS[Gl, mu, nu, a]
+      FCPGHD2[H, NEFT]
+];
+
+LSGHD := Block[{mu, nu, al, be, ga, a},
+  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] Eps[mu, nu, al, be]/2
+      HC[FS[Gl, al, be, a]] FS[Gl, mu, nu, a]
+      FCSGHD[H, NEFT]
+];
+
+
+(* Selection: an operator enters the Lagrangian only if its label is in EFTOperators. *)
+LUseraux = 0;
+If[HEFTPieceActiveQ[ "PGHD1"],     LUseraux += LPGHD1];
+If[HEFTPieceActiveQ[ "PGHD2"],     LUseraux += LPGHD2];
+If[HEFTPieceActiveQ[ "SGHD"], LUseraux += LSGHD];
+
+LUser := ExpandIndices[LUseraux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+
+(* Re-assembles LUser after the model has loaded (HEFT_Model.fr calls it); keep the same
+   selection lines as above. *)
+HEFTRebuildLUser[] := Block[{aux = 0, res},
+  If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
+  If[HEFTPieceActiveQ[ "PGHD1"],      aux += LPGHD1];
+  If[HEFTPieceActiveQ[ "PGHD2"],      aux += LPGHD2];
+  If[HEFTPieceActiveQ[ "SGHD"],  aux += LSGHD];
+  res = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+  If[ListQ[res], Plus @@ Flatten[res], res]
+];

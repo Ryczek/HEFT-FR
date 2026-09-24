@@ -3,12 +3,10 @@
 **A FeynRules implementation of the Higgs Effective Field Theory (HEFT).**
 
 HEFT-FR builds the electroweak chiral Lagrangian with a singlet Higgs, in the mass basis,
-from an operator set you choose — and exports it as a **UFO** model for MadGraph or as
-**FeynArts** model files. It is organised as a double expansion: in **chiral dimension** and
-in **powers of `h/v`**.
+from an operator set you choose — and exports it as a **UFO** or
+**FeynArts** model files.
 
-
-- **Version 0.5** · MIT licensed · see [Authors](#authors)
+- **Version 1.0** · MIT licensed · see [Authors](#authors)
 - **Entry point:** [`heft_fr_notebook.wl`](heft_fr_notebook.wl) — open it in Mathematica and
   evaluate cell by cell. Nothing else needs editing.
 
@@ -17,14 +15,15 @@ in **powers of `h/v`**.
 ## Contents
 
 - [What you get](#what-you-get)
-- [References and bases](#references-and-bases)
+- [References and operator set](#references-and-operator-set)
+- [Power counting](#power-counting)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Configuration options](#configuration-options)
 - [The Kappa and Delta frameworks](#the-kappa-and-delta-frameworks)
 - [Input scheme (EW)](#input-scheme-ew)
 - [Wilson coefficients — the WCxf workflow](#wilson-coefficients--the-wcxf-workflow)
-- [Operators by Chiral Dimension](#operators-by-chiral-dimension)
+- [Adding your own operators](#adding-your-own-operators)
 - [Exports](#exports)
 - [The LHEFT cache](#the-lheft-cache)
 - [Merging cached models](#merging-cached-models)
@@ -32,56 +31,113 @@ in **powers of `h/v`**.
 - [Repository layout](#repository-layout)
 - [Rules of the road](#rules-of-the-road)
 - [Known limitations](#known-limitations)
-- [Deferred configuration options](#deferred-configuration-options)
 - [Authors](#authors)
 
 ---
 
 ## What you get
 
-- **The complete NLO HEFT basis of [Brivio et al. 1604.06801](https://arxiv.org/abs/1604.06801)** —
-  bosonic, two-fermion (2F) *and* four-fermion (4F) operators. That is 41 bosonic, 56 2F and
-  56 4F operator labels, each with its own flare-function tower of Wilson coefficients.
-- **Example NNLO operators** (chiral dimension 2) as an extension beyond that basis — worked
-  examples, not a complete NNLO basis.
+- **The NLO operator set of [Brivio et al. 1604.06801](https://arxiv.org/abs/1604.06801)** —
+  bosonic, two-fermion (2F) and four-fermion (4F). That is 42 bosonic, 53 2F and 56 4F
+  operator labels, each with its own flare-function tower of Wilson coefficients.
 - **A pick-and-choose operator selection.** You name the operators you want; everything else
-  stays out of the Lagrangian entirely, rather than being present with a zero coefficient.
+  stays out of the Lagrangian entirely.
 - **Wilson coefficients in [WCxf](https://arxiv.org/abs/1712.05298) JSON** — written out for
-  your selection, edited in a text editor, read back into the export.
-- **Three electroweak input schemes**, with the SMINPUTS-style ones derived from the model's
-  *own* Lagrangian rather than copied from a paper.
-- **A build cache**, so the expensive step happens once per physics configuration, and a
-  **merge facility** that assembles a large model out of small cached ones by arithmetic.
+  your selection.
+- **Three electroweak input schemes** — heft, gf, aem.
+- **A build cache** - the expensive step happens once per physics configuration, and a
+  **merge facility** that can assemble a large model out of small cached ones.
 - **UFO and FeynArts exports**, plus optional plain-text and LaTeX listings of the Feynman
-  rules.
+  rules. The UFO carries `ChiralOrder` and `WCOrder` as coupling orders, so the
+  [power counting](#power-counting) can be applied at the amplitude level in MadGraph.
+- **Example user-defined operators**, in the two `_User.fr` files, as a worked template
+  for [adding your own](#adding-your-own-operators) operators.
 
-## References and bases
+## References and operator set
 
-The implementation follows the notation and conventions of Brivio et al. throughout.
+There is **one operator set (1604.06801)** and **one gauge (unitary)**.
 
 | | Reference |
 |---|---|
-| **NLO operator basis** | I. Brivio, J. Gonzalez-Fraile, M.C. Gonzalez-Garcia, L. Merlo, *The complete HEFT Lagrangian after the LHC Run I*, [arXiv:1604.06801](https://arxiv.org/abs/1604.06801) — **the basis this model implements** |
-| Alternative basis | H. Sun, X. Wang, et al., [arXiv:2206.07722](https://arxiv.org/abs/2206.07722) — **not implemented**; the operator catalogue can be previewed in Cell 1, but selecting it is refused |
+| **Operator set** | I. Brivio, J. Gonzalez-Fraile, M.C. Gonzalez-Garcia, L. Merlo, *The complete HEFT Lagrangian after the LHC Run I*, [arXiv:1604.06801](https://arxiv.org/abs/1604.06801) — **the operators this model implements** |
+| **Power counting** | I. Brivio, R. Gröber, K. Schmid, *The Art of Counting: a reappraisal of the HEFT expansion*, [arXiv:2511.23410](https://arxiv.org/abs/2511.23410) — the counting this model follows |
 | Framework | A. Alloul, N. Christensen, C. Degrande, C. Duhr, B. Fuks, *FeynRules 2.0*, [arXiv:1310.1921](https://arxiv.org/abs/1310.1921) |
 | Coefficient exchange format | J. Aebischer et al., *WCxf: an exchange format for Wilson coefficients*, [arXiv:1712.05298](https://arxiv.org/abs/1712.05298) |
 
-**Power counting.** Two bookkeeping parameters organise the Lagrangian:
 
-- **`ChiralOrder`** — chiral dimension. LO operators carry no factor, NLO carries `ChiralOrder^1`,
-  NNLO `ChiralOrder^2`. `HEFTMaxOrder` truncates the series.
-- **`LamF`** — the `h/v` expansion inside every flare function. `HiggsMaxOrder` (internally
-  `NEFT`) truncates it.
+## Power counting
 
-A flare function is just
-`F_op(h) = Σ_n C_op_n<n> · (LamF · h/v)^n`, so **every term of the expanded Lagrangian
-carries exactly one Wilson coefficient**, named after its operator and its `h`-power.
+Three parameters organise the EFT part of the Lagrangian.
+
+| Bookkeeper | Counts | Expansion |
+|---|---|---|
+| **`ChiralOrder^n`** | the chiral order of the operator | none — operator label only |
+| **`WCOrder`** | one power per Wilson-coefficient vertex insertion | fixed at `WCOrder^1` — one insertion per vertex, always |
+| `LamF` | the power of `h/v` inside every flare function | `HiggsMaxOrder`|
+
+`ChiralOrder` and `WCOrder` reach the exported UFO **as coupling orders**.
+
+HEFT Lagrangian is organised by **chiral dimension**. This model follows the prescription described
+in detail in [2511.23410](https://arxiv.org/abs/2511.23410).
+
+At the operator level, leading order (LO) means just `ChiralOrder^0` and nothing else. 
+
+| `ChiralOrder` | Bosonic (42) | Fermionic (109) |
+|---|---|---|
+| **0** | `PT`, `PG`, `PB`, `PW`, `P1`, `P12`, `S1`, `S2D`, `S8`, `SG`, `SB`, `SW` — 12 | 2F `NQ1`–`NQ8`, `NQ29`–`NQ36`, `NL1`, `NL2`, `NL12`–`NL17` — 24 · 4F **all 56**: `RQ1`–`RQ26`, `RQL1`–`RQL23`, `RL1`–`RL7` |
+| **1** | `PGGG`, `PWWW`, `SGGG`, `SWWW`, `P2`–`P5`, `P13`, `P14`, `P17`, `S2`, `S3`, `S4`, `S7`, `S9` — 16 | 2F `NQ9`–`NQ28`, `NL3`–`NL11` — 29 |
+| **2** | `PDH`, `P6`, `P8`, `P11`, `P18`, `P20`–`P24`, `P26`, `S5`, `S6`, `S15` — 14 | — |
+
+`P` and `S` are the CP-even and CP-odd bosonic operators, `NQ`/`NL` the two-fermion and
+`RQ`/`RQL`/`RL` the four-fermion ones. The three user examples `PGHD1`, `PGHD2`, `SGHD` are
+chiral order 2. The SM Lagrangian is always present and carries **no** `ChiralOrder` factor at
+all. Cell 1 prints this same catalogue, grouped the same way.
+
+### One Wilson-coefficient insertion per vertex
+
+**Every exported vertex is at most linear in the HEFT Wilson coefficients.** The Lagrangian is
+already linear term by term: each EFT operator carries exactly one `WCOrder`, as does each
+Delta-framework deviation (`DeltaFCn1/2`, `DeltaLam3/4`, `dyuH`/`dydH`/`dylH`) and each flagged
+`h/v` tower (`FFC`, `FVHiggs`, `FQU`/`FQD`/`FLE`). Kappa rescalings multiply interactions the SM
+already has, and are deliberately **not** flagged.
+
+Only two substitutions could put a *second* coefficient into a vertex, and both are expanded to
+first order in `WCOrder` and cut there:
+
+1. **The A–Z rotation** — [`gauge_normalization.fr`](model_files/gauge_normalization.fr). `P1` (W³–B kinetic mixing) and `P12` (W³ rescaling) change the gauge kinetic matrix
+   at `h⁰`, so `AZnorm` depends on `CP1n0` and `CP12n0` and enters every vertex with a W³ or B
+   leg. All such contributions are linearised, so in the end every vertex contains at most one
+   insertion of Wilson coefficient.
+
+2. **The input relations** — [`input_scheme.fr`](model_files/input_scheme.fr).
+Five HEFT operators change the tree-level relation: `P1`, `P12`, `PT` and
+   `RL2`/`RL5`. Again, such contributions are linearised, so in the end every vertex contains at most one insertion of Wilson coefficient.
+
+### Two derivatives on two flares: one combined coefficient
+
+Eight operators put a derivative on each of **two** flare functions, `∂_μF₁(h)·∂_νF₂(h)`, which
+would leave two Wilson coefficients in one vertex. They are written with a **single combined
+family** instead — an exact rewrite, since the vertex only ever depends on that one combination:
+
+| Operators | Coefficient | `nh` |
+|---|---|---|
+| `P8`, `P20`, `P21`, `P22` | `C<op>n<nh>prime` | `2 … 2·HiggsMaxOrder` |
+| `PDH` (that bilinear squared) | `CPDHn<nh>prime` | `4 … 4·HiggsMaxOrder` |
+| `NQ9`, `NQ10`, `NL3` | `C<op>n<nh>prime[f1,f2]`, a 3×3 tensor per `nh` | `2 … 2·HiggsMaxOrder` |
+
+`nh` counts the Higgs fields the term puts into the vertex, the differentiated ones included —
+so `CP8n4prime` multiplies the four-Higgs term. (`prime` is spelled out because `'` is not a
+legal UFO/FeynArts/WCxf identifier character.) A related rule: **a flare under a derivative
+starts at `n = 1`**, since `∂_μF(h)` kills the constant term. Both are checked when the model
+loads (`HEFTFlareSpecCheck[]`), which aborts naming the operator at fault — user-defined
+operators included.
+
 
 ## Requirements
 
-- **Mathematica** (any version FeynRules supports).
-- **FeynRules** — install it yourself and point `$FeynRulesPath` at the directory containing
-  `FeynRules.m`. This is the first line of the Configuration cell.
+- **Mathematica 14.0** — this is the version HEFT-FR is developed and tested on.
+- **FeynRules** (2.3.x) — install it yourself and point `$FeynRulesPath` at the directory
+  containing `FeynRules.m`. This is the first line of the Configuration cell.
 
 No installation step: clone the repository and open the notebook.
 
@@ -95,9 +151,9 @@ is resolved relative to the file itself, so the repository can live anywhere.
 
 | Cell | What it does |
 |------|--------------|
-| **1 — Reference** | Prints what this model is, the full configuration-option table, and the operator catalogue of the selected basis. No FeynRules, no model loading; safe to re-run any time you need to look up a label. |
+| **1 — Reference** | Prints what this model is, the full configuration-option table, and the operator catalogue grouped by chiral order. No FeynRules, no model loading; safe to re-run any time you need to look up a label. |
 | **2 — Configuration** | The single place every run option is set. Re-evaluate it after every change. |
-| **3 — Banner and coefficient files** | Loads FeynRules, echoes the active configuration, and writes `wcxf/wcxf_init.json` and `wcxf/wcxf_output.json` for exactly your operator selection. Closes with the cache verdict, so you know before Cell 5 whether it will load or build. |
+| **3 — Banner and coefficient files** | Loads FeynRules, checks the configuration (unknown operator labels and removed options abort here), echoes it, and writes `wcxf/wcxf_init.json` and `wcxf/wcxf_output.json` for exactly your operator selection. Closes with the cache verdict, so you know before Cell 5 whether it will load or build. |
 | **4 — Edit coefficients** *(optional)* | Skip it for defaults. Otherwise edit `wcxf/wcxf_output.json` in a text editor; this cell just prints the paths and re-runs the cache lookup. |
 | **5 — Build** | `LoadModel`, restrictions, then `LHEFT` — the mass-basis Lagrangian. Loads from cache when this exact configuration has been built before; otherwise builds from scratch (minutes to hours). |
 | **6 — Feynman rules** *(optional)* | `RulesHEFT = FeynmanRules[LHEFT]`, saved as `.mx`, plain text and a standalone LaTeX document. Cells 7 and 8 do **not** need this. |
@@ -110,29 +166,25 @@ Cells 7 and 8 are independent — run either, or both. Both need only `LHEFT` fr
 
 Everything below lives in **Cell 2**. Cell 1 prints the same table with the allowed values;
 [`model_files/heft_defaults.wl`](model_files/heft_defaults.wl) holds the fallback used for
-anything you leave unset.
+anything you leave unset. There are no power-counting options — see
+[Power counting](#power-counting).
 
 ### Physics and expansion
 
 | Option | Default | Meaning |
 |---|---|---|
-| `HEFTGauge` | `"unitary"` | The only supported value. See [Known limitations](#known-limitations). |
-| `HEFTMaxOrder` | `1` | Chiral-order truncation: `0` = LO only, `1` = NLO, `2` = NNLO. `2` requires `EWInputScheme = "heft"`. |
 | `HiggsMaxOrder` | `3` | Highest power of `h/v` kept in every flare function. The single strongest driver of build and export cost. |
+| `EFTOperators` | `{}` | The active operator labels. `{}` means the SM-like LO Lagrangian only. Must come from the catalogue Cell 1 prints; an unknown label aborts Cell 3. A selected operator is always kept — there is no order cut. |
 | `KappaFramework` | `True` | `True` → Kappa (multiplicative) parameterisation of SM-coupling deviations; `False` → Delta (additive). See [below](#the-kappa-and-delta-frameworks). |
-| `LOYukawaExpansion` | `True` | Keep the multi-Higgs tower `FQU`/`FQD`/`FLE` (`n ≥ 2`) on top of the LO Yukawa. `False` drops it *and* does not declare `CQUn`/`CQDn`/`CLEn` at all. The fermion mass and the single-Higgs coupling are unaffected either way. |
-| `IncludeCustodialT` | `True` | Keep the custodial-breaking operator `PT = Tr[T·V_μ] Tr[T·V^μ] F_T(h)` in the LO Lagrangian. `False` drops it, and with it the `CFTn` coefficients — `PT` is their only user. |
-| `Combine2Derivatives` | `False` | See [below](#combine2derivatives). |
-| `NLOOperators` | `{}` | The active operator labels. `{}` means LO only. Must come from the catalogue Cell 1 prints; an unknown label aborts Cell 3. |
-| `HEFTNLOBasis` | `"1604.06801"` | The only implemented basis. |
+| `LOYukawaExpansion` | `True` | Keep the multi-Higgs tower `FQU`/`FQD`/`FLE` (`n ≥ 2`) on top of the LO Yukawa. `False` drops it *and* does not declare `CQUn`/`CQDn`/`CLEn` at all. The fermion mass and the single-Higgs coupling are unaffected. |
 
 ### Inputs and restrictions
 
 | Option | Default | Meaning |
 |---|---|---|
 | `EWInputScheme` | `"heft"` | `"heft"`, `"gf"` or `"aem"` — see [Input scheme (EW)](#input-scheme-ew). |
-| `Massless` | `False` | Load `restrictions/Massless.rst`: light fermion masses set to zero, only τ, b and t stay massive. |
-| `DiagonalCKM` | `False` | Load `restrictions/DiagonalCKM.rst`: CKM → identity. |
+| `Massless` | `False` | If True → load `restrictions/Massless.rst`: light fermion masses set to zero, only τ, b and t stay massive. |
+| `DiagonalCKM` | `False` | If True → load `restrictions/DiagonalCKM.rst`: CKM → identity. |
 
 ### Coefficients, output and cache
 
@@ -141,31 +193,13 @@ anything you leave unset.
 | `InitialiseWCs` | `1` | Value written for the **effective** coefficients (`1` or `0`). SM couplings always keep their SM value regardless. See [below](#initialisewcs). |
 | `OutputName` | — | Subdirectory name under `output/`, and the readable half of the cache folder name. |
 | `MaxVertexLegs` | `Automatic` | Export-time cut on vertex multiplicity — see [below](#maxvertexlegs). |
-| `ForceRebuildLHEFT` | `False` | Skip the cache lookup and rebuild. |
-
-### `Combine2Derivatives`
-
-Five NLO operators — `DH`, `P8NLO`, `P20NLO`, `P21NLO`, `P22NLO` — multiply **two**
-independently truncated flare functions together through a derivative on each,
-`∂_μF₁(h)·∂_νF₂(h)`. Expanded to a fixed power of `h/v`, a vertex's coefficient is then an
-unavoidable *sum of products* of the two families. That is correct, but it overstates how many
-free parameters the vertex really has: it only ever depends on that one fixed combination.
-
-`Combine2Derivatives = True` **replaces** each operator's two families with a single combined
-family `C<op>n<nh>prime` (spelled out, because `'` is not a legal UFO/FeynArts/WCxf character),
-so each vertex carries one coefficient. The rewrite is exact — verified symbolically term by
-term. The index `nh` counts the Higgs fields the term contributes to the vertex, differentiated
-ones included, so it starts at 2 for the quadratic operators and at 4 for `DH`.
-
-Neither mode ever declares a coefficient the Lagrangian cannot use. It changes `LHEFT`, so it
-is part of the cache key.
+| `ForceRebuildLHEFT` | `False` | Skip the cache lookup and rebuild. | 
 
 ### `InitialiseWCs`
 
-Sets the value Cell 3 writes for every **effective** (beyond-SM) coefficient. The 13 SM
-couplings (`KappaV`, `Kappa2V`, `Kappa3H`, `Kappa4H`, `KappaLE`…`KappaQB`, or their `Delta*`
-counterparts) always keep their SM value — they rescale interactions the SM already has, so
-zeroing them would not give you the SM, it would delete SM physics.
+Sets the value Cell 3 writes for every **effective** coefficient. The 13 SM
+couplings (`KappaV`, `Kappa2V`, `Kappa3H`, `Kappa4H`, `KappaQU`…`KappaLT`, or their `Delta*`
+counterparts) keep their SM value.
 
 Note that the SM point depends on the framework: `κ = 1` with `KappaFramework = True`, `Δ = 0`
 with `False`. `InitialiseWCs = 0` is the natural starting point for switching one coefficient
@@ -179,28 +213,18 @@ integer `n ≥ 3` keeps only vertices with at most `n` legs. Honoured by Cells 6
 it becomes FeynRules' own `MaxParticles`, which the UFO and FeynArts writers forward to the
 `FeynmanRules` call they make internally, so it really does shrink the exported model.
 
-> Not to be confused with SmeftFR's option of the same name, which does *not* reach its UFO and
-> FeynArts output. That is a property of SmeftFR, not of FeynRules, and does not apply here.
+Measured on `{PG, PW, P12}`, `HiggsMaxOrder = 3`, `"heft"` (the setup of § Performance), Cell 5
+a cache hit:
 
-The cut is applied to Lagrangian *terms* before the vertex algebra, so it is a genuine
-speed-up. Measured on `{GHNLO, WHNLO, P12NLO}`, `HiggsMaxOrder = 3`:
-
-| `MaxVertexLegs` | Cells 6+7 | speed-up | vertices dropped |
+| `MaxVertexLegs` | Cells 6+7 | speed-up | UFO vertices dropped |
 |---|---|---|---|
-| `Automatic` | 419.8 s | 1.00× | — |
-| **`6`** | **221.0 s** | **1.90×** | 10 / 157 (6.4 %) |
-| `5` | 155.3 s | 2.70× | 23 / 157 (14.6 %) |
-| `4` | 123.7 s | 3.39× | 42 / 157 (26.8 %) |
+| `Automatic` | 200.7 s | 1.00× | — (211 exported) |
+| **`6`** | **133.9 s** | **1.50×** | 9 / 211 (4.3 %) |
+| `5` | 101.5 s | 1.98× | 22 / 211 (10.4 %) |
+| `4` | 97.7 s | 2.05× | 67 / 211 (31.8 %) |
 
-High-multiplicity vertices are combinatorially the most expensive, which is why removing 6.4 %
-of them buys 47 % of the time.
-
-**Know what it costs.** The quartics it removes first are exactly the ones that unitarise
-*VV → VV* — MadGraph will simply not have the diagram. And because the `h`-expansion is what
-generates high multiplicities in HEFT, a leg cut acts as a *second, export-level* truncation of
-the flare tower, while `wcxf_output.json` still lists every coefficient. Values below 3 are
-refused: FeynRules returns no 1- or 2-point vertices at all, so a smaller cut would write an
-empty model rather than a restricted one.
+High-multiplicity vertices are combinatorially the most expensive, which is why removing 4 % of
+them buys a third of the time. Below 5 legs there is little left to gain.
 
 Not part of the cache key — you can re-export one cached build at several cuts for free.
 
@@ -211,7 +235,7 @@ are declared as parameters at all**. An exported model contains one side, never 
 
 | | `KappaFramework = True` | `KappaFramework = False` |
 |---|---|---|
-| Names | `KappaV`, `Kappa2V`, `Kappa3H`, `Kappa4H`, `KappaQU`… | `DeltaV`, `Delta2V`, `DeltaLam3`, `DeltaYQU`… |
+| Names | `KappaV`, `Kappa2V`, `Kappa3H`, `Kappa4H`, `KappaQU`… | `DeltaFCn1`, `DeltaFCn2`, `DeltaLam3`, `DeltaLam4`, `DeltaYQU`… |
 | Form | multiplicative rescaling | additive shift |
 | SM point | `1` | `0` |
 
@@ -219,50 +243,21 @@ In the 2F sector the fermion **mass** and the **single-Higgs (*hff*) vertex** ar
 two separate tensors — `yu`/`yd`/`yl` for the mass, `yuH`/`ydH`/`ylH` for the vertex — so a
 Kappa can vary the coupling *relative* to the mass without shifting the mass away from the
 value used for the propagator. Above `n = 1`, the multi-Higgs tower `FQU`/`FQD`/`FLE` carries
-`CQUn<n>`/`CQDn<n>/`CLEn<n>` in both frameworks alike.
+`CQUn<n>`/`CQDn<n>`/`CLEn<n>` in both frameworks alike.
 
 ## Input scheme (EW)
 
 Before Feynman rules are computed, the mass-basis Lagrangian can be rewritten in terms of
-SMINPUTS-style electroweak inputs.
+electroweak inputs.
 
-| `EWInputScheme` | Inputs | `MW` | Lagrangian |
-|---|---|---|---|
-| **`"heft"`** *(default)* | `G1`, `GW`, `GS`, `vev`, `hlambda` themselves — all `External` | `External`, an input | Untouched. The Lagrangian and every downstream export stay written natively in `G1`/`GW`/`vev`/`hlambda`. |
-| **`"gf"`** | `Gf`, `MW`, `MZ`, `MH` (+ `aS`) | `External`, an input | Rewritten, with an NLO shift on top of the tree relation. |
-| **`"aem"`** | `aEWM1` (= 1/α<sub>EM</sub>), `Gf`, `MZ`, `MH` (+ `aS`) | **`Internal` — a *prediction***, `MW = GW·vev/2` | Same as `"gf"`. |
+| `EWInputScheme` | Inputs | Lagrangian |
+|---|---|---|
+| **`"heft"`** *(default)* | `G1`, `GW`, `vev`, `hlambda` themselves — all `External` | Untouched. The Lagrangian and every downstream export stay written natively in `G1`/`GW`/`vev`/`hlambda`. `MZ` and `MW` are **predictions** (`Internal`): `MW = GW vev/2`, and `MZ` is the Lagrangian's Z mass including the one-insertion `P1`/`P12`/`PT` shifts. |
+| **`"gf"`** | `Gf`, `MW`, `MZ`, `MH` | Rewritten, with a one-WC-insertion shift on top of the tree relation. |
+| **`"aem"`** | `α<sub>EM</sub>`, `Gf`, `MZ`, `MH` | Rewritten, with a one-WC-insertion shift on top of the tree relation. |
 
-**The relations are read off the model's own mass-basis Lagrangian**, not copied from a paper,
-so they are correct for *this* Lagrangian whatever normalisation convention a given operator
-carries here:
+**The relations can be found in the associated paper.**
 
-```
-MZ² = (G1² + GW²) v²/4
-      + ChiralOrder · v²/2 · (CFTn0 (G1²+GW²) + 2 CP12NLOn0 GW² − 2 CP1NLOn0 G1 GW)
-MW² = GW² v²/4                                       (no NLO shift at all)
-e   = G1 GW ((1 + 2 ChiralOrder CP12NLOn0) G1²
-             + 2 ChiralOrder CP1NLOn0 G1 GW + GW²) / (G1² + GW²)^(3/2)
-```
-
-### Chiral-order restriction — enforced, not advisory
-
-| Scheme | Valid for |
-|---|---|
-| `"heft"` | **any** `HEFTMaxOrder` |
-| `"gf"`, `"aem"` | `HEFTMaxOrder ≤ 1` **only** |
-
-The derived schemes invert an extraction that exists at O(`ChiralOrder`) only. At
-`HEFTMaxOrder ≥ 2` the Lagrangian carries NNLO operators the extraction knows nothing about,
-so the inputs would come out *silently* NLO-accurate while everything around them is not — no
-message, no failure, just wrong numbers in the parameter card and in the Lagrangian.
-
-The combination is refused **twice**, so no entry point can slip past it: once in Cell 3, before
-any expensive work, and again inside `LoadModel` (`HEFTEWInputSchemeCheckOrder[]`), which covers
-headless scripts that `Get` `HEFT_Model.fr` directly. Use `"heft"` at NNLO and beyond.
-
-There is **no CKM input scheme** — see
-[Deferred configuration options](#deferred-configuration-options). `DiagonalCKM` is the only
-CKM-related switch.
 
 ## Wilson coefficients — the WCxf workflow
 
@@ -279,86 +274,124 @@ There is nothing to configure. Three fixed steps:
 
 **Cell 3 rewrites `wcxf_output.json` back to the defaults every time it runs.** Edit *after*
 Cell 3, not before; if you re-run it after editing, it lists the values it is about to discard.
-After changing `NLOOperators` you *must* re-run Cell 3 — a file written for the old selection
+After changing `EFTOperators` you *must* re-run Cell 3 — a file written for the old selection
 has no keys for the new operators.
 
-**A zero does not remove an operator.** Operator selection is `NLOOperators` alone. A zeroed
-coefficient leaves its operator in `LHEFT` with the value `0`. If you do not want an operator,
-leave it out of the list.
-
 **Coefficient counts grow fast.** A 2F operator has `(HiggsMaxOrder+1) × 3²` independent
-entries and a 4F operator `(HiggsMaxOrder+1) × 3⁴` — at `HiggsMaxOrder = 2`, `NQ1NLO`
-contributes 27 keys and `RQ1NLO` contributes 243. Selecting many four-fermion operators makes
+entries and a 4F operator `(HiggsMaxOrder+1) × 3⁴` — at `HiggsMaxOrder = 2`, `NQ1` contributes
+27 keys and `RQ1` contributes 243. Selecting many four-fermion operators makes
 `wcxf_output.json` large.
 
 Flavour multiplicity is **fixed at 3 generations**; it is not a configuration option.
 
-## Operators by Chiral Dimension
+## Adding your own operators
 
-Cell 1 prints the full catalogue with `PrintHigherOrder = True` for the NNLO block. The labels
-below are exactly what goes into `NLOOperators`.
+Two files are reserved for operators you define yourself, and nothing else in the model has to
+change:
 
-### Leading order — chiral dimension 0
+- **[`model_files/Lagrangian/Lagrangian_User.fr`](model_files/Lagrangian/Lagrangian_User.fr)** —
+  the Lagrangian terms;
+- **[`model_files/parameters/parameters_User.fr`](model_files/parameters/parameters_User.fr)** —
+  their flare functions and Wilson coefficients.
 
-The Standard Model in HEFT form, always present:
+Both are loaded after the SM and EFT files, so every building block of the model is available
+in them. They ship with `PGHD1`, `PGHD2` and `SGHD` as a worked example to copy. **An operator
+is four entries in four places.** The steps below follow `PGHD1`.
 
-- **Gauge sector** — U(1), SU(2) and SU(3) field strengths, plus the QCD θ term.
-- **Gauge–Higgs sector** — the chiral-connection terms with flare functions `F_C` and `F_T`.
-  `F_T` belongs to the custodial-breaking `PT`, controlled by `IncludeCustodialT`.
-- **Fermion kinetic terms** for all quarks and leptons.
-- **Higgs sector** — kinetic term and potential, with the cubic and quartic deviations
-  `Kappa3H`/`Kappa4H` (or `DeltaLam3`/`DeltaLam4`) and a flare tower from `h⁵` upward.
-- **Yukawa sector** — the fermion mass, the single-Higgs coupling, and the multi-Higgs tower
-  `FQU`/`FQD`/`FLE` (`LOYukawaExpansion`).
+**Naming.** A label `<label>` (what goes into `EFTOperators`) has a Lagrangian `L<label>`, a
+flare function `FC<label>`, and coefficients `C<label>n<n>`, one per power `n` of `h/v`. Never
+put the leading `L` into `EFTOperators`.
 
-### Next-to-leading order — chiral dimension 1
+### Step 1 — the Lagrangian term (`Lagrangian_User.fr`)
 
-The complete 1604.06801 basis. All labels carry the `NLO` suffix.
+```mathematica
+LPGHD1 := Block[{mu, nu, ga, a},
+  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, mu] del[H, nu]
+      FS[Gl, mu, ga, a] FS[Gl, nu, ga, a] FCPGHD1[H, NEFT]
+];
+```
 
-**Bosonic — scalar and gauge kinetic (7)**
-`DH`, `GHNLO`, `GHtildeNLO`, `WHNLO`, `WtildeHNLO`, `BHNLO`, `BtildeHNLO`
+- **Dummy indices** go in the `Block`.
+- `ChiralOrder^n` with `n` the operator's chiral, energy scale `LamHEFT` to ensure proper dimansionality. `WCOrder` is what keeps the model at [one insertion per
+  vertex](#one-wilson-coefficient-insertion-per-vertex).
+- **Multiply by the flare function `FC<label>[H, NEFT]` and by no coefficient of your own** —
+  the Wilson coefficients live inside the flare. **One flare per term**: an operator that
+  multiplies two of them is refused at load time (see
+  [Two derivatives on two flares](#two-derivatives-on-two-flares-one-combined-coefficient)).
+- **Do not touch the gauge kinetic terms or the input relations.** Those are the two places the
+  model expands to first order in `WCOrder`; an operator that modified them would add a third
+  source of coefficient products that nothing re-expands.
 
-**Bosonic — cubic gauge (4)**
-`GGGNLO`, `WWWNLO`, `WWWtildeNLO`, `GGGtildeNLO`
+### Step 2 — make it selectable (`Lagrangian_User.fr`)
 
-**Bosonic — CP-even, the *P* operators (19)**
-`P1NLO`, `P2NLO`, `P3NLO`, `P4NLO`, `P5NLO`, `P6NLO`, `P8NLO`, `P11NLO`, `P12NLO`, `P13NLO`,
-`P14NLO`, `P17NLO`, `P18NLO`, `P20NLO`, `P21NLO`, `P22NLO`, `P23NLO`, `P24NLO`, `P26NLO`
+Add one line to **each** of the two selection blocks at the bottom of the file:
 
-**Bosonic — CP-odd, the *S* operators (11)**
-`S1NLO`, `S2NLO`, `S2DNLO`, `S3NLO`, `S4NLO`, `S5NLO`, `S6NLO`, `S7NLO`, `S8NLO`, `S9NLO`,
-`S15NLO`
+```mathematica
+If[HEFTPieceActiveQ["PGHD1"], LUseraux += LPGHD1];     (* in the LUseraux block     *)
+If[HEFTPieceActiveQ["PGHD1"], aux += LPGHD1];          (* inside HEFTRebuildLUser[] *)
+```
 
-**Two-fermion (56)**
+`HEFT_Model.fr` rebuilds the user Lagrangian with `HEFTRebuildLUser[]` after the model has
+loaded, so **the second line is the one that counts** — forgetting it drops the operator with
+no message at all, while its coefficients are still declared and still written to
+`wcxf_output.json`, so nothing downstream looks wrong. Check that the coefficients really
+appear in `LHEFT` after Cell 5.
 
-| Family | Labels | Structure |
-|---|---|---|
-| Quark | `NQ1NLO`–`NQ36NLO` | `NQ1`–`NQ8` pure **V** chains; `NQ9`–`NQ10` dual-flare (two derivatives of two form factors); `NQ11`–`NQ20` chirality-flipping via the chiral connection; `NQ21`–`NQ28` σ^{μν}V_μ with ∂_ν; `NQ29`–`NQ36` σ^{μν} with field strengths (B, G, W) |
-| Lepton | `NL1NLO`–`NL17NLO` | `NL1`–`NL14` follow eq. 2.20; `NL15`–`NL17` are the eq. 2.21 flavour structures, valid only off-diagonal (enforced with `1 − δ_{ff1,ff2}`) |
-| Lepton, extra flavour structures | `NLF1NLO`–`NLF3NLO` | eq. 2.21 |
+### Step 3 — declare the flare and its coefficients (`parameters_User.fr`)
 
-Coefficients carry two flavour indices, `C<op>n<n>[ff1, ff2]`, which FeynRules expands as
-`C<op>n<n>x<ff1>x<ff2>`.
+One row in `userScalarFlareSpecs`:
 
-**Four-fermion (56)**
+```mathematica
+userScalarFlareSpecs = {
+  {FCPGHD1,  "PGHD1",  "CPGHD1n",  0},
+  ...
+};
+```
 
-| Family | Labels | Indices |
-|---|---|---|
-| Four-quark | `RQ1NLO`–`RQ26NLO` | `[ff1, ff2, ff3, ff4]` |
-| Quark–lepton | `RQL1NLO`–`RQL23NLO` | `ff1`, `ff2` lepton legs; `ff3`, `ff4` quark legs |
-| Four-lepton | `RL1NLO`–`RL7NLO` | `[ff1, ff2, ff3, ff4]` |
+The four fields are the flare symbol, the label, the coefficient prefix and `nmin`. From that
+row the model builds
 
-The dual-flare operators `NQ9`, `NQ10` and `NL3` are the one exception to "one coefficient per
-term": each half of `∂_μF · ∂^μF'` carries its own tensor, so a term goes as `C¹_n · C²_m`.
-Both halves start at `n = 1`, since a constant under `∂` drops out.
+```
+FCPGHD1[h, NEFT] = Σ_{n = nmin}^{NEFT} CPGHD1n<n> · (LamF h/vev)^n
+```
 
-### Next-to-next-to-leading order — chiral dimension 2
+only when the label is selected, and declares every coefficient as an `External` parameter, so
+it appears in the parameter card and in the WCxf files. **Use `nmin = 1` if the flare sits
+under a derivative** — a constant there drops out, and the load aborts otherwise. These rows
+are for bosonic, flavour-blind operators; a fermionic one needs flavour-tensor flares instead
+(`ferm2FFlareSpecs` / `ferm4FFlareSpecs` in `parameters_EFT_2F.fr` / `parameters_EFT_4F.fr`
+show how).
 
-Implemented as an extension beyond the 1604.06801 basis, and shipped as **worked examples
-rather than a complete NNLO basis**. They need `HEFTMaxOrder ≥ 2`, which in turn forces
-`EWInputScheme = "heft"`.
+### Step 4 — register the label (`wcxf_input.fr`, `heft_notebook_reference.wl`)
 
-`GHNNLO1`, `GHNNLO2`, `GHtildeNNLO`, `WLh2WRD2NNLO`, `WLh3D4NNLO`
+```mathematica
+(* wcxf_input.fr, in HEFT1604ScalarOpPrefixes — same label, prefix and nmin as Step 3 *)
+{"PGHD1", "CPGHD1n", 0},
+
+(* heft_notebook_reference.wl, in HEFT$Catalog1604Higher *)
+{"PGHD1", "PGHD2", "SGHD"},
+
+(* heft_notebook_reference.wl, in HEFT$OperatorChiralOrder — the same n as in Step 1 *)
+Thread[{"PGHD1", "PGHD2", "SGHD"} -> 2],
+```
+
+The first generates the WCxf keys; without it the coefficients never reach
+`wcxf_output.json`, and absent keys are read as **0**. The second is the catalogue Cell 3
+validates `EFTOperators` against — an unlisted label is refused as unknown. The third is the
+chiral-order label printed by the Reference cell and exported as a UFO coupling order; the two
+must agree with the power in Step 1, and the load-time check compares the prefix and `nmin` of
+Steps 3 and 4 against each other.
+
+### Using user-defined operators
+
+```mathematica
+EFTOperators = {"PGHD1"};
+```
+
+Then run the notebook as usual. The `_User.fr` files are part of the cache's model digest, so
+**any edit to them invalidates every cached `LHEFT`** and the next Cell 5 rebuilds. To check an
+operator came out as intended, look at its vertices in the Cell 6 Feynman-rule output before
+exporting.
 
 ## Exports
 
@@ -367,7 +400,7 @@ There is no `OutputFormat` option — the cell you evaluate *is* the choice.
 | Cell | Writes | Notes |
 |---|---|---|
 | **6** | `output/FeynmanRules/<OutputName>/` | `.mx` (reload with `Get`), `.txt` (every vertex in plain text), `latex/<OutputName>.tex` (a standalone LaTeX document). Optional — Cells 7 and 8 never read it. |
-| **7** | `output/UFO/<OutputName>/` | For MadGraph. |
+| **7** | `output/UFO/<OutputName>/` | For MadGraph. Carries `ChiralOrder` and `WCOrder` as coupling orders. |
 | **8** | `output/FeynArts/<OutputName>/` | `.mod`, `.gen`, `.pars`. For FeynArts / FeynCalc. |
 
 ## The LHEFT cache
@@ -389,73 +422,64 @@ surprise; on a miss they also print how long the closest previous build took.
 
 | Change | Rebuild? |
 |---|---|
-| Operators, basis, expansion orders, gauge/scheme, restrictions, `.fr` sources | **Yes** — unless that exact configuration was built before, under any name |
+| `EFTOperators`, `HiggsMaxOrder`, `EWInputScheme`, `KappaFramework`, `LOYukawaExpansion`, `Massless`, `DiagonalCKM`, or any `.fr` source | **Yes** — unless that exact configuration was built before, under any name |
 | Wilson-coefficient **values**, zeros included | **No.** Every coefficient is an `External` parameter, so a value never enters `LHEFT`; it reaches the export through `M$Parameters`. No coefficient is part of the cache key. |
 | `MaxVertexLegs`, `InitialiseWCs`, `OutputName`, export format | **No** |
 
-`ForceRebuildLHEFT = True` is the only override.
+`ForceRebuildLHEFT = True` is the only override. Editing any model file changes the digest, so
+**every existing cache entry is invalidated automatically** by a source edit — including edits
+to your own `_User.fr` operators.
 
 ## Merging cached models
 
-The expensive step is not `LoadModel` (1–2 s) but the `ExpandIndices` pass, which grows sharply
-with operator count. Measured at `HiggsMaxOrder = 2`: `{P1NLO}` 12 s, `{P12NLO}` 16 s,
-`{WHNLO}` 13 s — but a single build of all three takes **168 s**. Merging the three cached
-pieces takes **4 s**.
+The expensive step is not `LoadModel` (1–2 s) but the `ExpandIndices` pass, which grows faster
+than the operator count. Measured at `HiggsMaxOrder = 2`, `"heft"`: `{P1}` 12 s, `{P12}` 14 s,
+`{PW}` 7 s — but a single build of all three takes **45 s**. Merging the three cached pieces takes
+**4 s**, and gives the same 105 vertices with identical couplings.
 
 [`heft_fr_merge_models.wl`](heft_fr_merge_models.wl) does exactly that. `ExpandIndices` is
 linear in the Lagrangian, so for *N* sub-models
 
 ```
-LHEFT(A ∪ B ∪ …) = Σ_i LHEFT(i) − (N − 1) · LHEFT(LO)
+LHEFT(A ∪ B ∪ …) = Σ_i LHEFT(i) − (N − 1) · LHEFT(SM baseline)
 ```
 
-The LO baseline must be subtracted explicitly: each sub-model carries the whole LO Lagrangian,
+The SM baseline must be subtracted explicitly: each sub-model carries the whole LO Lagrangian,
 so adding *N* of them without it would scale every SM vertex by *N*.
 
 Its Cell 3 lists every cached model built with your configuration — **you never need to know a
 cache hash**; selection is by name. Cells 6, 7 and 8 are literally the same cells as the main
 notebook, `Get` from the same file rather than copied.
 
+**Merging is exact here**, because the model keeps [one EFT insertion per
+vertex](#one-wilson-coefficient-insertion-per-vertex): the places where operators would mix
+non-linearly — the A–Z rotation and the input-scheme shifts — are themselves linear in
+`WCOrder`, so nothing cross-couples two sub-models.
+
 **What must agree:** every cache key except the operator list. **Refused, not warned about:**
-any hashed option differing between sub-models; `HEFTMaxOrder > 1` (merging is exact only at
-linear order in `ChiralOrder`); a missing LO baseline; an operator appearing twice.
+any hashed option differing between sub-models, a missing SM baseline, an operator appearing
+twice, and a cache entry listed twice.
 
-**Why arithmetic and not term matching.** FeynRules names summed dummy indices with
-`$`-suffixed symbols whose counters diverge between kernels, and `Times` is `Orderless`, so
-"rename in order of first appearance" is not canonical. More fundamentally, the LO sector is
-not written the same way in two builds: activating `P1NLO`/`P12NLO`/`WHNLO`/`BHNLO` switches
-`gauge_normalization.fr` to an algebraically equal but syntactically different A–Z branch, so
-102 of 149 LO terms of an LO-only build do not appear verbatim in a `{P1NLO}` build. Addition
-is immune to both.
-
-The price: nothing cancels syntactically, so the merged Lagrangian is larger (+29 % in
-`LeafCount` for two operators). FeynRules collapses it during vertex extraction and the
-vertices come out identical — 105 vertices both ways, 0 of 105 couplings differing.
-
-The result is an ordinary cache entry, with `mergedFrom` and `mergedLOBaseline` recorded in its
-`meta.json`.
 
 ## Performance
 
 The dominant cost depends on `HiggsMaxOrder`. At `HiggsMaxOrder = 2` the **build** dominates
-and merging is the answer. At `HiggsMaxOrder = 3` the **export** does — measured on
-`{GHNLO, WHNLO, P12NLO}`:
+and merging is the answer. At `HiggsMaxOrder = 3` the **export** does. Measured on
+`{PG, PW, P12}`, `HiggsMaxOrder = 3`, `EWInputScheme = "heft"`, `MaxVertexLegs = Automatic`, all
+other options at their defaults, all cells in one kernel (Intel i7-9750H, 6 cores, Mathematica
+14.0):
 
-| Stage | Seconds |
-|---|---|
-| Cell 5 — build (cache miss) | 115.2 |
-| Cell 6 — `FeynmanRules` | 188.8 |
-| Cell 7 — `WriteUFO` | 231.0 |
-| **Export total** | **419.8** |
+| Stage | Seconds (wall) | Result |
+|---|---|---|
+| Cell 3 — configuration, WCxf files | 12.3 | |
+| Cell 5 — build (cache miss) | 26.0 | `LHEFT`: 567 terms |
+| Cell 6 — `FeynmanRules` | 82.5 | 183 vertices |
+| Cell 7 — `WriteUFO` | 118.2 | 211 vertices in `vertices.py` |
+| Cell 8 — `WriteFeynArtsOutput` | 70.7 | 91 couplings in the `.mod` file |
 
-Merging removes build cost and nothing else, so above `HiggsMaxOrder = 2` it is necessary but
-not sufficient; [`MaxVertexLegs`](#maxvertexlegs) is the only lever on the term that then
-dominates.
+Cells 6, 7 and 8 each read `LHEFT` independently, so an export costs only the cells you run:
+UFO alone is ~2 min here, FeynArts alone ~1 min. On a cache hit, Cell 5 takes a second or two.
 
-**Practical advice:** debug physics with a small `HiggsMaxOrder` (1–2) and a minimal operator
-list, then widen for the final export — the cache means the expensive build runs once per
-configuration. To build many sub-models for a merge, run several `wolframscript` kernels in
-parallel: 6 concurrent kernels have been run without hitting a licence ceiling.
 
 ## Repository layout
 
@@ -465,22 +489,32 @@ heft_fr_merge_models.wl    build a large model by merging cached small ones
 
 model_files/               the model source
   HEFT_Model.fr              master file: loads everything, assembles LHEFTMassBasis
-  fields_LO.fr               field and particle declarations
-  definitions.fr             chiral building blocks (U, V_μ, T, field strengths)
-  power_counting.fr          LamHEFT / LamF bookkeeping
-  gauge_normalization.fr     gauge-field normalisations and A–Z mixing
+  fields.fr                  field and particle declarations
+  definitions.fr             chiral building blocks (U, V_μ, T, field strengths), unitary gauge
+  power_counting.fr          the ChiralOrder / WCOrder / LamF bookkeepers
+  gauge_normalization.fr     gauge-field normalisations and the A–Z mixing matrix
   input_scheme.fr            EW input schemes, applied at the end of the mass-basis build
-  wcxf_input.fr              WCxf reading/writing and operator activation
-  LO/                        parameters_LO.fr, Lagrangian_LO.fr
-  NLO/basis_1604_06801/      the NLO basis: parameters + bosonic / 2F / 4F Lagrangians
-  NNLO/                      chiral-dimension-2 example operators
+  wcxf_input.fr              WCxf reading/writing, key tables and operator activation
+  parameters/
+    parameters_SM.fr           SM parameters, the Kappa/Delta sets, the WC declaration helpers
+    parameters_EFT.fr          shared EFT machinery: flare and coefficient-table builders
+    parameters_EFT_Bosonic.fr  bosonic flare and coefficient specs
+    parameters_EFT_2F.fr       two-fermion specs
+    parameters_EFT_4F.fr       four-fermion specs
+    parameters_User.fr         YOUR operators' flares and coefficients
+  Lagrangian/
+    Lagrangian_SM.fr           the LO (SM-like) Lagrangian
+    Lagrangian_EFT_Bosonic.fr  bosonic operators
+    Lagrangian_EFT_2F.fr       two-fermion operators
+    Lagrangian_EFT_4F.fr       four-fermion operators
+    Lagrangian_User.fr         YOUR operators
   heft_fr.wl                 the engine behind notebook Cells 3–8
   heft_fr_merge.wl           the engine behind the merge notebook
   lheft_cache.wl             the build cache
   lheft_merge.wl             the merge arithmetic
   heft_latex_export.wl       LaTeX writer for the Feynman rules
-  heft_notebook_reference.wl the Cell 1 reference tables and operator catalogue
-  heft_defaults.wl           fallback values for unset configuration options
+  heft_notebook_reference.wl the Cell 1 reference tables, operator catalogue and chiral orders
+  heft_defaults.wl           fallback values for unset options, and the removed-option check
 
 wcxf/                      Wilson coefficients: wcxf_init.json (reference) + wcxf_output.json (read)
 restrictions/              Massless.rst, DiagonalCKM.rst
@@ -492,54 +526,31 @@ output/                    UFO/, FeynArts/, FeynmanRules/ exports              (
 
 ## Rules of the road
 
-**One run per kernel.** Quit the kernel (*Evaluation ▸ Quit Kernel*) before every run. The
-notebook deliberately does not reset anything by itself — a partial reset would be worse than
-none, since the state at risk is FeynRules' own, in its private contexts.
+**One run per kernel.** Quit the kernel (*Evaluation ▸ Quit Kernel*) before every run.
+LoadModel is not idempotent: a second call re-declares the model on top of the live
+FeynRules state and corrupts it. The notebook therefore refuses rather than resets — Cell 5
+refuses a second LoadModel, and Cell 3 refuses to run unless Cell 2 has been evaluated.
+Cells 1–4 and 6–8 are safe to re-run; restarting is cheap, since LHEFT is on disk.
 
-The reason is that **`LoadModel` is not idempotent**: FeynRules only *warns* on a second call
-and then re-declares the model on top of the existing state. That state ends up corrupted —
-`MR$GaugeGroupList` stops being a list, parameter definitions recurse to `$RecursionLimit`, and
-in the cases that do not die outright you get an `LHEFT` that silently ignores `EWInputScheme`.
+## Known limitations
 
-So the notebook refuses rather than resets:
+**No general Rξ gauge.** The model is **unitary gauge** only.
 
-- **Cell 5 refuses a second `LoadModel`** in one kernel and tells you to restart.
-- **Cell 3 refuses to run** unless Cell 2 has been evaluated, so a Cell 3 pressed after a
-  restart cannot silently fall back to defaults for every option you had chosen.
+**One operator set.** - 1604.06801 only, whichis **not a complete basis**.
 
-Cells 1, 2, 3, 4, 6, 7 and 8 are all safe to re-run; only Cell 5 carries this restriction.
-Restarting costs almost nothing — `LHEFT` is on disk, so Cell 5 reloads it in seconds.
+**Only single insertions of the EFT Wilson coefficients.** Every vertex is linear in WCs.
 
-## Known limitations and planned improvements
+**No assumptions on the fermionic Wilson coefficients.** Every flavour entry is an independent
+free parameter — 3×3 per 2F operator and 3⁴ per 4F operator, per power of `h/v`. The model
+imposes **no** flavour symmetry, no MFV ansatz, no hermiticity or exchange relation between
+entries, and no relation between operators; the only assumption is that the coefficients are
+real.
 
-- **Unitary gauge only.** An Rξ branch exists in the source (`definitions.fr`), with the
-  Goldstone expansion pinned at order 1, but it is unfinished and unsupported. Setting
-  `HEFTGauge = "rxi"` selects that branch; do not rely on the result.
-- **One NLO basis.** Only 1604.06801 is implemented. `"2206.07722"` is refused, twice — at
-  configuration time and inside `LoadModel`. Its catalogue can still be previewed in Cell 1.
-- **All Wilson coefficients are real.** The CP-odd imaginary parts of the chirality-flipping
-  and dipole operators (the `n0IM` tensors of eqs. 2.20/2.22) are not currently implemented.
-- **Flavour is fixed at 3 generations** — not configurable.
-- **The derived EW schemes are NLO-only.** `"gf"` and `"aem"` are refused above
-  `HEFTMaxOrder = 1`; use `"heft"` at NNLO. See [Input scheme (EW)](#input-scheme-ew).
-- **Indexed coefficients inside an `Internal` value hit a `WriteUFO` bug.** With `"gf"`/`"aem"`
-  *and* `RL2NLO`/`RL5NLO` active, the input-scheme shift carries indexed external parameters
-  into an `Internal` value, which `WriteUFO` does not handle. With those two operators
-  inactive — the usual case — only scalars appear and the export is clean.
-- **The NNLO set is a set of worked examples**, not a complete chiral-dimension-2 basis. NNNLO
-  operators are not part of this release.
-- **One `LoadModel` per kernel.** See [Rules of the road](#rules-of-the-road).
+**All Wilson coefficients are real.** 
 
-## Deferred configuration options
+**Flavour is fixed at 3 generations.** 
 
-Two options were removed from the Configuration cell because the features they parametrised are
-not implemented. **Both must be revisited when those features land** — the removal cleaned up a
-user-facing surface that could not do anything; it was not a decision about the physics.
-
-| Removed | Why | What to review, and when |
-|---|---|---|
-| **`GoldstoneMaxOrder`** | Only the Rξ branch reads it, and the model ships unitary gauge only. Now pinned at `1` near the top of `HEFT_Model.fr`; the Rξ code path is untouched and still honours it. | **When Rξ gauge is actually implemented.** Decide then whether order 1 is the right default, whether it should be user-selectable again, and **re-add it to the cache key** — otherwise two builds differing only in Goldstone order would collide on one cache entry. |
-| **`CKMInputScheme`** | Its four values did nothing distinct: two were no-ops and the other two only did what `DiagonalCKM = True` does. It was never a CKM *input scheme* in the sense `EWInputScheme` is one — there was no extraction of CKM entries from chosen inputs. | **When a real CKM input scheme is implemented.** `HEFTCKMInputRepl` is now always empty. This costs nothing in practice: `DiagonalCKM = True` removes `CKM` from `LHEFT` anyway, because the restriction zeroes the Wolfenstein inputs and FeynRules substitutes the internal `CKM[i,j]` built from them during expansion. |
+**One `LoadModel` per kernel.** See [Rules of the road](#rules-of-the-road).
 
 ## Authors
 

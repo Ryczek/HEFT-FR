@@ -1,0 +1,67 @@
+(* ============================================================================================
+   EFT parameters - BOSONIC sector (1604.06801 basis)
+   ============================================================================================
+
+   Loaded by parameters/parameters_EFT.fr, which defines every builder used here
+   (DefineScalarFlare, DefineCombinedDerivFlare, bosonicWCProps, MakeScalarCoeffTable,
+   MakeCombinedCoeffTable) and, after the three sector files, assembles them all in
+   HEFTBuildNLOParameterEntries[].  This file only declares the bosonic spec lists and defines
+   the flares built from them.
+
+   Bosonic flare functions FC<op>[h, neft] are NOT written out by hand: they are generated from
+   scalarFlareSpecs / combinedDerivFlareSpecs below, which are the ONLY place their nmin lives.
+   Until 2026-09-17 each was also defined explicitly - a second copy of every nmin, silently
+   overwritten by the generated one - and the coefficient table scalarCoeffSpecs was a third,
+   hand-kept copy; nine operators (P17, P18, S2, S3, S5, S6, S7, S9, S15) had drifted to
+   nmin = 0 there.  Both copies are gone.  User-defined operators declare their rows in
+   parameters_User.fr, which appends to scalarFlareSpecs / scalarCoeffSpecs.  Each power of
+   (H/vev) is accompanied by LamF, so that ExpansionF is tracked via powers of LamF.
+
+   RULE: a flare that appears under a derivative, del[FC<op>[...], mu], starts at nmin = 1 - its
+   constant term drops out.  HEFT_Model.fr checks this for every operator at load time
+   (HEFTFlareSpecCheck) and aborts on a violation. *)
+
+scalarFlareSpecs = {
+  (* PT: custodial-symmetry breaking Tr[T.V_mu] Tr[T.V^mu] F_T(h), chiral order 0 (formerly the
+     LO FFT / CFTn, switched by IncludeCustodialT; an ordinary EFTOperators label since 2026-09-15). *)
+  {FCPT, "PT", "CPTn", 0},
+  (* PG, PB, PW and the CP-odd SG, SB, SW use Fbar(h) = F(h) - 1: only h-dependent terms, nmin = 1
+     (1604.06801 eqs. C.14-C.18) - no redundancy with the SM kinetic terms, no topological term. *)
+  {FCPG, "PG", "CPGn", 1}, {FCSG, "SG", "CSGn", 1},
+  {FCP1, "P1", "CP1n", 0}, {FCS1, "S1", "CS1n", 0},
+  {FCPB, "PB", "CPBn", 1}, {FCSB, "SB", "CSBn", 1},
+  {FCPW, "PW", "CPWn", 1}, {FCSW, "SW", "CSWn", 1},
+  {FCPWWW, "PWWW", "CPWWWn", 0}, {FCPGGG, "PGGG", "CPGGGn", 0},
+  {FCSWWW, "SWWW", "CSWWWn", 0}, {FCSGGG, "SGGG", "CSGGGn", 0},
+  {FCP2, "P2", "CP2n", 0}, {FCP3, "P3", "CP3n", 0},
+  {FCP4, "P4", "CP4n", 1}, {FCP5, "P5", "CP5n", 1},
+  {FCP6, "P6", "CP6n", 0},
+  {FCP11, "P11", "CP11n", 0}, {FCP12, "P12", "CP12n", 0},
+  {FCP13, "P13", "CP13n", 0}, {FCP14, "P14", "CP14n", 0},
+  {FCP17, "P17", "CP17n", 1}, {FCP18, "P18", "CP18n", 1},
+  {FCP23, "P23", "CP23n", 0}, {FCP24, "P24", "CP24n", 0},
+  {FCP26, "P26", "CP26n", 0},
+  {FCS2D, "S2D", "CS2Dn", 1}, {FCS2, "S2", "CS2n", 1},
+  {FCS3, "S3", "CS3n", 1}, {FCS4, "S4", "CS4n", 0},
+  {FCS5, "S5", "CS5n", 1}, {FCS6, "S6", "CS6n", 1},
+  {FCS7, "S7", "CS7n", 1}, {FCS8, "S8", "CS8n", 0},
+  {FCS9, "S9", "CS9n", 1}, {FCS15, "S15", "CS15n", 1}
+};
+
+(* {function, op, prefix, extraPow} - the combined form, the only one (see the block comment
+   above DefineCombinedDerivFlare in parameters_EFT.fr). *)
+combinedDerivFlareSpecs = {
+  {FCPDHCombined, "PDH", "CPDHn", 4},
+  {FCP8Combined, "P8", "CP8n", 2},
+  {FCP20Combined, "P20", "CP20n", 2},
+  {FCP21Combined, "P21", "CP21n", 2},
+  {FCP22Combined, "P22", "CP22n", 2}
+};
+combinedDerivCoeffSpecs = Rest /@ combinedDerivFlareSpecs;
+
+(* Derived, not hand-kept: same op, prefix and nmin as the flare specs (see the comment at the
+   top of this file for the nine rows that had drifted when this was a separate table). *)
+scalarCoeffSpecs = Rest /@ scalarFlareSpecs;
+
+Scan[(DefineScalarFlare @@ #) &, scalarFlareSpecs];
+Scan[(DefineCombinedDerivFlare @@ #) &, combinedDerivFlareSpecs];
