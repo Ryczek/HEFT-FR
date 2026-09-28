@@ -78,7 +78,6 @@ SetDirectory[HEFT$WorkspaceRoot];
 HiggsMaxOrder=3;                     (* Max (H/vev)^n order kept in the F-functions *)
 KappaFramework=True;                 (* True -> Kappa parameterisation of SM couplings deviation; False = Delta parameterisation (see README/draft) *)
 InitialiseWCs=0;                     (* Default value Cell 3 writes for the Effective Wilson coefficients: 1 or 0. SM couplings always keep their SM value (Kappa framework 1, Delta framework 0) regardless of this *)
-LOYukawaExpansion = False;           (* True = keep the higher-order fermion-Higgs terms of the LO Yukawa sector: FQU/FQD/FLE = Sum_{n>=2} C<X>n<n>[ff1,ff2] (LamF H/vev)^n. False = drop them and do not declare CQUn/CQDn/CLEn at all. The mass and the single-Higgs coupling are unaffected either way *)
 
 (* Input schemes *)
 EWInputScheme="heft";                (* "heft" - (g, g', v, hlambda) treated as external input parameters. "gf" - (g, g', v, hlambda) expressed in terms of (Gf, MW, MZ, MH). "aem" - (g, g', v, hlambda) expressed in terms of (alpha_EM, Gf, MZ, MH) *)

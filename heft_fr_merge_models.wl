@@ -67,7 +67,6 @@ $FeynRulesPath="/Users/michalryczkowski/Library/Mathematica/Applications/feynrul
 HiggsMaxOrder=3;                     (* Max (H/vev)^n order kept in the F-functions *)
 KappaFramework=True;                 (* True -> Kappa parameterisation of SM couplings deviation; False = Delta parameterisation (see README) *)
 InitialiseWCs=0;                     (* Default value Cell 4 writes for the EFFECTIVE Wilson coefficients: 1 or 0. SM couplings always keep their SM value regardless of this. NOT part of the cache key, so it need not match the sub-models *)
-LOYukawaExpansion = False;           (* True = keep the higher-order fermion-Higgs terms of the LO Yukawa sector. Part of the cache key: must match the sub-models *)
 
 (* Input schemes - must match the sub-models *)
 EWInputScheme="heft";                (* "heft" / "gf" / "aem". The derived schemes are NSM-only, which merging requires anyway. See README SS "Input scheme (EW)" *)

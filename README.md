@@ -64,6 +64,11 @@ There is **one operator set (1604.06801)** and **one gauge (unitary)**.
 | Framework | A. Alloul, N. Christensen, C. Degrande, C. Duhr, B. Fuks, *FeynRules 2.0*, [arXiv:1310.1921](https://arxiv.org/abs/1310.1921) |
 | Coefficient exchange format | J. Aebischer et al., *WCxf: an exchange format for Wilson coefficients*, [arXiv:1712.05298](https://arxiv.org/abs/1712.05298) |
 
+**One deliberate deviation from 1604.06801:** `PDH` carries a factor `1/(4π)²`. The paper prints
+`P_DH = (∂_μF_DH ∂^μF'_DH)²` without it, but its own NDA master formula gives `1/(4π)²` for
+four derivatives on four Higgs fields, the same factor the paper puts on `P6`, `P8`, `P11` and
+`P20`–`P22`. The model's `CPDHn<nh>prime` are therefore the paper's coefficients times `(4π)²`.
+
 
 ## Power counting
 
@@ -176,7 +181,6 @@ anything you leave unset. There are no power-counting options — see
 | `HiggsMaxOrder` | `3` | Highest power of `h/v` kept in every flare function. The single strongest driver of build and export cost. |
 | `EFTOperators` | `{}` | The active operator labels. `{}` means the SM-like LO Lagrangian only. Must come from the catalogue Cell 1 prints; an unknown label aborts Cell 3. A selected operator is always kept — there is no order cut. |
 | `KappaFramework` | `True` | `True` → Kappa (multiplicative) parameterisation of SM-coupling deviations; `False` → Delta (additive). See [below](#the-kappa-and-delta-frameworks). |
-| `LOYukawaExpansion` | `True` | Keep the multi-Higgs tower `FQU`/`FQD`/`FLE` (`n ≥ 2`) on top of the LO Yukawa. `False` drops it *and* does not declare `CQUn`/`CQDn`/`CLEn` at all. The fermion mass and the single-Higgs coupling are unaffected. |
 
 ### Inputs and restrictions
 
@@ -422,7 +426,7 @@ surprise; on a miss they also print how long the closest previous build took.
 
 | Change | Rebuild? |
 |---|---|
-| `EFTOperators`, `HiggsMaxOrder`, `EWInputScheme`, `KappaFramework`, `LOYukawaExpansion`, `Massless`, `DiagonalCKM`, or any `.fr` source | **Yes** — unless that exact configuration was built before, under any name |
+| `EFTOperators`, `HiggsMaxOrder`, `EWInputScheme`, `KappaFramework`, `Massless`, `DiagonalCKM`, or any `.fr` source | **Yes** — unless that exact configuration was built before, under any name |
 | Wilson-coefficient **values**, zeros included | **No.** Every coefficient is an `External` parameter, so a value never enters `LHEFT`; it reaches the export through `M$Parameters`. No coefficient is part of the cache key. |
 | `MaxVertexLegs`, `InitialiseWCs`, `OutputName`, export format | **No** |
 

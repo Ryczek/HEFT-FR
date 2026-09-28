@@ -10,7 +10,7 @@
 HEFT$DefaultConfig = <|
   "feynRulesPath" -> "/Users/michalryczkowski/Library/Mathematica/Applications/feynrules-current",
   "higgsMaxOrder" -> 3,
-  "kappaFramework" -> True, "initialiseWCs" -> 1, "loYukawaExpansion" -> True,
+  "kappaFramework" -> True, "initialiseWCs" -> 1,
   "ewScheme" -> "heft",
   "massless" -> False, "diagonalCKM" -> False,
   "operators" -> {}, "outputName" -> "HEFT_run",
@@ -22,7 +22,7 @@ HEFT$DefaultConfig = <|
 HEFT$ConfigSymbolForKey = <|
   "feynRulesPath" -> "$FeynRulesPath",
   "higgsMaxOrder" -> "HiggsMaxOrder", "kappaFramework" -> "KappaFramework",
-  "initialiseWCs" -> "InitialiseWCs", "loYukawaExpansion" -> "LOYukawaExpansion",
+  "initialiseWCs" -> "InitialiseWCs",
   "ewScheme" -> "EWInputScheme",
   "massless" -> "Massless", "diagonalCKM" -> "DiagonalCKM", "operators" -> "EFTOperators",
   "outputName" -> "OutputName",
@@ -57,13 +57,16 @@ HEFT$ApplyConfigDefaults[] := Do[
      - EFTMaxOrder (renamed MaxEFTInsertions 2026-09-16) was removed 2026-09-17: the model keeps a
        single EFT insertion per vertex, always;
      - Combine2Derivatives was removed 2026-09-17: PDH/P8/P20/P21/P22 always use one combined
-       Wilson-coefficient family. *)
+       Wilson-coefficient family;
+     - LOYukawaExpansion was removed 2026-09-28: the FQU/FQD/FLE tower is always present, and
+       setting its coefficients to 0 neglects it. *)
 HEFT$RemovedOptionMessages = {
   "HEFTMaxOrder" -> "removed (2026-09-17) - chiral order is a label only, every selected operator is kept; delete the line",
   "MaxChiralOrder" -> "removed (2026-09-17) - chiral order is a label only, every selected operator is kept; delete the line",
   "EFTMaxOrder" -> "removed (2026-09-17) - the model always keeps a single EFT insertion per vertex; delete the line",
   "MaxEFTInsertions" -> "removed (2026-09-17) - the model always keeps a single EFT insertion per vertex; delete the line",
-  "Combine2Derivatives" -> "removed (2026-09-17) - PDH/P8/P20/P21/P22 always use one combined coefficient family; delete the line"
+  "Combine2Derivatives" -> "removed (2026-09-17) - PDH/P8/P20/P21/P22 always use one combined coefficient family; delete the line",
+  "LOYukawaExpansion" -> "removed (2026-09-28) - the FQU/FQD/FLE Yukawa tower is always in the model; set CQUn/CQDn/CLEn to 0 in wcxf_output.json to neglect it, and delete the line"
 };
 HEFT$CheckExpansionOptions[] := Module[{set},
   set = Select[Keys[HEFT$RemovedOptionMessages],

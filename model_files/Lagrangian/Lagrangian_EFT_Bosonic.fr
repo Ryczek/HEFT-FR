@@ -56,9 +56,13 @@ LPT := Block[{mu, aux},
    independently-truncated flares with a derivative on each, so a fixed power of h/vev carries a
    single WC.  The only form since 2026-09-17 (Combine2Derivatives removed).  See the block
    comment above combinedDerivFlareSpecs in parameters_EFT.fr for the (symbolically verified)
-   derivation. *)
+   derivation.
+   NORMALISATION: 1/(4 Pi)^2 added 2026-09-28 (user decision), a deliberate deviation from the
+   paper.  1604.06801 prints P_DH = (d F_DH d F'_DH)^2 without it, but the paper's own NDA
+   master formula (four derivatives, four h) gives 1/(4 Pi)^2 - the same factor it puts on P6,
+   P8, P11 and P20-P22.  CPDHn<nh>prime here = the paper's c_DH coefficients times (4 Pi)^2. *)
 LPDH := Block[{mu, nu},
-    WCOrder*ChiralOrder^2 FCPDHCombined[H, NEFT] del[H, mu] del[H, mu] del[H, nu] del[H, nu]
+    WCOrder*ChiralOrder^2 1/(4*Pi)^2 FCPDHCombined[H, NEFT] del[H, mu] del[H, mu] del[H, nu] del[H, nu]
   ];
 
 LPG := Block[{mu, nu, a},

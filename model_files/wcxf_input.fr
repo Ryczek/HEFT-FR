@@ -38,13 +38,6 @@ If[!ValueQ[InitialiseWCs], InitialiseWCs = 1];
 InitialiseWCs::invalid =
   "Unknown InitialiseWCs `1`. Supported: 0 or 1 (also as the strings \"0\"/\"1\"). Using 1.";
 
-(* Higher-order fermion-Higgs terms of the LO Yukawa sector (FQU/FQD/FLE and their
-   CQUn/CQDn/CLEn tensors).  Off -> those coefficients do not exist, so no WCxf key is
-   generated for them.  Defined in parameters/parameters_SM.fr; mirrored here because Cell 3 writes
-   the WCxf files before LoadModel. *)
-If[ValueQ[Global`LOYukawaExpansion], LOYukawaExpansion = Global`LOYukawaExpansion];
-If[!ValueQ[LOYukawaExpansion], LOYukawaExpansion = True];
-
 HEFTWCInitValue[] := Which[
   InitialiseWCs === 0 || InitialiseWCs === "0", 0,
   InitialiseWCs === 1 || InitialiseWCs === "1", 1,
@@ -69,15 +62,14 @@ HEFTWCxfScale = None;
 (* Bookkeepers: never assign numeric values to these symbols during WCxf load. *)
 HEFTWCProtectedParameterSymbols = {ChiralOrder, WCOrder, LamF};
 
-(* LO Yukawa-expansion tensors: present only when LOYukawaExpansion is on, and only for
-   n >= 2, mirroring FQU/FQD/FLE and the M$Parameters declarations in parameters/parameters_SM.fr.
-   n = 1 does not exist - the single-Higgs Yukawa strength is KappaQU.../DeltaYQU... *)
+(* LO Yukawa-expansion tensors, n >= 2 only, mirroring FQU/FQD/FLE and the M$Parameters
+   declarations in parameters/parameters_SM.fr (always present since the LOYukawaExpansion switch
+   was removed 2026-09-28).  n = 1 does not exist - the single-Higgs Yukawa strength is
+   KappaQU.../DeltaYQU... *)
 HEFTLOYukawaSymbols[] :=
-  If[!TrueQ[LOYukawaExpansion], {},
-    Flatten @ Table[
-      Symbol[pre <> ToString[heftN]],
-      {pre, {"CQUn", "CQDn", "CLEn"}}, {heftN, 2, HiggsMaxOrder}
-    ]
+  Flatten @ Table[
+    Symbol[pre <> ToString[heftN]],
+    {pre, {"CQUn", "CQDn", "CLEn"}}, {heftN, 2, HiggsMaxOrder}
   ];
 
 HEFTLOSymbols[] := If[TrueQ[KappaFramework],

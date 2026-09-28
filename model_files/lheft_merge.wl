@@ -69,7 +69,7 @@
    gauge_normalization.fr can never be merged. *)
 HEFTMergeGroupKeys = {
   "higgsMaxOrder", "ewScheme",
-  "kappaFramework", "loYukawaExpansion",
+  "kappaFramework",
   "massless", "diagonalCKM", "modelDigest"
 };
 

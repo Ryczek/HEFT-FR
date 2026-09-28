@@ -172,7 +172,7 @@ HEFTCatalogFlatten[catalog_List] := Join @@ catalog[[All, 2]];
 
 (* All configuration variables (EFTOperators, OutputName,
    ForceRebuildLHEFT, HiggsMaxOrder,
-   KappaFramework, InitialiseWCs, LOYukawaExpansion, EWInputScheme, Massless, DiagonalCKM,
+   KappaFramework, InitialiseWCs, EWInputScheme, Massless, DiagonalCKM,
    MaxVertexLegs) are
    already defaulted above by
    HEFT$ApplyConfigDefaults[] if still unset at this point. *)
@@ -198,7 +198,6 @@ HEFTPrintOptions[{
   {"HiggsMaxOrder", HiggsMaxOrder},
   {"KappaFramework", KappaFramework},
   {"InitialiseWCs", InitialiseWCs},
-  {"LOYukawaExpansion", LOYukawaExpansion},
   {"EWInputScheme", EWInputScheme},
   {"Massless.rst", Massless},
   {"DiagonalCKM.rst", DiagonalCKM},
@@ -255,7 +254,6 @@ HEFTWCxfOutputFile = FileNameJoin[{HEFTWCxfDir, "wcxf_output.json"}];
 HEFTPrintSubsection["WCxf \[LongDash] Wilson-coefficient files"];
 Global`KappaFramework = KappaFramework;
 Global`InitialiseWCs = InitialiseWCs;
-Global`LOYukawaExpansion = LOYukawaExpansion;
 Global`HiggsMaxOrder = HiggsMaxOrder;
 Global`HEFTActiveEFTPieces = EFTOperators;
 Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "wcxf_input.fr"}]];
@@ -327,7 +325,6 @@ HEFT$EnsureFeynRulesLoaded[];
 (* Configuration -> model flags (Global` survives FeynRules model context during LoadModel). *)
 Global`KappaFramework = KappaFramework;
 Global`InitialiseWCs = InitialiseWCs;
-Global`LOYukawaExpansion = LOYukawaExpansion;
 Global`HiggsMaxOrder = HiggsMaxOrder;
 Global`HEFTActiveEFTPieces = EFTOperators;
 Global`EWInputScheme = EWInputScheme;

@@ -148,7 +148,6 @@ HEFT$MergePrintKV["EFT insertions", "1 per vertex (fixed)"];
 HEFT$MergePrintKV["HiggsMaxOrder", HiggsMaxOrder];
 HEFT$MergePrintKV["KappaFramework", KappaFramework];
 HEFT$MergePrintKV["InitialiseWCs", InitialiseWCs];
-HEFT$MergePrintKV["LOYukawaExpansion", LOYukawaExpansion];
 HEFT$MergePrintKV["EWInputScheme", EWInputScheme];
 HEFT$MergePrintKV["Massless.rst", Massless];
 HEFT$MergePrintKV["DiagonalCKM.rst", DiagonalCKM];
@@ -233,7 +232,6 @@ HEFTWCxfInitFile   = FileNameJoin[{HEFTWCxfDir, "wcxf_init.json"}];
 HEFTWCxfOutputFile = FileNameJoin[{HEFTWCxfDir, "wcxf_output.json"}];
 Global`KappaFramework      = KappaFramework;
 Global`InitialiseWCs       = InitialiseWCs;
-Global`LOYukawaExpansion   = LOYukawaExpansion;
 Global`HiggsMaxOrder       = HiggsMaxOrder;
 Global`HEFTActiveEFTPieces = EFTOperators;
 Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "wcxf_input.fr"}]];
@@ -278,7 +276,6 @@ If[TrueQ[MR$ModelLoaded],
    Lagrangian possible at all. *)
 Global`KappaFramework      = KappaFramework;
 Global`InitialiseWCs       = InitialiseWCs;
-Global`LOYukawaExpansion   = LOYukawaExpansion;
 Global`HiggsMaxOrder       = HiggsMaxOrder;
 Global`HEFTActiveEFTPieces = EFTOperators;
 Global`EWInputScheme       = EWInputScheme;

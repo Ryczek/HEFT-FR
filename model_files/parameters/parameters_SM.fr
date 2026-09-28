@@ -830,37 +830,33 @@ _,
 If[ValueQ[Global`HiggsMaxOrder], NEFT = Global`HiggsMaxOrder];
 If[!ValueQ[NEFT], NEFT = 3];
 
-(* LOYukawaExpansion - configuration option (default True).
-   Governs the higher-order fermion-Higgs terms of the LO Yukawa sector, i.e. the F-functions
+(* Higher-order fermion-Higgs terms of the LO Yukawa sector, the F-functions
 
      FQU[H, NEFT, ff1, ff2] = Sum_{n=2}^{NEFT} CQUn<n>[ff1, ff2] (LamF H/vev)^n
 
-   and likewise FQD / FLE.  False makes all three identically 0 AND skips the declaration of
-   the CQUn / CQDn / CLEn tensors below, so no coefficient that cannot appear in the
-   Lagrangian reaches wcxf_output.json or the export.
+   and likewise FQD / FLE.  Always present, like FFC / FVHiggs: the LOYukawaExpansion switch
+   was removed 2026-09-28 (user decision) - set the CQUn / CQDn / CLEn values to 0 in
+   wcxf_output.json to neglect them.
 
-   The SM part is untouched either way: the fermion mass term and the single-Higgs coupling
-   both come from yu / yd / yl, whose strength is set by KappaQU... (Kappa framework) or
-   DeltaYQU... (Delta framework) - see yu[1,1] :> KappaQU Sqrt[2] MQU/vev below.  That is
-   also why the sums start at n = 2: an independent n = 1 coefficient would duplicate
-   KappaQU / DeltaYQU. *)
-If[ValueQ[Global`LOYukawaExpansion], LOYukawaExpansion = Global`LOYukawaExpansion];
-If[!ValueQ[LOYukawaExpansion], LOYukawaExpansion = True];
+   The fermion mass term and the single-Higgs coupling come from yu / yd / yl, whose strength
+   is set by KappaQU... (Kappa framework) or DeltaYQU... (Delta framework) - see
+   yu[1,1] :> KappaQU Sqrt[2] MQU/vev below.  That is why the sums start at n = 2: an
+   independent n = 1 coefficient would duplicate KappaQU / DeltaYQU. *)
 
 FQU[h_, neft_, ff1_, ff2_] :=
-  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+  If[neft >= 2,
     Sum[Symbol["CQUn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
     0
   ];
 
 FQD[h_, neft_, ff1_, ff2_] :=
-  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+  If[neft >= 2,
     Sum[Symbol["CQDn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
     0
   ];
 
 FLE[h_, neft_, ff1_, ff2_] :=
-  If[TrueQ[LOYukawaExpansion] && neft >= 2,
+  If[neft >= 2,
     Sum[Symbol["CLEn" <> ToString[n]][ff1, ff2]*(LamF*h/vev)^n, {n, 2, neft}],
     0
   ];
@@ -881,12 +877,11 @@ FVHiggs[h_, neft_] :=
   ];
 
 (* Dynamically generate NEFT-dependent fermion Wilson coefficients.
-   Gated on LOYukawaExpansion and starting at n = 2, matching FQU/FQD/FLE above exactly:
-   with the option off nothing is declared, and n = 1 is never declared at all because the
+   Starting at n = 2, matching FQU/FQD/FLE above exactly: n = 1 is never declared because the
    single-Higgs Yukawa strength is KappaQU.../DeltaYQU..., not a CQUn1 tensor.  Declaring
    coefficients the Lagrangian cannot contain is what used to put dead CQUn1/CQDn1/CLEn1
    entries into wcxf_output.json and the exported cards. *)
-fermionNeftParams = If[!TrueQ[LOYukawaExpansion], {}, Flatten[{
+fermionNeftParams = Flatten[{
     (* CQUn: n from 2 to NEFT.  One LHA block per tensor - see tensorWCProps at the top of this
        file for why these must not share the scalar HEFT block. *)
     Table[
@@ -930,7 +925,7 @@ fermionNeftParams = If[!TrueQ[LOYukawaExpansion], {}, Flatten[{
       ],
       {n, 2, NEFT}
     ]
-  }]];
+  }];
 
 (* Dynamically generate NEFT-dependent coefficients for FC and VHiggs (PT's CPTn: parameters_EFT.fr, the PT operator) *)
 gaugeHiggsNeftParams = Flatten[{

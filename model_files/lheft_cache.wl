@@ -84,7 +84,6 @@ HEFTLHEFTCacheMeta[] := Module[{},
     "higgsMaxOrder"     -> HiggsMaxOrder,
     "ewScheme"          -> EWInputScheme,
     "kappaFramework"    -> KappaFramework,
-    "loYukawaExpansion" -> LOYukawaExpansion,
     "massless"          -> Massless,
     "diagonalCKM"       -> DiagonalCKM,
     "modelDigest"       -> HEFTLHEFTModelDigest[]
@@ -97,7 +96,7 @@ HEFTLHEFTCacheMeta[] := Module[{},
    so two builds can no longer differ in them. *)
 HEFTLHEFTCacheCompareKeys = {
   "operators", "higgsMaxOrder",
-  "ewScheme", "kappaFramework", "loYukawaExpansion",
+  "ewScheme", "kappaFramework",
   "massless", "diagonalCKM", "modelDigest"
 };
 

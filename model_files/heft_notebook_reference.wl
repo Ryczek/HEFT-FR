@@ -134,8 +134,6 @@ HEFT$ConfigOptionReference = {
   {"HiggsMaxOrder", "Max (H/vev)^n order in bosonic F-functions"},
   {"KappaFramework", "True = Kappa normalisation; False = Delta (see README and documentation)"},
   {"InitialiseWCs", "Default value cell 3 writes for the effective Wilson coefficients: 1 or 0. SM couplings keep their SM value either way (Kappa framework 1, Delta framework 0)"},
-  {"LOYukawaExpansion", "True (default) = keep the higher-order fermion-Higgs terms of the LO Yukawa sector (F-functions FQU/FQD/FLE, valid for HiggsMaxOrder >= 2)"},
-  {"", "False = drop them and do not declare those coefficients at all. The SM Yukawas and their single-Higgs couplings are unaffected either way"},
   {"EWInputScheme", "\"heft\" (default) = (G1,GW,vev,hlambda) are the model's External input parameters"},
   {"", "\"gf\" = (G1,GW,vev,hlambda) derived from (Gf, MW, MZ, MH)"},
   {"", "\"aem\" = (G1,GW,vev,hlambda) derived from (alpha_EM, Gf, MZ, MH)"},
