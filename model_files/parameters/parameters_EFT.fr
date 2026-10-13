@@ -208,15 +208,20 @@ MakeCombinedCoeffTable[op_String, prefix_String, extraPow_Integer, withValue_:Tr
   ];
 
 (* One real flavour tensor per power of h/vev, matching the flare built from the same spec.
-   nIdx is 2 (two-fermion operators) or 4 (four-fermion operators). *)
+   nIdx is 2 (two-fermion operators) or 4 (four-fermion operators).
+   HEFT1604Fermion2FOffDiagOps (NL15-NL17, wcxf_input.fr): no diagonal entries.  The Definitions rule
+   sets them to 0, and FeynRules registers no external parameter for a component a Definitions rule
+   replaces (Core/ClassDeclarations.m), so they are absent from the LHA block too.  2026-10-12. *)
 MakeFermCoeffTable[op_String, prefix_String, nmin_Integer, nIdx_Integer] :=
   If[HEFTPieceActiveQ[op],
     Table[
-      With[{sym = Symbol[prefix <> ToString[n]]},
+      With[{sym = Symbol[prefix <> ToString[n]], offDiag = nIdx === 2 && MemberQ[HEFT1604Fermion2FOffDiagOps, op]},
         sym == Join[
           tensorWCProps[sym],
           {Indices -> ConstantArray[Index[Generation], nIdx],
-           Value -> If[nIdx === 2, HEFT2FermValueRules[sym], HEFT4FermValueRules[sym]],
+           Value -> Which[offDiag, DeleteCases[HEFT2FermValueRules[sym], sym[i_, i_] -> _],
+                          nIdx === 2, HEFT2FermValueRules[sym], True, HEFT4FermValueRules[sym]],
+           Sequence @@ If[offDiag, {Definitions -> {sym[i_?NumericQ, i_?NumericQ] :> 0}}, {}],
            Description -> prefix <> ToString[n] <> " HEFT coefficient"}
         ]
       ],

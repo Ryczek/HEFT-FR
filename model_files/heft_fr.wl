@@ -69,6 +69,25 @@ HEFT$CheckMaxVertexLegs[] := Module[{heftN = HEFT$MaxVertexLegsValue[]},
   True
 ];
 
+(* FeynArtsDiracIndices - fermion form of the FeynArts export (Cell 8); opt-in explicit Dirac indices
+   (user decision 2026-10-13, TODO.md plan 1.1d).
+     Automatic (default) = FeynRules' own choice: index-free fermion chains unless some vertex has more
+                           than two fermions, explicit Dirac indices otherwise;
+     True                = explicit Dirac indices in every export.
+   Exports in the two forms cannot be merged (merge notebook Cells 9-10 refuse the mix), and an SM-only
+   baseline is index-free under Automatic, so a FeynArts merge with four-fermion operators needs True
+   for ALL its exports, the SM-only baseline included.  Export-time only: not part of the cache key,
+   like MaxVertexLegs.  heft_export.json records the form actually written. *)
+HEFT$FeynArtsDiracIndicesValue[] := If[ValueQ[FeynArtsDiracIndices], FeynArtsDiracIndices, Automatic];
+
+HEFT$CheckFeynArtsDiracIndices[] := Module[{v = HEFT$FeynArtsDiracIndicesValue[]},
+  If[MemberQ[{Automatic, True}, v], Return[True]];
+  Print[Style["[HEFT] ERROR: FeynArtsDiracIndices = " <> ToString[v, InputForm] <>
+    " is not a usable value. Use Automatic (default, FeynRules' choice) or True (explicit Dirac " <>
+    "indices in every FeynArts export).", Red, Bold]];
+  Abort[]
+];
+
 (* =============================================================================
    CELL 3 \[LongDash] Configuration & WCxf template generation
    ============================================================================= *)
@@ -118,8 +137,14 @@ HEFT$ModelFile = FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "HEFT_Model.fr
 HEFT$RestrictionsDir = FileNameJoin[{HEFT$WorkspaceRoot, "restrictions"}];
 
 HEFT$EnsureFeynRulesLoaded[] := Module[{},
-  If[!StringQ[$FeynRulesPath] || !DirectoryQ[$FeynRulesPath],
-    Print[Style["[HEFT] ERROR: FeynRules path not found: " <> ToString[$FeynRulesPath], Red, Bold]];
+  If[!StringQ[$FeynRulesPath] || $FeynRulesPath === "",
+    Print[Style["[HEFT] ERROR: $FeynRulesPath is not set. In Cell 2 (Configuration) set it to the folder of your " <>
+      "FeynRules installation, the one containing FeynRules.m.", Red, Bold]];
+    Abort[]
+  ];
+  If[!FileExistsQ[FileNameJoin[{$FeynRulesPath, "FeynRules.m"}]],
+    Print[Style["[HEFT] ERROR: no FeynRules.m in $FeynRulesPath = " <> $FeynRulesPath <>
+      ". Set it in Cell 2 (Configuration) to the folder of your FeynRules installation.", Red, Bold]];
     Abort[]
   ];
   If[!MemberQ[$Packages, "FeynRules`"],
@@ -229,12 +254,18 @@ If[EFTOperators === {},
 (* Checked here, during configuration, so a typo costs nothing: Cells 6/7/8 check it again at
    the point of use, since either may be run in a kernel where this cell was not. *)
 HEFT$CheckMaxVertexLegs[];
+HEFT$CheckFeynArtsDiracIndices[];
 
 HEFTPrintSubsection["Output"];
 HEFTPrintOptions[{
   {"OutputName", OutputName},
-  {"MaxVertexLegs", HEFT$MaxVertexLegsValue[]}
+  {"MaxVertexLegs", HEFT$MaxVertexLegsValue[]},
+  {"FeynArtsDiracIndices", HEFT$FeynArtsDiracIndicesValue[]}
 }];
+If[HEFT$FeynArtsDiracIndicesValue[] === True,
+  Print[Style["    Cell 8 will write explicit Dirac indices. To merge FeynArts exports, every export of the " <>
+    "merge (the SM-only baseline included) must have been made this way.", Gray]]
+];
 If[HEFT$MaxVertexLegsValue[] =!= Automatic,
   Print[Style["    Cells 6/7/8 will keep only vertices with at most " <>
     ToString[HEFT$MaxVertexLegsValue[]] <> " legs. Not part of the cache key \[LongDash] " <>
@@ -618,6 +649,10 @@ Module[{ufoOutDir},
          Both are fixed at source (aEWM is now Internal = 1/aEWM1, and the YUKAWA block is
          gone), and a WriteUFO now emits zero duplicate parameter blocks.  If duplicates ever
          reappear, that is a real defect to diagnose, not something to post-process away. *)
+      (* heft_export.json: the configuration and operators this export was made with, which the
+         UFO merge (merge notebook Cells 11/12) needs to check that exports agree (2026-10-06). *)
+      Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
+      HEFTExportWriteMeta[ufoOutDir, "ufo"];
       Print[Style["[HEFT] UFO written to " <> ufoOutDir <> " in ", Bold], TimeUsed[] - CPUTime, " seconds"];
 ];
 
@@ -656,14 +691,43 @@ Quiet[CreateDirectory[outputDir["."], CreateIntermediateDirectories -> True],
        export in the same kernel inherits that nested directory as its cwd and the files end up
        one level too deep instead. So: restore the working directory afterwards, then flatten
        anything that did land in the nested folder and remove it. *)
-    Module[{feynArtsOutDir, cput, faBase, cwd, nestedFiles, target},
+    (* Fermion form: FeynArtsDiracIndices (top of this file).  Automatic = FeynRules' default
+       DiracIndices -> Automatic (user decision 2026-09-29): fermion chains index-free
+       (NonCommutative[...], flipping rules, $FermionLines = True) unless some vertex has more than
+       two fermions, explicit Dirac indices (DiracObject[...][di1,di2]) otherwise.  True = explicit
+       indices always (opt-in, user decision 2026-10-13), so that exports with and without
+       four-fermion operators can be merged.  Exports in the two forms cannot be merged (merge
+       notebook Cell 10 refuses the mix); heft_export.json records the form actually written.
+       The option symbol is taken from WriteFeynArtsOutput's own option list: it has no usage
+       message, so its context cannot be relied on, and a mis-contexted option would be accepted
+       in silence and do nothing (cf. MaxParticles). *)
+    (* Two corrections to FeynRules' FeynArts writer, applied in memory (feynrules_fixes.wl,
+       TESTS/T38): single-term vertices next to Levi-Civita structures were silently dropped
+       (S1, S8, SB, SG lost hhhW+W-), and ScalarProduct[p_a,p_b]^2 was not written to the .gen.
+       FeynRules on disk is not changed; the status goes into heft_export.json. *)
+    Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "feynrules_fixes.wl"}]];
+    HEFTApplyFeynRulesFixes[];
+    Module[{feynArtsOutDir, cput, faBase, cwd, nestedFiles, target, diracOpt, diracOpts = {}},
+      HEFT$CheckFeynArtsDiracIndices[];
+      If[HEFT$FeynArtsDiracIndicesValue[] === True,
+        diracOpt = SelectFirst[First /@ Options[WriteFeynArtsOutput],
+          SymbolName[#] === "DiracIndices" &, None];
+        If[diracOpt === None,
+          Print[Style["[HEFT] ERROR: FeynArtsDiracIndices = True, but WriteFeynArtsOutput has no " <>
+            "DiracIndices option in this FeynRules; the export is refused rather than written in " <>
+            "the other form.", Red, Bold]];
+          Abort[]
+        ];
+        diracOpts = {diracOpt -> True};
+        Print[Style["[HEFT] FeynArts export with explicit Dirac indices (FeynArtsDiracIndices = True).", Bold]]
+      ];
       feynArtsOutDir = outputDir[{"FeynArts", OutputName}];
       Quiet[CreateDirectory[feynArtsOutDir, CreateIntermediateDirectories -> True],
         CreateDirectory::eexist];
       faBase = FileNameJoin[{feynArtsOutDir, OutputName}];
       cput = TimeUsed[];
       cwd = Directory[];
-      WriteFeynArtsOutput[LHEFT, Output -> faBase, Sequence @@ HEFT$VertexLegOptions[]];
+      WriteFeynArtsOutput[LHEFT, Output -> faBase, Sequence @@ diracOpts, Sequence @@ HEFT$VertexLegOptions[]];
       Quiet @ SetDirectory[cwd];
       If[DirectoryQ[faBase],
         nestedFiles = Select[FileNames["*", faBase], !DirectoryQ[#] &];
@@ -678,6 +742,10 @@ Quiet[CreateDirectory[outputDir["."], CreateIntermediateDirectories -> True],
         (* Only succeeds once the directory is empty, which is exactly when it should go. *)
         Quiet @ DeleteDirectory[faBase]
       ];
+      (* heft_export.json: the configuration and operators this export was made with, which
+         the FeynArts merge (merge notebook Cells 9/10) needs to check that exports agree. *)
+      Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
+      HEFTExportWriteMeta[feynArtsOutDir, "feynarts"];
       Print[Style["[HEFT] FeynArts export in ", Bold], TimeUsed[] - cput, " seconds"];
       Print[Style["[HEFT] FeynArts written to ", Bold], feynArtsOutDir];
       Print["[HEFT]   ", FileNameTake /@ Select[FileNames["*", feynArtsOutDir], !DirectoryQ[#] &]];

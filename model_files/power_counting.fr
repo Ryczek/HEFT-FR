@@ -30,9 +30,11 @@ powerCountingParams = {
     InteractionOrder -> {WCOrder, 1},
     Description      -> "Wilson-coefficient order: one power per Wilson-coefficient insertion"
   },
+  (* Internal, fixed to 1 (2026-10-13, plan 1.6): powercountingreplacements sets LamF -> 1 before any
+     vertex is computed, so as an External in its own block HEFTEXP it was an input in every
+     parameter card that changed nothing. *)
   LamF == {
-    ParameterType    -> External,
-    BlockName        -> HEFTEXP,
+    ParameterType    -> Internal,
     Value            -> 1,
     InteractionOrder -> {ExpansionF, 1},
     Description      -> "H/v form-factor expansion counting parameter (LamF)"

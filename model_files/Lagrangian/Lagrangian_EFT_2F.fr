@@ -24,7 +24,7 @@ I Sum[ uRbar[sp1, ff1, cc] . uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] V
 ];
 
 
-LNQ3 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aa, aux},
+LNQ3 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aux},
   aux = ExpandIndices[
 Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] (VUFerm[si, ii, kk] TTFerm[kk, jj] - TTFerm[ii, kk] VUFerm[si, kk, jj]) , {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}]
     *FCNQ3[H, NEFT, ff1, ff2],
@@ -33,7 +33,7 @@ Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] (VUFerm[si, i
   aux + HC[aux]
 ];
 
-LNQ4 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aa, aux},
+LNQ4 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aux},
   aux = ExpandIndices[
 Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] - TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,1]  
     + dRbar[sp1, ff1, cc].dR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[2,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] - TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,2]
@@ -46,7 +46,7 @@ Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] (VUFe
   aux + HC[aux]
 ];
   
-LNQ5 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aa, aux},
+LNQ5 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aux},
   aux = ExpandIndices[
 I Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]), {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}]
     *FCNQ5[H, NEFT, ff1, ff2],
@@ -55,9 +55,9 @@ I Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] (VUFerm[si,
   aux + HC[aux]
 ];
 
-LNQ6 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aa, aux},
+LNQ6 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, aux},
   aux = ExpandIndices[
-    Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,1]  
+  I Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,1]  
     + dRbar[sp1, ff1, cc].dR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[2,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,2]
     + uRbar[sp1, ff1, cc].dR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,2]
     + dRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[2,ii]] (VUFerm[si, ii, kk] TTFerm[kk, jj] + TTFerm[ii, kk] VUFerm[si, kk, jj]) UFerm[jj,1]),
@@ -69,7 +69,7 @@ LNQ6 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aa, aux},
 ];
   
 
-LNQ7 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aa, aux},
+LNQ7 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aux},
   aux = ExpandIndices[
 I Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] , {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {ll, 1, 2}]
     *FCNQ7[H, NEFT, ff1, ff2],
@@ -78,9 +78,9 @@ I Sum[QLbar[sp1, ii, ff1, cc]. QL[sp2, jj, ff2, cc] Ga[si, sp1, sp2] TTFerm[ii, 
   aux + HC[aux]
 ];
 
-LNQ8 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, mm, nn, aux},
+LNQ8 := Block[{sp1, sp2, si, ff1, ff2, cc, ii, jj, kk, ll, aux},
   aux = ExpandIndices[
-Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] UFerm[jj,1]  
+I Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] UFerm[jj,1]  
     + dRbar[sp1, ff1, cc].dR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[2,ii]] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] UFerm[jj,2]
     + uRbar[sp1, ff1, cc].dR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] UFerm[jj,2]
     + dRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[2,ii]] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll, jj] UFerm[jj,1]),
@@ -93,14 +93,14 @@ Sum[(uRbar[sp1, ff1, cc].uR[sp2, ff2, cc] Ga[si, sp1, sp2] HC[UFerm[1,ii]] TTFer
 
 (* NQ9, NQ10: the paper's del[F,mu] del[F',mu] written with ONE combined flare FC<op>Combined (since
    2026-09-17, one Wilson coefficient per term) - see ferm2FCombinedFlareSpecs in parameters_EFT.fr. *)
-LNQ9 := Block[{sp1, ff1, ff2, cc, ii, jj, aux},
+LNQ9 := Block[{sp1, mu, ff1, ff2, cc, ii, aux},
   aux = ExpandIndices[Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] UFerm[ii,1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] UFerm[ii,2]), {ii, 1, 2}]*
     del[H, mu] del[H, mu] FCNQ9Combined[H, NEFT, ff1, ff2], FlavorExpand -> {SU2D}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
-LNQ10 := Block[{sp1, ff1, ff2, cc, ii, jj, aux},
+LNQ10 := Block[{sp1, mu, ff1, ff2, cc, ii, jj, aux},
   aux = ExpandIndices[Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, jj] UFerm[jj,1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] TTFerm[ii, jj] UFerm[jj,2]), {ii, 1, 2}, {jj, 1, 2}]*
     del[H, mu] del[H, mu] FCNQ10Combined[H, NEFT, ff1, ff2],
@@ -110,7 +110,7 @@ LNQ10 := Block[{sp1, ff1, ff2, cc, ii, jj, aux},
 ];
 
 (* NQ11: QL V_mu U QR partial^mu F *)
-LNQ11 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, aux},
+LNQ11 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] UFerm[kk, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] VUFerm[mu, ii, kk] UFerm[kk, 2]), {ii, 1, 2}, {kk, 1, 2}]*
@@ -121,7 +121,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] UFerm[kk, 1])
 ];
 
 (* NQ12: QL {V_mu, T} U QR partial^mu F *)
-LNQ12 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ12 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 1] + TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 1]))
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 2] + TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 2])), 
@@ -133,7 +133,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll]
 ];
 
 (* NQ13: QL [V_mu, T] U QR partial^mu F *)
-LNQ13 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ13 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 1] - TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 1]))
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 2] - TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 2])), 
@@ -145,7 +145,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] (VUFerm[mu, ii, kk] TTFerm[kk, ll]
 ];
 
 (* NQ14: QL T V_mu T U QR partial^mu F *)
-LNQ14 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, aux},
+LNQ14 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] UFerm[mm, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] UFerm[mm, 2]), 
@@ -157,7 +157,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] 
 ];
 
 (* NQ15: QL V_mu V^mu U QR F *)
-LNQ15 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ15 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 2]), 
@@ -169,7 +169,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, 
 ];
 
 (* NQ16: QL V_mu V^mu T U QR F *)
-LNQ16 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, aux},
+LNQ16 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] UFerm[mm, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] UFerm[mm, 2]), 
@@ -181,7 +181,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] VUFerm[mu, kk, 
 ];
 
 (* NQ17: QL T V_mu T V^mu U QR F *)
-LNQ17 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, nn, aux},
+LNQ17 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, nn, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] VUFerm[mu, mm, nn] UFerm[nn, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] VUFerm[mu, mm, nn] UFerm[nn, 2]), 
@@ -193,7 +193,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] 
 ];
 
 (* NQ18: QL T V_mu T V^mu T U QR F *)
-LNQ18 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, nn, pp, aux},
+LNQ18 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, nn, pp, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] VUFerm[mu, mm, nn] TTFerm[nn, pp] UFerm[pp, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] VUFerm[mu, mm, nn] TTFerm[nn, pp] UFerm[pp, 2]), 
@@ -205,7 +205,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] TTFerm[ii, kk] VUFerm[mu, kk, ll] 
 ];
 
 (* NQ19: QL V_mu T V^mu U QR F *)
-LNQ19 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, nn, aux},
+LNQ19 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] VUFerm[mu, ll, mm] UFerm[mm, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] VUFerm[mu, ll, mm] UFerm[mm, 2]), 
@@ -217,7 +217,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] 
 ];
 
 (* NQ20: QL V_mu T V^mu T U QR F *)
-LNQ20 := Block[{sp1, sp2, mu, ff1, ff2, cc, ii, jj, kk, ll, mm, nn, aux},
+LNQ20 := Block[{sp1, mu, ff1, ff2, cc, ii, kk, ll, mm, nn, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] VUFerm[mu, ll, mm] TTFerm[mm, nn] UFerm[nn, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] VUFerm[mu, ll, mm] TTFerm[mm, nn] UFerm[nn, 2]), 
@@ -230,7 +230,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp1, ff2, cc] VUFerm[mu, ii, kk] TTFerm[kk, ll] 
 
 
 (* NQ21: QL sigma^{mu nu} V_mu U QR partial_nu F *)
-LNQ21 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, aux},
+LNQ21 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] VUFerm[mu, ii, kk] UFerm[kk, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] VUFerm[mu, ii, kk] UFerm[kk, 2]), 
@@ -242,7 +242,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] VUFerm[mu, ii
 ];
 
 (* NQ22: QL sigma^{mu nu} [V_mu, T] U QR partial_nu F *)
-LNQ22 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ22 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 1] - TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 1]))
@@ -256,7 +256,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2]
 ];
 
 (* NQ23: QL sigma^{mu nu} {V_mu, T} U QR partial_nu F *)
-LNQ23 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ23 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (VUFerm[mu, ii, kk] TTFerm[kk, ll] UFerm[ll, 1] + TTFerm[ii, kk] VUFerm[mu, kk, ll] UFerm[ll, 1]))
@@ -270,7 +270,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2]
 ];
 
 (* NQ24: QL sigma^{mu nu} T V_mu T U QR partial_nu F *)
-LNQ24 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, mm, aux},
+LNQ24 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       TTFerm[ii, kk] VUFerm[mu, kk, ll] TTFerm[ll, mm] UFerm[mm, 1])
@@ -308,7 +308,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] VUFerm[mu, ii
 ];
 
 (* NQ27: QL sigma^{mu nu} [V_mu, V_nu] U QR F *)
-LNQ27 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ27 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (VUFerm[mu, ii, kk] VUFerm[nu, kk, ll] - VUFerm[nu, ii, kk] VUFerm[mu, kk, ll]) UFerm[ll, 1])
@@ -322,7 +322,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2]
 ];
 
 (* NQ28: QL sigma^{mu nu} [V_mu, V_nu] T U QR F *)
-LNQ28 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, mm, aux},
+LNQ28 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (VUFerm[mu, ii, kk] VUFerm[nu, kk, ll] - VUFerm[nu, ii, kk] VUFerm[mu, kk, ll]) TTFerm[ll, mm] UFerm[mm, 1])
@@ -336,7 +336,7 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2]
 ];
 
 (* NQ29: i g' QL sigma^{mu nu} U QR B_{mu nu} F *)
-LNQ29 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, aux},
+LNQ29 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, aux},
   aux = ExpandIndices[Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] UFerm[ii, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] UFerm[ii, 2]), 
     {ii, 1, 2}]*
@@ -356,19 +356,19 @@ LNQ30 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, aux},
 ];
 
 (* NQ31: i g_s QL sigma^{mu nu} G_{mu nu} U QR F *)
-LNQ31 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc1, cc2, ii, jj, aa, aux},
+LNQ31 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc1, cc2, ii, aa, aux},
   aux = ExpandIndices[Sum[(QLbar[sp1, ii, ff1, cc1].uR[sp2, ff2, cc2] Sigma[mu,nu,sp1,sp2] FS[Gl, mu, nu, aa]*T[aa, cc1, cc2] UFerm[ii, 1])
     + (QLbar[sp1, ii, ff1, cc1].dR[sp2, ff2, cc2] Sigma[mu,nu,sp1,sp2] FS[Gl, mu, nu, aa]*T[aa, cc1, cc2] UFerm[ii, 2]), 
-    {ii, 1, 2}, {aa, 1, 8}, {cc1, 1, 3}, {cc2, 1, 3}]*
+    {ii, 1, 2}]*
     I*FCNQ31[H, NEFT, ff1, ff2], FlavorExpand -> {SU2D}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
 (* NQ32: i g_s QL sigma^{mu nu} G_{mu nu} T U QR F *)
-LNQ32 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc1, cc2, ii, jj, kk, aa, aux},
+LNQ32 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc1, cc2, ii, jj, aa, aux},
   aux = ExpandIndices[Sum[(QLbar[sp1, ii, ff1, cc1].uR[sp2, ff2, cc2] Sigma[mu,nu,sp1,sp2] FS[Gl, mu, nu, aa]*T[aa, cc1, cc2] TTFerm[ii, jj] UFerm[jj, 1])
     + (QLbar[sp1, ii, ff1, cc1].dR[sp2, ff2, cc2] Sigma[mu,nu,sp1,sp2] FS[Gl, mu, nu, aa]*T[aa, cc1, cc2] TTFerm[ii, jj] UFerm[jj, 2]), 
-    {ii, 1, 2}, {jj, 1, 2}, {aa, 1, 8}, {cc1, 1, 3}, {cc2, 1, 3}]*
+    {ii, 1, 2}, {jj, 1, 2}]*
     I*FCNQ32[H, NEFT, ff1, ff2],
       FlavorExpand -> {SU2D}, NoDefinitions -> True];
     aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
@@ -376,54 +376,54 @@ LNQ32 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc1, cc2, ii, jj, kk, aa, aux},
 ];
 
 (* NQ33: i g QL sigma^{mu nu} W_{mu nu} U QR F *)
-LNQ33 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, kk, aux},
+LNQ33 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, aa, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] UFerm[jj, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] UFerm[jj, 2]), 
     {ii, 1, 2},{jj, 1, 2}, {aa, 1, 3}]*
-    I*FCNQ33[H, NEFT, ff1, ff2],
+    I/2*FCNQ33[H, NEFT, ff1, ff2],   (* 1/2: W_{mu nu} = sigma^a W^a_{mu nu}/2 *)
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
 (* NQ34: i g QL sigma^{mu nu} {W_{mu nu}, T}_F U QR F *)
-LNQ34 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, aux},
+LNQ34 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, aa, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] TTFerm[jj, kk] + TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa]) UFerm[kk, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] TTFerm[jj, kk] + TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa]) UFerm[kk, 2]), 
     {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {aa, 1, 3}]*
-    I*FCNQ34[H, NEFT, ff1, ff2],
+    I/2*FCNQ34[H, NEFT, ff1, ff2],   (* 1/2: W_{mu nu} = sigma^a W^a_{mu nu}/2 *)
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
 (* NQ35: i g QL sigma^{mu nu} [W_{mu nu}, T]_F U QR F *)
-LNQ35 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, aux},
+LNQ35 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, aa, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] TTFerm[jj, kk] - TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa]) UFerm[kk, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       (PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] TTFerm[jj, kk] - TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa]) UFerm[kk, 2]), 
     {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {aa, 1, 3}]*
-    I*FCNQ35[H, NEFT, ff1, ff2],
+    I/2*FCNQ35[H, NEFT, ff1, ff2],   (* 1/2: W_{mu nu} = sigma^a W^a_{mu nu}/2 *)
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
 (* NQ36: i g QL sigma^{mu nu} T W_{mu nu} T U QR F *)
-LNQ36 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, aux},
+LNQ36 := Block[{sp1, sp2, mu, nu, ff1, ff2, cc, ii, jj, kk, ll, aa, aux},
   aux = ExpandIndices[
 Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
       TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa] TTFerm[kk, ll] UFerm[ll, 1])
     + (QLbar[sp1, ii, ff1, cc].dR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2] 
-      TTFerm[ii, jj] PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] TTFerm[jj, ll] UFerm[ll, 2]), 
+      TTFerm[ii, jj] PauliSigmaFerm[aa, jj, kk] FS[Wi, mu, nu, aa] TTFerm[kk, ll] UFerm[ll, 2]), 
     {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {ll, 1, 2}, {aa, 1, 3}]*
-    I*FCNQ36[H, NEFT, ff1, ff2],
+    I/2*FCNQ36[H, NEFT, ff1, ff2],   (* 1/2: W_{mu nu} = sigma^a W^a_{mu nu}/2 *)
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
@@ -435,7 +435,8 @@ Sum[(QLbar[sp1, ii, ff1, cc].uR[sp2, ff2, cc] Sigma[mu,nu,sp1,sp2]
    Numbering follows the paper: NL1, NL2 carry real n^l (j = 1, 2 in eq.
    2.20); NL3--NL11 carry complex (n^l + I ntilde^l)/Lambda (j = 3-11);
    NL12--NL14 carry complex 4 pi/Lambda weights (j = 12-14).
-   NL15--NL17 carry real n0 with 1/Lambda (eq. 2.21 off-diagonal flavour structures).
+   NL15--NL17 (eq. 2.21 off-diagonal flavour structures) are dimension 4 like NL1, NL2: weight 1, no 1/Lambda
+   (until 2026-10-08 they carried 1/Lambda).
    (NLF1--NLF3 duplicated NL15--NL17 and were removed 2026-09-15.)
    No right-handed neutrinos: L_R reduces to the lR component, so chains
    U L_R become UFerm[ii, 2] lR and U^dag ... U sandwiches keep only the
@@ -512,7 +513,7 @@ Sum[LLbar[sp1, ii, ff1].lR[sp1, ff2] TTFerm[ii, kk] VUFerm[si, kk, ll] TTFerm[ll
 ];
 
 (* NL8: LLbar sigma^{mu nu} [V_mu, T] U LR partial_nu F  (complex n0). *)
-LNL8 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, kk, ll, aux},
+LNL8 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
       (VUFerm[mu, ii, kk] TTFerm[kk, ll] - TTFerm[ii, kk] VUFerm[mu, kk, ll]) UFerm[ll, 2], {ii, 1, 2}, {kk, 1, 2}, {ll, 1, 2}]*
@@ -523,7 +524,7 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
 ];
 
 (* NL9: LLbar sigma^{mu nu} {V_mu, T} U LR partial_nu F  (complex n0). *)
-LNL9 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, kk, ll, aux},
+LNL9 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
       (VUFerm[mu, ii, kk] TTFerm[kk, ll] + TTFerm[ii, kk] VUFerm[mu, kk, ll]) UFerm[ll, 2], {ii, 1, 2}, {kk, 1, 2}, {ll, 1, 2}]*
@@ -534,7 +535,7 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
 ];
 
 (* NL10: LLbar sigma^{mu nu} V_mu T V_nu U LR F  (complex n0). *)
-LNL10 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, kk, ll, mm, aux},
+LNL10 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, kk, ll, mm, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
       VUFerm[mu, ii, kk] TTFerm[kk, ll] VUFerm[nu, ll, mm] UFerm[mm, 2], {ii, 1, 2}, {kk, 1, 2}, {ll, 1, 2}, {mm, 1, 2}]*
@@ -545,7 +546,7 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
 ];
 
 (* NL11: LLbar sigma^{mu nu} [V_mu, V_nu] U LR F  (complex n0). *)
-LNL11 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, kk, ll, aux},
+LNL11 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, kk, ll, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu,nu,sp1,sp2]
       (VUFerm[mu, ii, kk] VUFerm[nu, kk, ll] - VUFerm[nu, ii, kk] VUFerm[mu, kk, ll]) UFerm[ll, 2], {ii, 1, 2}, {kk, 1, 2}, {ll, 1, 2}]*
@@ -556,14 +557,14 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu,nu,sp1,sp2]
 ];
 
 (* NL12: i g' LLbar sigma^{mu nu} U LR B_{mu nu} F  (complex n0). *)
-LNL12 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, aux},
+LNL12 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, aux},
   aux = ExpandIndices[Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2] UFerm[ii, 2], {ii, 1, 2}]*
     I*FS[B, mu, nu]*FCNL12[H, NEFT, ff1, ff2], FlavorExpand -> {SU2D}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
 (* NL13: i g LLbar sigma^{mu nu} W_{mu nu} U LR F, W_{mu nu} = sigma^a W^a_{mu nu}/2  (complex n0). *)
-LNL13 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, jj, aa, aux},
+LNL13 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, jj, aa, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
       1/2 PauliSigmaFerm[aa, ii, jj] FS[Wi, mu, nu, aa] UFerm[jj, 2], {ii, 1, 2}, {jj, 1, 2}, {aa, 1, 3}]*
@@ -574,7 +575,7 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu, nu, sp1, sp2]
 ];
 
 (* NL14: i g LLbar sigma^{mu nu} [W_{mu nu}, T] U LR F  (complex n0). *)
-LNL14 := Block[{sp1, sp2, sp3, mu, nu, ff1, ff2, ii, jj, kk, aa, aux},
+LNL14 := Block[{sp1, sp2, mu, nu, ff1, ff2, ii, jj, kk, aa, aux},
   aux = ExpandIndices[
 Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu,nu,sp1,sp2]
       1/2 (PauliSigmaFerm[aa, ii, kk] TTFerm[kk, jj] - TTFerm[ii, kk] PauliSigmaFerm[aa, kk, jj]) FS[Wi, mu, nu, aa] UFerm[jj, 2], {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {aa, 1, 3}]*
@@ -586,11 +587,17 @@ Sum[LLbar[sp1, ii, ff1].lR[sp2, ff2] Sigma[mu,nu,sp1,sp2]
 
 
 (* NL15: eq. 2.21 flavour structure, real n0. Non-zero only if off-diagonal.  Bilinear fixed 2026-09-15:
-   it read LLbar.LLbar (two barred doublets); it is LLbar.LL, as in the former NLF1 it replaces. *)
-LNL15 := Block[{sp1, sp2, si, ff1, ff2, ii, jj, kk, aux},
+   it read LLbar.LLbar (two barred doublets); it is LLbar.LL, as in the former NLF1 it replaces.
+   NL15-NL17 (2026-10-12): no projector.  The paper's i != j is carried by the coefficient tensors, whose
+   diagonal entries are 0 by a Definitions rule and are not declared (HEFT1604Fermion2FOffDiagOps,
+   wcxf_input.fr; MakeFermCoeffTable, parameters_EFT.fr).  The former (1 - KroneckerDelta[ff1, ff2])
+   kept ff1, ff2 unbound in every export and never acted; (1 - IndexDelta[ff1, ff2]) was contracted
+   in the fields only and gave flavour-diagonal vertices with summed off-diagonal coefficients
+   (e.g. e+ e- Z H ~ C[1,2] + C[1,3]; TESTS/T43). *)
+LNL15 := Block[{sp1, sp2, si, ff1, ff2, ii, jj, aux},
   aux = ExpandIndices[
 I Sum[LLbar[sp1, ii, ff1].LL[sp2, jj, ff2] Ga[si, sp1, sp2] VUFerm[si, ii, jj] , {ii, 1, 2}, {jj, 1, 2}]*
-    FCNL15[H, NEFT, ff1, ff2] (1 - KroneckerDelta[ff1, ff2]),
+    FCNL15[H, NEFT, ff1, ff2],
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
@@ -601,7 +608,7 @@ I Sum[LLbar[sp1, ii, ff1].LL[sp2, jj, ff2] Ga[si, sp1, sp2] VUFerm[si, ii, jj] ,
 LNL16 := Block[{sp1, sp2, si, ff1, ff2, ii, jj, kk, aux},
   aux = ExpandIndices[
 I Sum[LLbar[sp1, ii, ff1].LL[sp2, kk, ff2] Ga[si, sp1, sp2] (TTFerm[ii, jj] VUFerm[si, jj, kk] + VUFerm[si, ii, jj] TTFerm[jj, kk]), {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}]*
-    FCNL16[H, NEFT, ff1, ff2] (1 - KroneckerDelta[ff1, ff2]),
+    FCNL16[H, NEFT, ff1, ff2],
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
@@ -612,13 +619,13 @@ I Sum[LLbar[sp1, ii, ff1].LL[sp2, kk, ff2] Ga[si, sp1, sp2] (TTFerm[ii, jj] VUFe
 LNL17 := Block[{sp1, sp2, si, ff1, ff2, ii, jj, kk, ll, aux},
   aux = ExpandIndices[
 I Sum[LLbar[sp1, ii, ff1].LL[sp2, ll, ff2] Ga[si, sp1, sp2] TTFerm[ii, jj] VUFerm[si, jj, kk] TTFerm[kk, ll], {ii, 1, 2}, {jj, 1, 2}, {kk, 1, 2}, {ll, 1, 2}]*
-    FCNL17[H, NEFT, ff1, ff2] (1 - KroneckerDelta[ff1, ff2]),
+    FCNL17[H, NEFT, ff1, ff2],
         FlavorExpand -> {SU2D}, NoDefinitions -> True];
       aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   aux + HC[aux]
 ];
 
-(* Assembly (eq. 2.20): dim-4 (j=1-8, NL1-2); 1/Lambda (j=9-28, NL3-11; NL15-17 in their own chiral-order-0 sum);
+(* Assembly (eq. 2.20): dim-4 (j=1-8, NL1-2, and the eq. 2.21 structures NL15-17); 1/Lambda (j=9-28, NL3-11);
    4 pi/Lambda (j=29-36, NL12-14). *)
 
 LEFT2FDim4aux = 0;
@@ -632,6 +639,11 @@ If[HEFTPieceActiveQ[ "NQ7"], LEFT2FDim4aux += LNQ7];
 If[HEFTPieceActiveQ[ "NQ8"], LEFT2FDim4aux += LNQ8];
 If[HEFTPieceActiveQ[ "NL1"], LEFT2FDim4aux += LNL1];
 If[HEFTPieceActiveQ[ "NL2"], LEFT2FDim4aux += LNL2];
+(* NL15-NL17, the eq. (2.21) flavour structures: dimension 4 like NL1, NL2, so weight 1 (until 2026-10-08 in
+   a separate 1/Lambda block). *)
+If[HEFTPieceActiveQ[ "NL15"], LEFT2FDim4aux += LNL15];
+If[HEFTPieceActiveQ[ "NL16"], LEFT2FDim4aux += LNL16];
+If[HEFTPieceActiveQ[ "NL17"], LEFT2FDim4aux += LNL17];
 
 LEFT2F1Lamaux = 0;
 If[HEFTPieceActiveQ[ "NQ9"], LEFT2F1Lamaux += LNQ9];
@@ -664,12 +676,6 @@ If[HEFTPieceActiveQ[ "NL9"], LEFT2F1Lamaux += LNL9];
 If[HEFTPieceActiveQ[ "NL10"], LEFT2F1Lamaux += LNL10];
 If[HEFTPieceActiveQ[ "NL11"], LEFT2F1Lamaux += LNL11];
 
-(* 1/Lambda block, chiral order 0: the eq. (2.21) flavour structures. *)
-LEFT2F1LamChi0aux = 0;
-If[HEFTPieceActiveQ[ "NL15"], LEFT2F1LamChi0aux += LNL15];
-If[HEFTPieceActiveQ[ "NL16"], LEFT2F1LamChi0aux += LNL16];
-If[HEFTPieceActiveQ[ "NL17"], LEFT2F1LamChi0aux += LNL17];
-
 LEFT2F4PiLamaux = 0;
 If[HEFTPieceActiveQ[ "NQ29"], LEFT2F4PiLamaux += LNQ29];
 If[HEFTPieceActiveQ[ "NQ30"], LEFT2F4PiLamaux += LNQ30];
@@ -685,5 +691,5 @@ If[HEFTPieceActiveQ[ "NL14"], LEFT2F4PiLamaux += LNL14];
 
 (* Every operator carries WCOrder once.  Chiral order: d Psi^2 phi^4 class 0 (NQ1-NQ8, NL1-NL2, NL15-NL17,
    NQ29-NQ36, NL12-NL14), d^2 Psi^2 phi^2 class 1 (NQ9-NQ28, NL3-NL11).  The eq. (2.20) weights (1, 1/Lambda,
-   4 pi/Lambda) are unchanged; the 1/Lambda block is split only because it holds both chiral orders. *)
-LEFT2F :=  WCOrder*LEFT2FDim4aux + WCOrder*ChiralOrder/LamHEFT*LEFT2F1Lamaux + WCOrder/LamHEFT*LEFT2F1LamChi0aux + WCOrder*4*Pi/LamHEFT*LEFT2F4PiLamaux;
+   4 pi/Lambda) per block; NL15-NL17 are in the weight-1 block. *)
+LEFT2F :=  WCOrder*LEFT2FDim4aux + WCOrder*ChiralOrder/LamHEFT*LEFT2F1Lamaux + WCOrder*4*Pi/LamHEFT*LEFT2F4PiLamaux;

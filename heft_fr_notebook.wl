@@ -27,7 +27,8 @@
 (*There are no flags for this: the model always reads wcxf/wcxf_output.json. Edit the numbers in it to change coefficients, or leave it alone for the defaults Cell 3 just wrote. Cell 4 itself only prints the paths and re-runs the cache lookup for the file as it now stands - the editing happens in a text editor. Re-running Cell 3 resets the file, so edit after it, not before. The Cell 4 section below describes this in full.*)
 (**)
 (*CELL 5 - Load model, build LHEFT*)
-(*Runs LoadModel on model_files/HEFT_Model.fr, applies the .rst restrictions if Massless / DiagonalCKM are True, then produces LHEFT, the Lagrangian in the mass basis. Before building it checks HEFT_cache/ for a build of this exact configuration, saved under any OutputName; only if there is none, is LHEFT built from scratch (minutes to hours, depending on the operator count). Every build is saved. ForceRebuildLHEFT = True is the only way to override this.*)
+(*Runs LoadModel on model_files/HEFT_Model.fr, applies the .rst restrictions if Massless / DiagonalCKM are True, then produces LHEFT, the Lag*)
+(*rangian in the mass basis. Before building it checks HEFT_cache/ for a build of this exact configuration, saved under any OutputName; only if there is none, is LHEFT built from scratch (minutes to hours, depending on the operator count). Every build is saved. ForceRebuildLHEFT = True is the only way to override this.*)
 (*Changing Wilson-coefficient values NEVER costs a rebuild, zeros included: they are External parameters, so a value never enters LHEFT.*)
 (**)
 (*CELL 6 - compute Feynman rules (OPTIONAL)*)
@@ -69,7 +70,7 @@ HEFT$PrintNotebookReference[];
 
 (* Paths *)
 (* Path to your local FeynRules installation (must contain FeynRules.m) *)
-$FeynRulesPath="/Users/michalryczkowski/Library/Mathematica/Applications/feynrules-current";
+$FeynRulesPath="";   (* SET THIS to your FeynRules folder, e.g. FileNameJoin[{$UserBaseDirectory, "Applications", "feynrules-current"}]; Cell 3 refuses to run while it is empty *)
 (* Location of this package, do not edit!*)
 HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
 SetDirectory[HEFT$WorkspaceRoot];
@@ -85,11 +86,12 @@ Massless=False;                      (* True -> load restrictions/Massless.rst b
 DiagonalCKM=False;                   (* True -> load restrictions/DiagonalCKM.rst before Feynman rules (CKM -> identity) *)
 
 (* EFT operators - see Cell 1 (Reference) above for the full catalogue. *)
-EFTOperators={"PW","NQ22"};          (* Active EFT operator labels. {} = SM only*)
+EFTOperators={};          (* Active EFT operator labels. {} = SM only*)
 
 OutputName="HEFT_Example";           (* Output subdirectory name under HEFT_Frules/output/ *)
 
 MaxVertexLegs=6;                     (* Cut on vertex multiplicity, honoured by Cells 6, 7 and 8. Automatic (default) = no cut. An integer n >= 3 keeps only vertices with at most n legs *)
+FeynArtsDiracIndices=Automatic;      (* Fermion form of the FeynArts export (Cell 8). Automatic (default) = FeynRules' choice; True = explicit Dirac indices always, needed to merge FeynArts exports that include four-fermion operators (set it for every export of the merge, the SM-only one included) *)
 
 ForceRebuildLHEFT=False;             (* True = skip the cache lookup, rebuild LHEFTMassBasis and overwrite the entry for this configuration *)
 
@@ -204,7 +206,7 @@ Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
 
 
 (* ::Text:: *)
-(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars). Like Cell 7 it needs only LHEFT from Cell 5, and the two are independent - run this one, Cell 7, or both.*)
+(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars, plus heft_export.json - the configuration it was made with, which merging exports in heft_fr_merge_models.wl needs). Fermions are written in FeynRules' default form: index-free, or with explicit Dirac indices when the model has a four-fermion vertex; heft_export.json records which. Before exporting it corrects two bugs in FeynRules' FeynArts writer in memory (model_files/feynrules_fixes.wl: single-term vertices next to Levi-Civita structures were dropped, and ScalarProduct^2 was not written) and prints whether each was applied; FeynRules on disk is not changed, and heft_export.json records the result. Like Cell 7 it needs only LHEFT from Cell 5, and the two are independent - run this one, Cell 7, or both.*)
 
 
 HEFT$NotebookCell=8;

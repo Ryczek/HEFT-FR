@@ -76,10 +76,18 @@ Switch[EWInputScheme,
   (* CRL2n0 / CRL5n0 (earlier CL2NLOn0 / CL5NLOn0, and before 2026-08-06 CL2NLOn0RE / CL5NLOn0RE): every
      fermionic Wilson coefficient is a real flavour tensor named C<op>n<n>, living in the
      flare function.  The n = 0 entry is the one the muon-decay extraction needs. *)
+  (* Muon decay, re-derived 2026-10-08 (TESTS/T43) after RL2/RL5 got their SU(2) contraction and
+     + h.c.: the contact term is L > K (ebar g^mu P_L mu)(vmbar g_mu P_L ve) with
+       K = 2 WCOrder (4 Pi)^2/LamHEFT^2 [(C2_1221 + C2_2112) - (C5_1221 + C5_2112)]
+     (RL5 with the opposite sign: T = sigma3 gives -1 on a charged-lepton x neutrino current), and
+     4 Gf/Sqrt[2] = 2/vev^2 - K.  So the aux below are the half-sums over the two flavour orderings,
+     and every CL term enters with the sign of (CL5aux - CL2aux) in vev.  Before, the aux was the
+     [1,2,2,1] entry alone and every CL term had the opposite sign (closure residual
+     -128 Pi^2 WCOrder (C2 - C5)/LamHEFT^2 for symmetric tensors). *)
   HEFTGfCL2aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL2"],
-    CRL2n0[1, 2, 2, 1], 0];
+    (CRL2n0[1, 2, 2, 1] + CRL2n0[2, 1, 1, 2])/2, 0];
   HEFTGfCL5aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL5"],
-    CRL5n0[1, 2, 2, 1], 0];
+    (CRL5n0[1, 2, 2, 1] + CRL5n0[2, 1, 1, 2])/2, 0];
   HEFTGfCP1aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],
     CP1n0, 0];
   HEFTGfCP12aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"],
@@ -95,26 +103,34 @@ Switch[EWInputScheme,
   EWinputrepl = {
       vev -> 1/(2^(1/4)*Sqrt[Gf]) +
         8*2^(1/4)*WCOrder*Pi^2*
-          (HEFTGfCL2aux - HEFTGfCL5aux)/(Gf^(3/2)*LamHEFT^2),
+          (HEFTGfCL5aux - HEFTGfCL2aux)/(Gf^(3/2)*LamHEFT^2),
       GW -> 2^(5/4)*Sqrt[Gf]*MW +
         16*2^(3/4)*WCOrder*MW*Pi^2*
-          (HEFTGfCL5aux - HEFTGfCL2aux)/(Sqrt[Gf]*LamHEFT^2),
+          (HEFTGfCL2aux - HEFTGfCL5aux)/(Sqrt[Gf]*LamHEFT^2),
       G1 -> 2^(5/4)*Sqrt[Gf]*Sqrt[MZ^2 - MW^2]
           - 4*2^(1/4)*HEFTGfCP12aux*WCOrder*Sqrt[Gf]*MW^2/Sqrt[MZ^2 - MW^2]
           + 2^(5/4)*HEFTGfCPTaux*WCOrder*Sqrt[Gf]*MZ^2/Sqrt[MZ^2 - MW^2]
           + 4*2^(1/4)*HEFTGfCP1aux*WCOrder*Sqrt[Gf]*MW
           + 16*2^(3/4)*WCOrder*Pi^2*
-            (HEFTGfCL5aux - HEFTGfCL2aux)*Sqrt[MZ^2 - MW^2]/(Sqrt[Gf]*LamHEFT^2),
+            (HEFTGfCL2aux - HEFTGfCL5aux)*Sqrt[MZ^2 - MW^2]/(Sqrt[Gf]*LamHEFT^2),
       GS -> Sqrt[4 Pi aS],
       hlambda -> Gf*MH^2/Sqrt[2] +
         16*WCOrder*MH^2*Pi^2*
-          (HEFTGfCL5aux - HEFTGfCL2aux)/LamHEFT^2
+          (HEFTGfCL2aux - HEFTGfCL5aux)/LamHEFT^2
     },
   "aem",
+  (* Muon decay, re-derived 2026-10-08 (TESTS/T43) after RL2/RL5 got their SU(2) contraction and
+     + h.c.: the contact term is L > K (ebar g^mu P_L mu)(vmbar g_mu P_L ve) with
+       K = 2 WCOrder (4 Pi)^2/LamHEFT^2 [(C2_1221 + C2_2112) - (C5_1221 + C5_2112)]
+     (RL5 with the opposite sign: T = sigma3 gives -1 on a charged-lepton x neutrino current), and
+     4 Gf/Sqrt[2] = 2/vev^2 - K.  So the aux below (as in "gf") are the half-sums over the two flavour orderings,
+     and every CL term enters with the sign of (CL5aux - CL2aux) in vev.  Before, the aux was the
+     [1,2,2,1] entry alone and every CL term had the opposite sign (closure residual
+     -128 Pi^2 WCOrder (C2 - C5)/LamHEFT^2 for symmetric tensors). *)
   HEFTaemCL2aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL2"],
-    CRL2n0[1, 2, 2, 1], 0];
+    (CRL2n0[1, 2, 2, 1] + CRL2n0[2, 1, 1, 2])/2, 0];
   HEFTaemCL5aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL5"],
-    CRL5n0[1, 2, 2, 1], 0];
+    (CRL5n0[1, 2, 2, 1] + CRL5n0[2, 1, 1, 2])/2, 0];
   HEFTaemCP1aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],
     CP1n0, 0];
   HEFTaemCP12aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"],
@@ -161,7 +177,7 @@ Switch[EWInputScheme,
   EWinputrepl = {
       vev -> 1/(2^(1/4)*Sqrt[Gf])
         + 8*2^(1/4)*WCOrder*Pi^2*
-            (HEFTaemCL2aux - HEFTaemCL5aux)/(Gf^(3/2)*LamHEFT^2),
+            (HEFTaemCL5aux - HEFTaemCL2aux)/(Gf^(3/2)*LamHEFT^2),
 
       GW -> 2^(3/4)*Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]
         + HEFTaemCPTaux*WCOrder*
@@ -172,7 +188,7 @@ Switch[EWInputScheme,
         + 2^(7/4)*HEFTaemCP1aux*WCOrder*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 + Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
       
@@ -183,7 +199,7 @@ Switch[EWInputScheme,
         - 2^(7/4)*HEFTaemCP1aux*WCOrder*
             Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 - Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
       MW -> Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]
@@ -195,14 +211,14 @@ Switch[EWInputScheme,
         + 2*HEFTaemCP1aux*WCOrder*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        + 4*Sqrt[2]*WCOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        + 4*Sqrt[2]*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]*
             (1 - Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
             
       GS -> Sqrt[4 Pi aS],
       hlambda -> Gf*MH^2/Sqrt[2] +
         16*WCOrder*MH^2*Pi^2*
-          (HEFTaemCL5aux - HEFTaemCL2aux)/LamHEFT^2
+          (HEFTaemCL2aux - HEFTaemCL5aux)/LamHEFT^2
     },
 
   _,
@@ -234,6 +250,9 @@ Switch[EWInputScheme,
    -M<f> (1 + WCOrder dvev) against a propagator mass of M<f> - the same class of bug as
    the Kappa/mass one fixed 2026-08-06.  Latent rather than visible: dvev is non-zero only with
    RL2 or RL5 active, they being the sole source of the vev shift in both schemes.
+   (Since 2026-10-12 the Yukawa Definitions carry no vev at all - LYukawa divides by vev
+   explicitly, so the substitution and the one-insertion cut act on it; NOTES.md SS10.7.  The
+   patch below still sets every declared value and the parameter card.)
 
    Patching M$Parameters from EWinputrepl fixes both at once - the parameter card, the
    Lagrangian-level replacement, and everything MR$Definitions resolves later are one

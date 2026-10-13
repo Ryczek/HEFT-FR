@@ -8,13 +8,14 @@
    configuration options - both switches were removed 2026-09-18.  Nothing to default here. *)
 
 HEFT$DefaultConfig = <|
-  "feynRulesPath" -> "/Users/michalryczkowski/Library/Mathematica/Applications/feynrules-current",
+  "feynRulesPath" -> "",   (* no default: the user sets it in Cell 2 (2026-10-13) *)
   "higgsMaxOrder" -> 3,
   "kappaFramework" -> True, "initialiseWCs" -> 1,
   "ewScheme" -> "heft",
   "massless" -> False, "diagonalCKM" -> False,
   "operators" -> {}, "outputName" -> "HEFT_run",
   "maxVertexLegs" -> Automatic,
+  "feynArtsDiracIndices" -> Automatic,
   "forceRebuild" -> False
 |>;
 
@@ -27,6 +28,7 @@ HEFT$ConfigSymbolForKey = <|
   "massless" -> "Massless", "diagonalCKM" -> "DiagonalCKM", "operators" -> "EFTOperators",
   "outputName" -> "OutputName",
   "maxVertexLegs" -> "MaxVertexLegs",
+  "feynArtsDiracIndices" -> "FeynArtsDiracIndices",
   "forceRebuild" -> "ForceRebuildLHEFT"
 |>;
 

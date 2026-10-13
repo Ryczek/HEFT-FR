@@ -19,7 +19,15 @@ If[!TrueQ[HEFT$FromMergeNotebook], Quit[]]
    OutputName and HEFT$WorkspaceRoot, so the notebook Get's model_files/heft_fr.wl for them -
    literally the same three cells the ordinary notebook runs, not a copy of them.
 
-   The merge itself lives in model_files/lheft_merge.wl. *)
+   CELL 9  List the FeynArts exports (output/FeynArts/) made with the Cell 2 configuration
+   CELL 10 Merge FeynArts exports (MergeFeynArtsSources) into output/FeynArts/<OutputName>/
+           Cells 9 and 10 need only Cell 2: no FeynRules, no LoadModel, no LHEFT.
+   CELL 11 List the UFO exports (output/UFO/) made with the Cell 2 configuration
+   CELL 12 Merge UFO exports (MergeUFOSources) into output/UFO/<OutputName>/ (decays.py omitted)
+           Cells 11 and 12 need only Cell 2 and a Python 3 interpreter.
+
+   The Lagrangian merge lives in model_files/lheft_merge.wl, the FeynArts merge in
+   model_files/fa_merge.wl, the UFO merge in model_files/ufo_merge.wl + ufo_merge.py. *)
 
 HEFT$MergeShouldRunCell[heftN_Integer] :=
   !ValueQ[HEFT$MergeCell] || HEFT$MergeCell === heftN;
@@ -41,9 +49,14 @@ HEFT$MergeBootstrap[] := Module[{},
 ];
 
 HEFT$MergeEnsureFeynRules[] := Module[{},
-  If[!StringQ[$FeynRulesPath] || !DirectoryQ[$FeynRulesPath],
-    Print[Style["[HEFT merge] ERROR: FeynRules path not found: " <> ToString[$FeynRulesPath],
-      Red, Bold]];
+  If[!StringQ[$FeynRulesPath] || $FeynRulesPath === "",
+    Print[Style["[HEFT merge] ERROR: $FeynRulesPath is not set. In Cell 2 (Configuration) set it to the folder of your " <>
+      "FeynRules installation, the one containing FeynRules.m.", Red, Bold]];
+    Abort[]
+  ];
+  If[!FileExistsQ[FileNameJoin[{$FeynRulesPath, "FeynRules.m"}]],
+    Print[Style["[HEFT merge] ERROR: no FeynRules.m in $FeynRulesPath = " <> $FeynRulesPath <>
+      ". Set it in Cell 2 (Configuration) to the folder of your FeynRules installation.", Red, Bold]];
     Abort[]
   ];
   If[!MemberQ[$Packages, "FeynRules`"],
@@ -97,6 +110,15 @@ Print["    4.  Cell 5  - merges, and leaves the result in LHEFT (also cached, so
 Print["                  notebook finds it later as a normal cache hit)."];
 Print["    5.  Cells 6/7/8 - Feynman rules, UFO, FeynArts. The very same cells as in"];
 Print["                  heft_fr_notebook.wl."];
+Print[""];
+Print["    Or merge FeynArts EXPORTS instead of cached Lagrangians - one step later in the"];
+Print["    pipeline, so the expensive export is also paid only for the small models:"];
+Print["    9.  Cell 9  - lists the FeynArts exports made with the Cell 2 configuration."];
+Print["    10. Cell 10 - put their names in MergeFeynArtsSources; writes the merged"];
+Print["                  output/FeynArts/<OutputName>/. Needs only Cell 2 - no Cells 3-8."];
+Print["    11. Cell 11 - lists the UFO exports made with the Cell 2 configuration."];
+Print["    12. Cell 12 - put their names in MergeUFOSources; writes the merged"];
+Print["                  output/UFO/<OutputName>/ (no decays.py). Needs only Cell 2 and Python 3."];
 
 HEFT$MergePrintSubsection["What has to agree, and what is refused"];
 Print["    Two cached models may be merged only if EVERY hashed configuration option agrees;"];
@@ -155,6 +177,7 @@ HEFT$MergePrintKV["OutputName", OutputName];
 (* Export-time only, and not hashed, so unlike everything above it it need not match the
    sub-models. Cells 6/7/8 (heft_fr.wl's own) validate it at the point of use. *)
 HEFT$MergePrintKV["MaxVertexLegs", MaxVertexLegs];
+HEFT$MergePrintKV["FeynArtsDiracIndices", If[ValueQ[FeynArtsDiracIndices], FeynArtsDiracIndices, Automatic]];
 Print[Style["    " <> StringRepeat["-", 68], Darker[Gray]]];
 
 (* No order gate: the model is single-insertion by construction (HEFT_Model.fr, 2026-09-17), which
@@ -366,3 +389,113 @@ Print["[HEFT merge] Next: Cell 6 (Feynman rules), Cell 7 (UFO) and/or Cell 8 (Fe
   "the same cells as in heft_fr_notebook.wl."];
 
 ]; (* end merge cell 5 gate *)
+
+
+(* =============================================================================
+   CELL 9 \[LongDash] FeynArts exports that match this configuration
+   ============================================================================= *)
+
+If[HEFT$MergeShouldRunCell[9],
+
+If[!TrueQ[HEFT$ConfigEvaluated],
+  Print[Style["[HEFT merge] ERROR: the Configuration section has not been evaluated in this " <>
+    "kernel. Evaluate Cell 2 first, then this cell.", Red, Bold]];
+  Abort[]
+];
+HEFT$MergeBootstrap[];
+Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "fa_merge.wl"}];
+
+HEFT$MergePrintBanner["HEFT FeynRules \[LongDash] FeynArts exports"];
+Print[Style["\n  Exports: ", Bold], HEFTFAExportsDir[]];
+HEFT$FAMergeCompatible = HEFTFAPrintCatalog[HEFTFAExportIndex[], HEFTExportCurrentMeta["feynarts"]];
+
+Print[Style["\n[HEFT merge] Cell 9 done.", Bold]];
+Print["[HEFT merge] Next: put the names you want from the table above into " <>
+  "MergeFeynArtsSources in Cell 10."];
+
+]; (* end merge cell 9 gate *)
+
+
+(* =============================================================================
+   CELL 10 \[LongDash] Merge FeynArts exports
+   ============================================================================= *)
+
+If[HEFT$MergeShouldRunCell[10],
+
+If[!TrueQ[HEFT$ConfigEvaluated],
+  Print[Style["[HEFT merge] ERROR: the Configuration section has not been evaluated in this " <>
+    "kernel. Evaluate Cell 2 first, then this cell.", Red, Bold]];
+  Abort[]
+];
+HEFT$MergeBootstrap[];
+Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "fa_merge.wl"}];
+
+If[!ValueQ[MergeFeynArtsSources] || !ListQ[MergeFeynArtsSources] || MergeFeynArtsSources === {},
+  Print[Style["[HEFT merge] ERROR: MergeFeynArtsSources is not set. Set it in Cell 10 to a list " <>
+    "of names from the Cell 9 table, e.g. MergeFeynArtsSources = {\"HEFT_P1\", \"HEFT_PW\"};",
+    Red, Bold]];
+  Abort[]
+];
+
+HEFT$MergePrintBanner["HEFT FeynRules \[LongDash] FeynArts merge"];
+HEFTFAMergeRun[MergeFeynArtsSources, OutputName,
+  If[ValueQ[MergeFeynArtsBaseline], MergeFeynArtsBaseline, Automatic]];
+
+Print["[HEFT merge] Done."];
+
+]; (* end merge cell 10 gate *)
+
+
+(* =============================================================================
+   CELL 11 \[LongDash] UFO exports that match this configuration
+   ============================================================================= *)
+
+If[HEFT$MergeShouldRunCell[11],
+
+If[!TrueQ[HEFT$ConfigEvaluated],
+  Print[Style["[HEFT merge] ERROR: the Configuration section has not been evaluated in this " <>
+    "kernel. Evaluate Cell 2 first, then this cell.", Red, Bold]];
+  Abort[]
+];
+HEFT$MergeBootstrap[];
+Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "ufo_merge.wl"}];
+
+HEFT$MergePrintBanner["HEFT FeynRules \[LongDash] UFO exports"];
+Print[Style["\n  Exports: ", Bold], HEFTUFOExportsDir[]];
+HEFT$UFOMergeCompatible = HEFTUFOPrintCatalog[HEFTUFOExportIndex[], HEFTExportCurrentMeta["ufo"]];
+
+Print[Style["\n[HEFT merge] Cell 11 done.", Bold]];
+Print["[HEFT merge] Next: put the names you want from the table above into " <>
+  "MergeUFOSources in Cell 12."];
+
+]; (* end merge cell 11 gate *)
+
+
+(* =============================================================================
+   CELL 12 \[LongDash] Merge UFO exports
+   ============================================================================= *)
+
+If[HEFT$MergeShouldRunCell[12],
+
+If[!TrueQ[HEFT$ConfigEvaluated],
+  Print[Style["[HEFT merge] ERROR: the Configuration section has not been evaluated in this " <>
+    "kernel. Evaluate Cell 2 first, then this cell.", Red, Bold]];
+  Abort[]
+];
+HEFT$MergeBootstrap[];
+Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "ufo_merge.wl"}];
+
+If[!ValueQ[MergeUFOSources] || !ListQ[MergeUFOSources] || MergeUFOSources === {},
+  Print[Style["[HEFT merge] ERROR: MergeUFOSources is not set. Set it in Cell 12 to a list " <>
+    "of names from the Cell 11 table, e.g. MergeUFOSources = {\"HEFT_P1\", \"HEFT_PW\"};",
+    Red, Bold]];
+  Abort[]
+];
+
+HEFT$MergePrintBanner["HEFT FeynRules \[LongDash] UFO merge"];
+HEFTUFOMergeRun[MergeUFOSources, OutputName,
+  If[ValueQ[MergeUFOBaseline], MergeUFOBaseline, Automatic]];
+
+Print["[HEFT merge] Done."];
+
+]; (* end merge cell 12 gate *)

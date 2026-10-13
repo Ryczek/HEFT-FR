@@ -123,8 +123,6 @@ HEFTWCGetSymbol[sym_Symbol, default_:0] :=
 HEFT1604ScalarOpPrefixes = {
   {"PT", "CPTn", 0},
   {"PG", "CPGn", 1}, {"SG", "CSGn", 1},
-  {"PGHD1", "CPGHD1n", 0}, {"PGHD2", "CPGHD2n", 0},
-  {"SGHD", "CSGHDn", 0},
   (* User-defined operators (parameters_User.fr / Lagrangian_User.fr): add one row per
      operator here, with the same label, prefix and nmin as its userScalarFlareSpecs row
      (HEFTFlareSpecCheck in HEFT_Model.fr aborts the load if they disagree). *)
@@ -149,12 +147,17 @@ HEFT1604ScalarOpPrefixes = {
   {"S15", "CS15n", 1}
 };
 
-(* {op, prefix, extraPow}, mirroring combinedDerivFlareSpecs
-   in parameters_EFT.fr exactly (extraPow = 2 for the quadratic operators, 4 for PDH). *)
+(* {op, prefix, extraPow}, mirroring combinedDerivFlareSpecs (parameters_EFT_Bosonic.fr, plus
+   the user rows of parameters_User.fr) exactly (extraPow = 2 for the quadratic operators, 4 for PDH). *)
 heft1604CombinedDerivOpPrefixes = {
   {"PDH", "CPDHn", 4},
   {"P8", "CP8n", 2}, {"P20", "CP20n", 2},
-  {"P21", "CP21n", 2}, {"P22", "CP22n", 2}
+  {"P21", "CP21n", 2}, {"P22", "CP22n", 2},
+  (* User-defined combined-flare operators (userCombinedDerivFlareSpecs, parameters_User.fr):
+     the gluon-Higgs examples and the W-Higgs analogues of SMEFT's Q_{W^2H^2D^2}. *)
+  {"PGHD1", "CPGHD1n", 2}, {"PGHD2", "CPGHD2n", 2}, {"SGHD", "CSGHDn", 2},
+  {"PWHD1", "CPWHD1n", 2}, {"PWHD2", "CPWHD2n", 2},
+  {"SWHD", "CSWHDn", 2}, {"SWHDT", "CSWHDTn", 2}
 };
 
 (* There is no real/complex split any more: every fermionic Wilson coefficient is a real
@@ -184,6 +187,10 @@ HEFT1604Fermion2FCombinedOps = {"NQ9", "NQ10", "NL3"};
 HEFT1604Fermion2FDerivOps = {"NQ11", "NQ12", "NQ13", "NQ14", "NQ21", "NQ22", "NQ23", "NQ24",
   "NL4", "NL5", "NL8", "NL9"};
 HEFT2FFlareNmin[op_String] := If[MemberQ[HEFT1604Fermion2FDerivOps, op], 1, 0];
+(* Operators defined for i != j only (1604.06801 eq. 2.21): their coefficient tensors have no
+   diagonal entries - no WCxf key here, no LHA entry (MakeFermCoeffTable, parameters_EFT.fr, sets them
+   to 0 by a Definitions rule, so FeynRules does not register them).  2026-10-12. *)
+HEFT1604Fermion2FOffDiagOps = {"NL15", "NL16", "NL17"};
 
 HEFT1604FermionPrefix[op_String] := Module[{wcMatch},
   wcMatch = StringCases[op, {
@@ -219,7 +226,10 @@ HEFTWCGen2FermKeys[op_String] := Module[{base = HEFT1604FermionPrefix[op]},
   If[base === "", Return[{}]];
   If[MemberQ[HEFT1604Fermion2FCombinedOps, op],
     HEFTWCGenFermCombinedKeys[base <> "n", 2, 2],
-    HEFTWCGenFermKeys[base <> "n", HEFT2FFlareNmin[op], 2]
+    With[{keys = HEFTWCGenFermKeys[base <> "n", HEFT2FFlareNmin[op], 2]},
+      If[MemberQ[HEFT1604Fermion2FOffDiagOps, op],
+        Select[keys, !(SameQ @@ Take[StringSplit[#, "_"], -2]) &],
+        keys]]
   ]
 ];
 

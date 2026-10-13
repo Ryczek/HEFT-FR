@@ -6,17 +6,22 @@
    Lagrangians, so every building block of the model can be used here (H, del, FS, Eps, HC,
    VU, TT, vev, gs, gw, g1, ...).  Its partner is parameters/parameters_User.fr.
 
-   The three operators below - the gluon-Higgs operators of chiral dimension two (NNLO) - are
-   shipped as the worked example.  Copy one, rename it, and follow README SS "Adding your own
-   operators".  Every operator needs four entries:
+   Shipped as worked examples: the three gluon-Higgs operators of chiral dimension two (NNLO)
+   PGHD1, PGHD2, SGHD, and four W-Higgs operators PWHD1, PWHD2, SWHD, SWHDT, the HEFT analogues of
+   SMEFT's Q_{W^2H^2D^2} (see below).  All seven have a derivative on each of two flares and so
+   one combined flare (entry 3).  Copy one, rename
+   it, and follow README SS "Adding your own operators".  Every operator needs four entries:
 
      1. its Lagrangian term in this file, carrying WCOrder (every EFT operator, once) and
         ChiralOrder^n with n from its W/V/d/D count (2 -> 0, 3 -> 1, 4 -> 2; the gluon-Higgs
         examples below have four: n = 2), and multiplied by its flare function FC<label>[H, NEFT] -
         ONE flare per term; if it sits under a derivative, its nmin must be 1 (checked at load);
      2. one selection line in LUseraux AND one in HEFTRebuildLUser[], both below;
-     3. one row in userScalarFlareSpecs in parameters/parameters_User.fr;
-     4. one WCxf prefix row in wcxf_input.fr (HEFT1604ScalarOpPrefixes), its label in the
+     3. one row in userScalarFlareSpecs in parameters/parameters_User.fr - or, for a derivative
+        on each of two flares (del[F,mu] del[F,nu]), one row in userCombinedDerivFlareSpecs
+        there, which gives ONE combined flare FC<label>Combined (coefficients C<label>n<nh>prime);
+     4. one WCxf prefix row in wcxf_input.fr (HEFT1604ScalarOpPrefixes, or
+        heft1604CombinedDerivOpPrefixes for a combined flare), its label in the
         operator catalogue in heft_notebook_reference.wl (HEFT$Catalog1604Higher) and its chiral
         order n in HEFT$OperatorChiralOrder there (a label only - nothing is cut on it).
    ============================================================================================ *)
@@ -24,31 +29,100 @@
 If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
 If[!ValueQ[HEFTActiveEFTPieces], HEFTActiveEFTPieces = {}];
 
-(* Gluon-Higgs NNLO (Brivio / Grober basis). *)
+(* Gluon-Higgs NNLO (Brivio / Grober basis): the gluon counterparts of PWHD1, PWHD2, SWHD below,
+   (D^mu H^dag D^nu H) G^a_{mu rho} G^{a rho}_nu etc. with the doublets replaced by flares,
+   del[F,mu] del[F,nu] = del[H,mu] del[H,nu] FC<op>Combined[H, NEFT] (one combined flare,
+   userCombinedDerivFlareSpecs).  Normalisation by NDA as for the W-Higgs operators:
+   WCOrder ChiralOrder^2/LamHEFT^2, no gauge coupling.  Rewritten 2026-10-05 (user): before, they
+   were -gs^2/4 WCOrder ChiralOrder^2/(LamHEFT^2 vev^4) del[H] del[H] G G FC<op>[H, NEFT] - mass
+   dimension 2, and a flare of h next to a bare del h del h instead of del F del F. *)
 LPGHD1 := Block[{mu, nu, ga, a},
-  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, mu] del[H, nu] FS[Gl, mu, ga, a] FS[Gl, nu, ga, a]
-      FCPGHD1[H, NEFT]
+  WCOrder*ChiralOrder^2/LamHEFT^2 del[H, mu] del[H, nu] FS[Gl, mu, ga, a] FS[Gl, nu, ga, a]
+      FCPGHD1Combined[H, NEFT]
 ];
 
 LPGHD2 := Block[{mu, nu, ga, a},
-  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] FS[Gl, mu, nu, a] FS[Gl, mu, nu, a]
-      FCPGHD2[H, NEFT]
+  WCOrder*ChiralOrder^2/LamHEFT^2 del[H, ga] del[H, ga] FS[Gl, mu, nu, a] FS[Gl, mu, nu, a]
+      FCPGHD2Combined[H, NEFT]
 ];
 
 LSGHD := Block[{mu, nu, al, be, ga, a},
-  -WCOrder*ChiralOrder^2/LamHEFT^2 1/vev^4 gs^2 1/4 del[H, ga] del[H, ga] Eps[mu, nu, al, be]/2
+  WCOrder*ChiralOrder^2/LamHEFT^2 del[H, ga] del[H, ga] Eps[mu, nu, al, be]/2
       HC[FS[Gl, al, be, a]] FS[Gl, mu, nu, a]
-      FCSGHD[H, NEFT]
+      FCSGHDCombined[H, NEFT]
+];
+
+
+(* W-Higgs, chiral dimension two: HEFT analogues of SMEFT's Q_{W^2H^2D^2}^{(1)...(6)} (user
+   request 2026-10-05).  Each SMEFT operator with the covariant derivative replaced by an
+   ordinary one and the Higgs doublets by flare functions: (D^mu H^dag D^nu H) -> del[F,mu] del[F,nu],
+   written - as every derivative on two flares in this model (PDH, P8, P20-P22) - with ONE
+   combined flare, del[H,mu] del[H,nu] FC<op>Combined[H, NEFT] (userCombinedDerivFlareSpecs in
+   parameters_User.fr).  Normalisation WCOrder ChiralOrder^2/LamHEFT^2, from NDA (2511.23410
+   eq. 3.2, gauge fields counted like any field, 4 pi A/Lambda, no gauge coupling): del h del h W W
+   has 4 derivatives and 4 fields, so its coefficient is (4 Pi)^2/Lambda^4 = 1/((4 Pi)^2 v^4) at
+   Lambda = 4 Pi v; the combined flare carries (LamF/vev)^2, so C/(LamHEFT^2 vev^2) with C ~ 1.
+   (Not P8's 1/(4 Pi)^2: there each V_mu brings its own 1/v.  The first version, 2026-10-05,
+   had 1/((4 Pi)^2 LamHEFT^2), which made the natural size of C (4 Pi)^2.)  W^{I rho}_nu is written
+   FS[Wi, nu, rho, I], the dual W~^{nu rho} = 1/2 eps^{nu rho al be} W_{al be} as in LSW.
+
+     PWHD1  <- Q^(1) = (D^mu H^dag D^nu H) W^I_{mu rho} W^{I rho}_nu
+     PWHD2  <- Q^(2) = (D^mu H^dag D_mu H) W^I_{nu rho} W^{I nu rho}
+     SWHD   <- Q^(3) = (D^mu H^dag D_mu H) W^I_{nu rho} W~^{I nu rho}
+     SWHDT  <- Q^(5) = eps^{IJK} (D^mu H^dag tau^I D^nu H)(W^J_{mu rho} W~^{K rho}_nu - W~^J_{mu rho} W^{K rho}_nu)
+
+   Q^(4)-Q^(6) carry tau^I, which has nothing to act on once H is a flare of the singlet h.
+   tau^I is replaced by the custodial spurion, t^I = Tr[T sigma^I]/2 (= delta^{I3} in unitary
+   gauge), via  eps^{IJK} t^I X^J Y^K = -I Tr[TT . [X, Y]]  for X = X^J sigma^J/2 = FSWi.  Then
+   del^mu F del^nu F is symmetric in mu <-> nu while the gauge factors of Q^(4) and Q^(6) are
+   antisymmetric, so their analogues vanish identically and are NOT implemented (user decision
+   2026-10-05); Q^(5)'s is symmetric and is SWHDT, custodial-symmetry breaking.  In SMEFT,
+   Q^(4) and Q^(6) survive through the imaginary antisymmetric part of D^mu H^dag tau^I D^nu H,
+   which a real del h del h does not have. *)
+LPWHD1 := Block[{mu, nu, rho, ii},
+  ExpandIndices[WCOrder*ChiralOrder^2/LamHEFT^2 del[H, mu] del[H, nu]
+      FS[Wi, mu, rho, ii] FS[Wi, nu, rho, ii] FCPWHD1Combined[H, NEFT],
+    FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+LPWHD2 := Block[{mu, nu, rho, ga, ii},
+  ExpandIndices[WCOrder*ChiralOrder^2/LamHEFT^2 del[H, ga] del[H, ga]
+      FS[Wi, nu, rho, ii] FS[Wi, nu, rho, ii] FCPWHD2Combined[H, NEFT],
+    FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+LSWHD := Block[{nu, rho, al, be, ga, ii},
+  ExpandIndices[WCOrder*ChiralOrder^2/LamHEFT^2 del[H, ga] del[H, ga]
+      Eps[nu, rho, al, be]/2 HC[FS[Wi, al, be, ii]] FS[Wi, nu, rho, ii] FCSWHDCombined[H, NEFT],
+    FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+(* WD: the dual W~_{a b} = 1/2 eps_{a b al be} W^{al be}, as a doublet-space matrix like FSWi. *)
+LSWHDT := Block[{mu, nu, rho, al, be, aux, WD},
+  WD[a_, b_] := 1/2 Eps[a, b, al, be] FSWi[al, be];
+  aux = ExpandIndices[WCOrder*ChiralOrder^2/LamHEFT^2 del[H, mu] del[H, nu] (-I) *
+      Tr[TT . ((FSWi[mu, rho] . WD[nu, rho] - WD[nu, rho] . FSWi[mu, rho]) -
+               (WD[mu, rho] . FSWi[nu, rho] - FSWi[nu, rho] . WD[mu, rho]))] *
+      FCSWHDTCombined[H, NEFT],
+    FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
 ];
 
 
 (* Selection: an operator enters the Lagrangian only if its label is in EFTOperators. *)
 LUseraux = 0;
-If[HEFTPieceActiveQ[ "PGHD1"],     LUseraux += LPGHD1];
-If[HEFTPieceActiveQ[ "PGHD2"],     LUseraux += LPGHD2];
-If[HEFTPieceActiveQ[ "SGHD"], LUseraux += LSGHD];
+If[HEFTPieceActiveQ[ "PGHD1"],     LUseraux += Hold[LPGHD1]];
+If[HEFTPieceActiveQ[ "PGHD2"],     LUseraux += Hold[LPGHD2]];
+If[HEFTPieceActiveQ[ "SGHD"], LUseraux += Hold[LSGHD]];
+If[HEFTPieceActiveQ[ "PWHD1"], LUseraux += Hold[LPWHD1]];
+If[HEFTPieceActiveQ[ "PWHD2"], LUseraux += Hold[LPWHD2]];
+If[HEFTPieceActiveQ[ "SWHD"],  LUseraux += Hold[LSWHD]];
+If[HEFTPieceActiveQ[ "SWHDT"], LUseraux += Hold[LSWHDT]];
 
-LUser := ExpandIndices[LUseraux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+(* Held, like LEFTBosonic (Lagrangian_EFT_Bosonic.fr): an operator evaluated while this file loads
+   comes out unexpanded and can be expanded wrongly later (TESTS/T39).  HEFT_Model.fr replaces
+   LUser by the delayed HEFTRebuildLUser[] anyway; this keeps the file's own definition safe too. *)
+LUser := ExpandIndices[ReleaseHold[LUseraux], FlavorExpand -> {SU2W}, NoDefinitions -> True];
 
 (* Re-assembles LUser after the model has loaded (HEFT_Model.fr calls it); keep the same
    selection lines as above. *)
@@ -57,6 +131,10 @@ HEFTRebuildLUser[] := Block[{aux = 0, res},
   If[HEFTPieceActiveQ[ "PGHD1"],      aux += LPGHD1];
   If[HEFTPieceActiveQ[ "PGHD2"],      aux += LPGHD2];
   If[HEFTPieceActiveQ[ "SGHD"],  aux += LSGHD];
+  If[HEFTPieceActiveQ[ "PWHD1"], aux += LPWHD1];
+  If[HEFTPieceActiveQ[ "PWHD2"], aux += LPWHD2];
+  If[HEFTPieceActiveQ[ "SWHD"],  aux += LSWHD];
+  If[HEFTPieceActiveQ[ "SWHDT"], aux += LSWHDT];
   res = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
   If[ListQ[res], Plus @@ Flatten[res], res]
 ];

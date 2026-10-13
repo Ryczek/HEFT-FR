@@ -120,12 +120,48 @@ HEFTFlareSpecCheck[] := Module[{ownValuesOf, flareHeads, checkSpec, scalarRows, 
       {o_, pre_String, k_Integer} :> pre <> ToString[k], #[[3]] <> ToString[#[[4]]]] &, scalarFlareSpecs];
   Scan[checkSpec[{#[[1]], #[[2]], #[[3]], 1}, Lookup[combinedRows, #[[2]], {None, "missing", -1}] /.
       {o_, pre_String, k_Integer} :> pre <> ToString[k], #[[3]] <> ToString[#[[4]]]] &, combinedDerivFlareSpecs];
-  Scan[checkSpec[#, First[HEFTWCGen2FermKeys[#[[2]]], None], #[[3]] <> ToString[#[[4]]] <> "_1_1"] &,
+  Scan[checkSpec[#, First[HEFTWCGen2FermKeys[#[[2]]], None], #[[3]] <> ToString[#[[4]]] <>
+      If[MemberQ[HEFT1604Fermion2FOffDiagOps, #[[2]]], "_1_2", "_1_1"]] &,  (* NL15-NL17: no diagonal keys *)
     ferm2FFlareSpecs];
   Scan[checkSpec[{#[[1]], #[[2]], #[[3]], 1}, First[HEFTWCGen2FermKeys[#[[2]]], None],
       #[[3]] <> ToString[#[[4]]] <> "prime_1_1"] &, ferm2FCombinedFlareSpecs];
   Scan[checkSpec[#, First[HEFTWCGen4FermKeys[#[[2]]], None], #[[3]] <> ToString[#[[4]]] <> "_1_1_1_1"] &,
     ferm4FFlareSpecs];
+  True
+];
+
+(* HEFTWCKeySetCheck[] - the full WCxf key set against the declared coefficient entries (2026-10-13,
+   TODO.md plan 1.5).  HEFTFlareSpecCheck compares only the FIRST key of each operator with its spec;
+   this compares, for every selected operator, the whole set of keys wcxf_input.fr generates
+   (HEFTWCOperatorKeys) with the whole set of entries the coefficient tables of parameters_EFT*.fr /
+   parameters_User.fr declare (one per scalar, one per declared flavour tuple of a tensor).  A key
+   without an entry would be a value the model silently ignores; an entry without a key, a coefficient
+   the WCxf file cannot set.  Catches power ranges, flavour tuples and the off-diagonal-only tensors
+   (HEFT1604Fermion2FOffDiagOps).  Runs after the specs and the active-operator list are final. *)
+HEFTFlareSpecCheck::keyset =
+  "Operator `1`: the WCxf keys (wcxf_input.fr) and the declared coefficient entries (parameters files) \
+differ - `2` key(s) with no declared entry, e.g. `3`; `4` declared entr(y/ies) with no key, e.g. `5`. \
+Keep the two in step. Aborting.";
+HEFTWCKeySetCheck[] := Module[{entryKeys, tablesOf, bad = 0},
+  entryKeys[Equal[sym_Symbol, opts_List]] := With[{idx = Indices /. opts, val = Value /. opts},
+    If[idx === Indices, {SymbolName[sym]},
+      Cases[Flatten[{val}], (Rule | RuleDelayed)[s_Symbol[i__Integer], _] :> HEFTWCFlatKey[s, i]]]];
+  entryKeys[_] := {};
+  tablesOf[op_String] := Flatten @ Join[
+    (MakeScalarCoeffTable @@ #) & /@ Select[scalarCoeffSpecs, First[#] === op &],
+    (MakeCombinedCoeffTable @@ #) & /@ Select[combinedDerivCoeffSpecs, First[#] === op &],
+    (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 2] &) /@ Select[ferm2FCoeffSpecs, First[#] === op &],
+    (MakeFermCombinedCoeffTable @@ #) & /@ Select[ferm2FCombinedCoeffSpecs, First[#] === op &],
+    (MakeFermCoeffTable[#[[1]], #[[2]], #[[3]], 4] &) /@ Select[ferm4FCoeffSpecs, First[#] === op &]];
+  Scan[Function[op, Module[{declared, keys, noEntry, noKey},
+      declared = Union @ Flatten[entryKeys /@ tablesOf[op]];
+      keys = Union @ HEFTWCOperatorKeys[op];
+      noEntry = Complement[keys, declared]; noKey = Complement[declared, keys];
+      If[noEntry =!= {} || noKey =!= {},
+        Message[HEFTFlareSpecCheck::keyset, op, Length[noEntry], Take[noEntry, UpTo[3]],
+          Length[noKey], Take[noKey, UpTo[3]]]; bad++]]],
+    HEFTActiveEFTPieces];
+  If[bad > 0, Abort[]];
   True
 ];
 
@@ -157,10 +193,16 @@ Module[{},
   If[DownValues[HEFTRegisterNLOWilsonCoefficients] =!= {},
     HEFTRegisterNLOWilsonCoefficients[]
   ];
+  (* Every selected operator: full WCxf key set = declared coefficient entries (2026-10-13). *)
+  HEFTWCKeySetCheck[];
   If[DownValues[HEFTWCApplyNLOParameters] =!= {}, HEFTWCApplyNLOParameters[]];
   If[DownValues[HEFTWCPrintApplySummary] =!= {}, HEFTWCPrintApplySummary[]];
-  (* Re-assemble LUser using the configured operator list (context-safe). *)
-  If[DownValues[HEFTRebuildLUser] =!= {}, LUser = HEFTRebuildLUser[]];
+  (* Re-assemble LUser using the configured operator list (context-safe).  Delayed (:=, since
+     2026-10-05, TESTS/T39): the user operators are evaluated when LUser is used in the mass-basis
+     step, after the model has loaded.  Evaluated here, during the load, they came out
+     unexpanded, and PGHD2/PWHD2 (a squared non-abelian field strength) then got a wrong quartic
+     gauge part - see the comment at LEFTBosonic in Lagrangian_EFT_Bosonic.fr. *)
+  If[DownValues[HEFTRebuildLUser] =!= {}, LUser := HEFTRebuildLUser[]];
 ];
 
 (* A–Z mixing matrix (AZnorm). *)

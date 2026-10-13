@@ -68,13 +68,16 @@ HEFTdyuH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dyuH[f1, f2]];
 HEFTdydH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dydH[f1, f2]];
 HEFTdylH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dylH[f1, f2]];
 
+(* yu/yuH... are vev times the Yukawa (Sqrt[2] M<f>, parameters_SM.fr); the 1/vev is written here so that
+   the "gf"/"aem" substitution and the one-insertion cut act on it (2026-10-12, NOTES.md SS10.7).  The
+   mass term -vev/Sqrt[2] yu/vev = -M<f> cancels symbolically. *)
 LYukawa := Block[{sp, ii, jj, cc, ff1, ff2, ff3, yuk},
   yuk = -vev/Sqrt[2] * ExpandIndices[
-      Sum[(yu[ff1, ff2] + (yuH[ff1, ff2] + HEFTdyuH[ff1, ff2])*H/vev + WCOrder*FQU[H, NEFT, ff1, ff2])
+      Sum[(yu[ff1, ff2]/vev + (yuH[ff1, ff2]/vev + HEFTdyuH[ff1, ff2])*H/vev + WCOrder*FQU[H, NEFT, ff1, ff2])
           QLbar[sp, ii, ff1, cc].uR[sp, ff2, cc] UFerm[ii, 1], {ii, 1, 2}] +
-      Sum[(yd[ff2, ff3] + (ydH[ff2, ff3] + HEFTdydH[ff2, ff3])*H/vev + WCOrder*FQD[H, NEFT, ff2, ff3])
+      Sum[(yd[ff2, ff3]/vev + (ydH[ff2, ff3]/vev + HEFTdydH[ff2, ff3])*H/vev + WCOrder*FQD[H, NEFT, ff2, ff3])
           CKM[ff1, ff2] QLbar[sp, ii, ff1, cc].dR[sp, ff3, cc] UFerm[ii, 2], {ii, 1, 2}] +
-      Sum[(yl[ff1, ff3] + (ylH[ff1, ff3] + HEFTdylH[ff1, ff3])*H/vev + WCOrder*FLE[H, NEFT, ff1, ff3])
+      Sum[(yl[ff1, ff3]/vev + (ylH[ff1, ff3]/vev + HEFTdylH[ff1, ff3])*H/vev + WCOrder*FLE[H, NEFT, ff1, ff3])
           LLbar[sp, ii, ff1].lR[sp, ff3] UFerm[ii, 2], {ii, 1, 2}],
       FlavorExpand -> {SU2D}, NoDefinitions -> True];
   yuk = yuk /. {

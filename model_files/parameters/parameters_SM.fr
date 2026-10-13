@@ -553,10 +553,14 @@ Sequence @@ Switch[EWInputScheme,
 },
 
 (* "heft" and anything unrecognised *)
+(* The five inputs sit in their own LHA block HEFTINPUTS (2026-10-13, plan 1.6); without a BlockName
+   FeynRules put them in its generic FRBLOCK.  MadGraph shows G1, GW, GS as g1__2, gw__2, gs__2: it is
+   case-insensitive and the model also has the gauge couplings g1, gw, gs (:> G1, GW, GS). *)
 _,
 {
   G1 == {
     ParameterType    -> External,
+    BlockName        -> HEFTINPUTS,
     InteractionOrder -> {QED,1},
     ComplexParameter -> False,
     Value            -> 0.34966947648018554,
@@ -565,6 +569,7 @@ _,
   },
   GW == {
     ParameterType    -> External,
+    BlockName        -> HEFTINPUTS,
     InteractionOrder -> {QED,1},
     ComplexParameter -> False,
     Value            -> 0.652969815696888,
@@ -573,6 +578,7 @@ _,
   },
   GS == {
     ParameterType    -> External,
+    BlockName        -> HEFTINPUTS,
     InteractionOrder -> {QCD,1},
     ComplexParameter -> False,
     Value            -> 1.2171996941475736,
@@ -581,12 +587,14 @@ _,
   },
   vev == {
     ParameterType    -> External,
+    BlockName        -> HEFTINPUTS,
     Value            -> 246.21965079413738,
     InteractionOrder -> {QED, -1},
     Description      -> "Higgs vacuum expectation value (heft: independent input)"
   },
   hlambda == {
     ParameterType    -> External,
+    BlockName        -> HEFTINPUTS,
     Value            -> 0.12905349405143485,
     InteractionOrder -> {QED, 2},
     Description      -> "Higgs quartic coupling (heft: independent input)"
@@ -648,46 +656,52 @@ _,
      Before 2026-08-06 there was only yu/yd/yl, carrying the Kappa/Delta factor, so the same
      number scaled BOTH the mass and the h-f-fbar coupling: the 2F-Higgs interaction could not
      be varied on its own, and any Kappa != 1 also shifted the fermion mass away from MQU...,
-     disagreeing with the mass used for the propagator. *)
+     disagreeing with the mass used for the propagator.
+
+     Since 2026-10-12 all six are vev TIMES the Yukawa, Sqrt[2] M<f> (Kappa M<f>): the 1/vev is
+     written in the Lagrangian (LYukawa, LS2D).  Inside these Definitions it was resolved only at
+     export, after the "gf"/"aem" substitution and the one-insertion cut of LHEFTMassBasis, so in
+     those schemes with RL2/RL5 the h-f-fbar couplings carried 1/vev(c) to all orders without a
+     WCOrder label, and S2D's CP-odd Yukawas a product CS2Dn1 x 1/vev(c) (NOTES.md SS10.7). *)
   Sequence @@ {
     yl == {
       ParameterType    -> Internal,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         yl[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        yl[1, 1] :> Sqrt[2] MLE/vev,
-        yl[2, 2] :> Sqrt[2] MLM/vev,
-        yl[3, 3] :> Sqrt[2] MLT/vev
+        yl[1, 1] :> Sqrt[2] MLE,
+        yl[2, 2] :> Sqrt[2] MLM,
+        yl[3, 3] :> Sqrt[2] MLT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, l],
-      Description      -> "Lepton Yukawa couplings (SM: fermion mass term)"
+      Description      -> "Lepton Yukawa couplings times vev (SM: fermion mass term)"
     },
     yu == {
       ParameterType    -> Internal,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         yu[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        yu[1, 1] :> Sqrt[2] MQU/vev,
-        yu[2, 2] :> Sqrt[2] MQC/vev,
-        yu[3, 3] :> Sqrt[2] MQT/vev
+        yu[1, 1] :> Sqrt[2] MQU,
+        yu[2, 2] :> Sqrt[2] MQC,
+        yu[3, 3] :> Sqrt[2] MQT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, u],
-      Description      -> "Up-type Yukawa couplings (SM: fermion mass term)"
+      Description      -> "Up-type Yukawa couplings times vev (SM: fermion mass term)"
     },
     yd == {
       ParameterType    -> Internal,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         yd[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        yd[1, 1] :> Sqrt[2] MQD/vev,
-        yd[2, 2] :> Sqrt[2] MQS/vev,
-        yd[3, 3] :> Sqrt[2] MQB/vev
+        yd[1, 1] :> Sqrt[2] MQD,
+        yd[2, 2] :> Sqrt[2] MQS,
+        yd[3, 3] :> Sqrt[2] MQB
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, d],
-      Description      -> "Down-type Yukawa couplings (SM: fermion mass term)"
+      Description      -> "Down-type Yukawa couplings times vev (SM: fermion mass term)"
     }
   },
 
@@ -698,39 +712,39 @@ _,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         ylH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        ylH[1, 1] :> KappaLE Sqrt[2] MLE/vev,
-        ylH[2, 2] :> KappaLM Sqrt[2] MLM/vev,
-        ylH[3, 3] :> KappaLT Sqrt[2] MLT/vev
+        ylH[1, 1] :> KappaLE Sqrt[2] MLE,
+        ylH[2, 2] :> KappaLM Sqrt[2] MLM,
+        ylH[3, 3] :> KappaLT Sqrt[2] MLT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, l],
-      Description      -> "Lepton Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+      Description      -> "Lepton Yukawa couplings times vev of the single-Higgs vertex (Kappa/Delta rescaled)"
     },
     yuH == {
       ParameterType    -> Internal,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         yuH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        yuH[1, 1] :> KappaQU Sqrt[2] MQU/vev,
-        yuH[2, 2] :> KappaQC Sqrt[2] MQC/vev,
-        yuH[3, 3] :> KappaQT Sqrt[2] MQT/vev
+        yuH[1, 1] :> KappaQU Sqrt[2] MQU,
+        yuH[2, 2] :> KappaQC Sqrt[2] MQC,
+        yuH[3, 3] :> KappaQT Sqrt[2] MQT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, u],
-      Description      -> "Up-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+      Description      -> "Up-type Yukawa couplings times vev of the single-Higgs vertex (Kappa/Delta rescaled)"
     },
     ydH == {
       ParameterType    -> Internal,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         ydH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        ydH[1, 1] :> KappaQD Sqrt[2] MQD/vev,
-        ydH[2, 2] :> KappaQS Sqrt[2] MQS/vev,
-        ydH[3, 3] :> KappaQB Sqrt[2] MQB/vev
+        ydH[1, 1] :> KappaQD Sqrt[2] MQD,
+        ydH[2, 2] :> KappaQS Sqrt[2] MQS,
+        ydH[3, 3] :> KappaQB Sqrt[2] MQB
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, d],
-      Description      -> "Down-type Yukawa couplings of the single-Higgs vertex (Kappa/Delta rescaled)"
+      Description      -> "Down-type Yukawa couplings times vev of the single-Higgs vertex (Kappa/Delta rescaled)"
     }
   },
   {
@@ -739,13 +753,13 @@ _,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         ylH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        ylH[1, 1] :> Sqrt[2] MLE/vev,
-        ylH[2, 2] :> Sqrt[2] MLM/vev,
-        ylH[3, 3] :> Sqrt[2] MLT/vev
+        ylH[1, 1] :> Sqrt[2] MLE,
+        ylH[2, 2] :> Sqrt[2] MLM,
+        ylH[3, 3] :> Sqrt[2] MLT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, l],
-      Description      -> "Lepton Yukawa couplings of the single-Higgs vertex (Delta framework: SM part)"
+      Description      -> "Lepton Yukawa couplings times vev of the single-Higgs vertex (Delta framework: SM part)"
     },
     (* The Delta deviation of the single-Higgs Yukawa, kept out of ylH so that the Lagrangian
        can multiply it by WCOrder (Lagrangian_SM.fr, LYukawa). *)
@@ -767,13 +781,13 @@ _,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         yuH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        yuH[1, 1] :> Sqrt[2] MQU/vev,
-        yuH[2, 2] :> Sqrt[2] MQC/vev,
-        yuH[3, 3] :> Sqrt[2] MQT/vev
+        yuH[1, 1] :> Sqrt[2] MQU,
+        yuH[2, 2] :> Sqrt[2] MQC,
+        yuH[3, 3] :> Sqrt[2] MQT
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, u],
-      Description      -> "Up-type Yukawa couplings of the single-Higgs vertex (Delta framework: SM part)"
+      Description      -> "Up-type Yukawa couplings times vev of the single-Higgs vertex (Delta framework: SM part)"
     },
     (* The Delta deviation of the single-Higgs Yukawa, kept out of yuH so that the Lagrangian
        can multiply it by WCOrder (Lagrangian_SM.fr, LYukawa). *)
@@ -795,13 +809,13 @@ _,
       Indices          -> {Index[Generation], Index[Generation]},
       Definitions      -> {
         ydH[i_?NumericQ, j_?NumericQ] :> 0 /; (i =!= j),
-        ydH[1, 1] :> Sqrt[2] MQD/vev,
-        ydH[2, 2] :> Sqrt[2] MQS/vev,
-        ydH[3, 3] :> Sqrt[2] MQB/vev
+        ydH[1, 1] :> Sqrt[2] MQD,
+        ydH[2, 2] :> Sqrt[2] MQS,
+        ydH[3, 3] :> Sqrt[2] MQB
       },
       InteractionOrder -> {QED, 1},
       TeX              -> Superscript[y, d],
-      Description      -> "Down-type Yukawa couplings of the single-Higgs vertex (Delta framework: SM part)"
+      Description      -> "Down-type Yukawa couplings times vev of the single-Higgs vertex (Delta framework: SM part)"
     },
     (* The Delta deviation of the single-Higgs Yukawa, kept out of ydH so that the Lagrangian
        can multiply it by WCOrder (Lagrangian_SM.fr, LYukawa). *)
@@ -840,7 +854,7 @@ If[!ValueQ[NEFT], NEFT = 3];
 
    The fermion mass term and the single-Higgs coupling come from yu / yd / yl, whose strength
    is set by KappaQU... (Kappa framework) or DeltaYQU... (Delta framework) - see
-   yu[1,1] :> KappaQU Sqrt[2] MQU/vev below.  That is why the sums start at n = 2: an
+   yu[1,1] :> KappaQU Sqrt[2] MQU below.  That is why the sums start at n = 2: an
    independent n = 1 coefficient would duplicate KappaQU / DeltaYQU. *)
 
 FQU[h_, neft_, ff1_, ff2_] :=

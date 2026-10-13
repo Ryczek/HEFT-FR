@@ -42,7 +42,9 @@ HEFT$Catalog1604NLO = {
    gate was removed 2026-09-22).  NNNLO (GHDNNNLO) was dropped from this release. *)
 HEFT$Catalog1604Higher = {
   {"User-defined - gluon-Higgs examples",
-    {"PGHD1", "PGHD2", "SGHD"}, "Bosonic"}
+    {"PGHD1", "PGHD2", "SGHD"}, "Bosonic"},
+  {"User-defined - W-Higgs examples (SMEFT Q_W2H2D2 analogues)",
+    {"PWHD1", "PWHD2", "SWHD", "SWHDT"}, "Bosonic"}
 };
 
 (* chiral dimension of every operator label - the power n of ChiralOrder^n the operator carries in the
@@ -59,6 +61,7 @@ HEFT$OperatorChiralOrder = Association @ Join[
   Thread[{"PDH", "P6", "P8", "P11", "P18", "P20", "P21", "P22", "P23", "P24", "P26",
     "S5", "S6", "S15"} -> 2],
   Thread[{"PGHD1", "PGHD2", "SGHD"} -> 2],
+  Thread[{"PWHD1", "PWHD2", "SWHD", "SWHDT"} -> 2],
   Thread[Table["NQ" <> ToString[heftI], {heftI, Join[Range[1, 8], Range[29, 36]]}] -> 0],
   Thread[Table["NQ" <> ToString[heftI], {heftI, 9, 28}] -> 1],
   Thread[Table["NL" <> ToString[heftI], {heftI, Join[{1, 2}, Range[12, 17]]}] -> 0],
@@ -142,6 +145,8 @@ HEFT$ConfigOptionReference = {
   {"EFTOperators", "List of active EFT operator labels, must be chosen from the catalogue below"},
   {"OutputName", "Output directory name under HEFT_Frules/output/"},
   {"MaxVertexLegs", "Automatic (default) = every vertex is exported. An integer n >= 3 keeps only vertices with at most n legs"},
+  {"FeynArtsDiracIndices", "Automatic (default) = FeynRules' fermion form: explicit Dirac indices only if a vertex has 4 fermions;"},
+  {"", "True = explicit Dirac indices in every FeynArts export (Cell 8), needed to merge FeynArts exports with four-fermion operators"},
   {"ForceRebuildLHEFT", "The only cache option. False (default) = always look HEFT_cache/ up first and load a matching build if there is one (under any OutputName);"},
   {"", "True = skip the lookup, rebuild LHEFTMassBasis, overwrite. Every build is saved either way"}
 };
