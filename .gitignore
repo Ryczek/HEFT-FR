@@ -2,6 +2,5 @@ CLAUDE.md
 .DS_Store
 __pycache__/
 *.pyc
-wcxf/
 HEFT_cache/
 output/
