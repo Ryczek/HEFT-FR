@@ -559,8 +559,19 @@ than the operator count. Measured at `HiggsMaxOrder = 2`, `"heft"`: `{P1}` 12 s,
 `{PW}` 7 s — but a single build of all three takes **45 s**. Merging the three cached pieces takes
 **4 s**, and gives the same 105 vertices with identical couplings.
 
-[`heft_fr_merge_models.wl`](heft_fr_merge_models.wl) does exactly that. `ExpandIndices` is
-linear in the Lagrangian, so for *N* sub-models
+There are two merging notebooks, in [`heft_merging/`](heft_merging/):
+
+| Notebook | Merges | Then | Needs FeynRules in the kernel |
+|---|---|---|---|
+| [`merge_cached_models.wl`](heft_merging/merge_cached_models.wl) | cached Lagrangians (`HEFT_cache/`) | exports the merged model (Cells 6–8) | yes |
+| [`merge_exports.wl`](heft_merging/merge_exports.wl) | FeynArts and/or UFO exports (`output/`) | nothing — the result is the export | no (only its path) |
+
+The first saves the build; the second also saves the export of the large model, which is usually
+the slow part. This section is the first; [Merging FeynArts exports](#merging-feynarts-exports)
+and [Merging UFO exports](#merging-ufo-exports) are the second.
+
+[`merge_cached_models.wl`](heft_merging/merge_cached_models.wl) merges cached Lagrangians.
+`ExpandIndices` is linear in the Lagrangian, so for *N* sub-models
 
 ```
 LHEFT(A ∪ B ∪ …) = Σ_i LHEFT(i) − (N − 1) · LHEFT(SM baseline)
@@ -587,13 +598,15 @@ twice, and a cache entry listed twice.
 
 Merging cached Lagrangians saves the build, but for large models the **export** is the expensive
 step: it grows roughly as terms^2.16, and a FeynArts export of the full bosonic set never finished.
-Cells 9 and 10 of [`heft_fr_merge_models.wl`](heft_fr_merge_models.wl) merge one step later, from
-FeynArts exports already on disk, so each export is paid only for a small model. No FeynRules, no
-`LoadModel` and none of Cells 3–8 are needed: set the configuration in Cell 2, then
+Cells 3 and 4 of [`heft_merging/merge_exports.wl`](heft_merging/merge_exports.wl) merge one step
+later, from FeynArts exports already on disk, so each export is paid only for a small model. No
+FeynRules is loaded and no model is built (FeynRules' folder is still needed in `$FeynRulesPath`:
+every export records the digest of the interface that wrote it). Set the configuration the exports
+were made with in Cell 2, then
 
-1. **Cell 9** lists every export in `output/FeynArts/` made with that configuration, with its
+1. **Cell 3** lists every export in `output/FeynArts/` made with that configuration, with its
    operators, whether an SM-only export is present, and near-misses with the option they differ in.
-2. **Cell 10** takes the names in `MergeFeynArtsSources` and writes
+2. **Cell 4** takes the names in `MergeFeynArtsSources` and writes
    `output/FeynArts/<OutputName>/`. The SM-only export is found automatically (name it in
    `MergeFeynArtsBaseline` if there are several).
 
@@ -615,7 +628,7 @@ own `heft_export.json`, so it can be merged again.
 **What must agree**, from each export's `heft_export.json`: every cache key except the operator
 list, plus `MaxVertexLegs` and the FeynArts interface that wrote it (`FeynArtsInterface.m`, by
 its digest). Exports made before 2026-09-29 have no `heft_export.json` and must be re-exported
-with Cell 8. Exports made before 2026-10-02, without the FeynRules fixes above, are merged with a
+with Cell 8 of the main notebook. Exports made before 2026-10-02, without the FeynRules fixes above, are merged with a
 warning: they are correct unless the bug removed vertices from them, which shows as fewer
 couplings in the `.mod` than vertices FeynRules reported. **Refused, not warned about:** a missing SM-only export, an operator in two exports, a
 name listed twice, an `OutputName` equal to one of the inputs, exports that differ outside their
@@ -645,18 +658,19 @@ and `P12` (`TESTS/T39`, `NOTES.md` §6).
 
 ## Merging UFO exports
 
-The UFO writer is the slowest step of the pipeline (about 10 h for the full bosonic model). Cells 11
-and 12 of [`heft_fr_merge_models.wl`](heft_fr_merge_models.wl) merge UFO exports already on disk, in
-the same way as Cells 9 and 10 merge FeynArts exports: set the configuration in Cell 2, then
+The UFO writer is the slowest step of the pipeline (about 10 h for the full bosonic model). Cells 5
+and 6 of [`heft_merging/merge_exports.wl`](heft_merging/merge_exports.wl) merge UFO exports already on
+disk, in the same way as its Cells 3 and 4 merge FeynArts exports: set the configuration in Cell 2,
+then
 
-1. **Cell 11** lists every export in `output/UFO/` made with that configuration, with its operators,
+1. **Cell 5** lists every export in `output/UFO/` made with that configuration, with its operators,
    whether an SM-only export is present, and near-misses with the option they differ in.
-2. **Cell 12** takes the names in `MergeUFOSources` and writes `output/UFO/<OutputName>/`. The
+2. **Cell 6** takes the names in `MergeUFOSources` and writes `output/UFO/<OutputName>/`. The
    SM-only export is found automatically (name it in `MergeUFOBaseline` if there are several).
 
 Every coupling entry becomes `C(SM) + Σ_i (C(i) − C(SM))`, exact at one Wilson-coefficient insertion
-per vertex. The merge is done by [`model_files/ufo_merge.py`](model_files/ufo_merge.py), so Cells 11
-and 12 need a Python 3 interpreter (standard library only, 3.8 or later), found automatically or set
+per vertex. The merge is done by [`model_files/ufo_merge.py`](model_files/ufo_merge.py), so Cells 5
+and 6 need a Python 3 interpreter (standard library only, 3.8 or later), found automatically or set
 as `HEFT$Python`. No FeynRules and no `LoadModel` are involved.
 
 **How the files are combined:**
@@ -678,8 +692,8 @@ as `HEFT$Python`. No FeynRules and no `LoadModel` are involved.
 - **`decays.py` is not written.** FeynRules' widths are quadratic in the couplings, so they cannot
   be added. Let MadGraph compute the widths (`compute_widths`, or `Auto` in the param card).
 
-**What must agree**, from each export's `heft_export.json` (written by Cell 7 since 2026-10-06;
-older UFO exports must be re-exported): every cache key except the operator list, plus
+**What must agree**, from each export's `heft_export.json` (written by Cell 7 of the main notebook since
+2026-10-06; older UFO exports must be re-exported): every cache key except the operator list, plus
 `MaxVertexLegs` and FeynRules' UFO interface (by its digest). **Refused, not warned about:** a
 missing SM-only export, an operator in two exports, a name listed twice, an `OutputName` equal to
 one of the inputs, exports that differ in a copied file, a baseline vertex missing from a sub-model,
@@ -717,7 +731,9 @@ UFO alone is ~2 min here, FeynArts alone ~1 min. On a cache hit, Cell 5 takes a 
 
 ```
 heft_fr_notebook.wl        THE entry point — open this
-heft_fr_merge_models.wl    build a large model by merging cached small ones
+heft_merging/              build a large model out of small ones
+  merge_cached_models.wl     merge cached Lagrangians, then export
+  merge_exports.wl           merge FeynArts and/or UFO exports
 
 model_files/               the model source
   HEFT_Model.fr              master file: loads everything, assembles LHEFTMassBasis
@@ -741,11 +757,13 @@ model_files/               the model source
     Lagrangian_EFT_4F.fr       four-fermion operators
     Lagrangian_User.fr         YOUR operators
   heft_fr.wl                 the engine behind notebook Cells 3–8
-  heft_fr_merge.wl           the engine behind the merge notebook
+  heft_fr_merge.wl           the engine behind merge_cached_models.wl
+  heft_fr_merge_exports.wl   the engine behind merge_exports.wl
+  heft_merge_common.wl       helpers shared by the two merge engines
   lheft_cache.wl             the build cache
   lheft_merge.wl             the merge arithmetic (cached Lagrangians)
-  fa_merge.wl                the FeynArts export merge (merge notebook Cells 9–10)
-  ufo_merge.wl, ufo_merge.py the UFO export merge (merge notebook Cells 11–12)
+  fa_merge.wl                the FeynArts export merge (merge_exports.wl Cells 3–4)
+  ufo_merge.wl, ufo_merge.py the UFO export merge (merge_exports.wl Cells 5–6)
   heft_export_meta.wl        heft_export.json: what each export was made with
   feynrules_fixes.wl         two corrections to FeynRules' FeynArts writer, applied by Cell 8
   heft_latex_export.wl       LaTeX writer for the Feynman rules

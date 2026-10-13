@@ -3,8 +3,8 @@
 (* Export metadata: output/<format>/<OutputName>/heft_export.json.
 
    Written by heft_fr.wl Cell 8 next to every FeynArts export and by Cell 7 next to every UFO
-   export (since 2026-10-06), and read by the FeynArts merge (fa_merge.wl, merge notebook Cells 9
-   and 10) and the UFO merge (ufo_merge.wl, Cells 11 and 12).  An export directory holds only the .mod / .gen
+   export (since 2026-10-06), and read by the FeynArts merge (fa_merge.wl, Cells 3
+   and 4 of heft_merging/merge_exports.wl) and the UFO merge (ufo_merge.wl, Cells 5 and 6).  An export directory holds only the .mod / .gen
    / .pars files FeynRules writes, and nothing in them says which configuration or operator
    selection produced them - so without this record two exports could not be checked for
    compatibility before being merged.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UFO model merging - the engine behind merge notebook Cell 12 (driven by ufo_merge.wl).
+"""UFO model merging - the engine behind Cell 6 of heft_merging/merge_exports.wl (driven by ufo_merge.wl).
 
 WHAT THIS DOES
 Builds one UFO model out of UFO exports already on disk, with no FeynRules: for sub-models

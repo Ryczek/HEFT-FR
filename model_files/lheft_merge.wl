@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
 (* Model merging from HEFT_cache/ entries.  Get'd by heft_fr_merge.wl (the pipeline behind
-   heft_fr_merge_models.wl).  Requires lheft_cache.wl to have been Get first: every cache
+   heft_merging/merge_cached_models.wl).  Requires lheft_cache.wl to have been Get first: every cache
    concept here - the directory, the entry layout, the compare keys, the meta reader - is
    reused from there rather than restated, so the two cannot drift apart.
 

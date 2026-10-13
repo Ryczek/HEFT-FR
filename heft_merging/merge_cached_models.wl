@@ -5,7 +5,9 @@
 
 
 (* ::Text:: *)
-(*The second entry point of the package, beside heft_fr_notebook.wl. Open it in Mathematica and evaluate it section by section. Use it to build one LARGE model out of several SMALL ones you have already built - e.g. a full bosonic model assembled from a handful of few-operator runs - without paying for the expensive mass-basis pass again.*)
+(*One of the two merging notebooks in heft_merging/, beside heft_fr_notebook.wl. Open it in Mathematica and evaluate it section by section. Use it to build one LARGE model out of several SMALL ones you have already built and cached - e.g. a full bosonic model assembled from a handful of few-operator runs - without paying for the expensive mass-basis pass again. The merged model is then exported here (Cells 7/8), so the export itself is paid for the large model.*)
+(**)
+(*The other notebook, merge_exports.wl, merges FeynArts or UFO EXPORTS of the small models instead, so that the export is paid only for the small ones. Use that one when the export of the large model is the slow part (it usually is: the UFO writer is the slowest step of the pipeline).*)
 (**)
 (*WHY IT WORKS*)
 (*ExpandIndices is linear in the Lagrangian, so*)
@@ -31,14 +33,6 @@
 (*  6  Feynman rules   |*)
 (*  7  UFO export      |  the SAME cells as heft_fr_notebook.wl - they Get the same file*)
 (*  8  FeynArts export |*)
-(*  9  Lists the FeynArts exports made with this configuration*)
-(* 10  MergeFeynArtsSources - merges those exports into output/FeynArts/<OutputName>/*)
-(* 11  Lists the UFO exports made with this configuration*)
-(* 12  MergeUFOSources - merges those exports into output/UFO/<OutputName>/*)
-(**)
-(*MERGING FEYNARTS EXPORTS (Cells 9-10) is the same idea one step later: instead of cached Lagrangians, it adds up FeynArts files you already exported, so the expensive export itself is paid only for the small models. The exports must each have a heft_export.json (written by Cell 8 since 2026-09-29), be made with the configuration of Cell 2 including MaxVertexLegs, and include one SM-only export (EFTOperators = {}). Cells 9-10 need only Cell 2 - no FeynRules, no LoadModel, and none of Cells 3-8.*)
-(**)
-(*MERGING UFO EXPORTS (Cells 11-12) does the same for UFO exports, which matters most: the UFO writer is the slowest step of the pipeline. The exports need a heft_export.json written by Cell 7 (since 2026-10-06; older UFO exports must be re-exported), the configuration of Cell 2 including MaxVertexLegs, and one SM-only export. The merge itself is done by model_files/ufo_merge.py, so Cells 11-12 need a Python 3 interpreter (standard library only), found automatically or set as HEFT$Python. The merged model has no decays.py: widths are not additive, so let MadGraph compute them.*)
 
 
 (* ::Section:: *)
@@ -51,7 +45,7 @@
 
 HEFT$FromMergeNotebook=True;
 
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
+HEFT$WorkspaceRoot=ParentDirectory@DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];   (* this notebook is in heft_merging/; the package root is its parent *)
 
 HEFT$MergeCell=1;
 
@@ -84,10 +78,10 @@ DiagonalCKM=False;                   (* True -> load restrictions/DiagonalCKM.rs
 (* NLO basis - must match the sub-models. There is deliberately NO EFTOperators here:
    Cell 4 derives it as the union of the sub-models you select. *)
 
-OutputName="HEFT_FullModel";            (* Output subdirectory name under HEFT_Frules/output/, and the readable half of the merged model's cache folder name *)
+OutputName="HEFT_FullModel";            (* Output subdirectory name under output/, and the readable half of the merged model's cache folder name *)
 
 MaxVertexLegs=6;                     (* Export-time cut on vertex multiplicity for Cells 6/7/8. Automatic (default) = no cut; an integer n >= 3 keeps only vertices with at most n legs. NOT part of the cache key, so it need not match the sub-models - like InitialiseWCs. See README *)
-FeynArtsDiracIndices=Automatic;      (* Fermion form of the FeynArts export of the merged model (Cell 8). Automatic = FeynRules' choice; True = explicit Dirac indices. FeynArts exports to be merged in Cells 9-10 must all have the same form: with four-fermion operators that means all made with True, the SM-only one included *)
+FeynArtsDiracIndices=Automatic;      (* Fermion form of the FeynArts export of the merged model (Cell 8). Automatic = FeynRules' choice; True = explicit Dirac indices. FeynArts exports to be merged in merge_exports.wl must all have the same form: with four-fermion operators that means all made with True, the SM-only one included *)
 
 ForceRebuildLHEFT=False;             (* True = ignore an existing cache entry for the MERGED configuration and merge again from the sub-models *)
 
@@ -112,7 +106,7 @@ HEFT$ConfigEvaluated=True;
 
 HEFT$FromMergeNotebook=True;
 
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
+HEFT$WorkspaceRoot=ParentDirectory@DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];   (* this notebook is in heft_merging/; the package root is its parent *)
 
 SetDirectory[HEFT$WorkspaceRoot];
 
@@ -149,7 +143,7 @@ Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr_merge.wl"}];
 (**)
 (*The merged Lagrangian is saved as an ordinary HEFT_cache/ entry, keyed by its own configuration exactly like a directly built model - so re-running this cell is a plain cache hit, and heft_fr_notebook.wl configured with the same options and the union operator list will find it too. Its meta.json additionally records mergedFrom / mergedLOBaseline, so you can always see where it came from.*)
 (**)
-(*The merge is plain arithmetic - sum of the sub-models minus (N-1) copies of the SM baseline - and not term-by-term matching. Matching cannot work here: FeynRules' $-suffixed dummy index names diverge between kernels and Times is Orderless, so "rename in order of first appearance" is not canonical; and the SM sector is not even written the same way in two builds, since activating P1/P12/PW/PB switches gauge_normalization.fr to an algebraically equal but syntactically different A-Z branch. Arithmetic is immune to both. The price is that nothing cancels syntactically, so the merged Lagrangian is larger than a directly built one (+29% in LeafCount in the verified case); FeynRules collapses it when it extracts the vertices, which come out identical - see TESTS.md T19.*)
+(*The merge is plain arithmetic - sum of the sub-models minus (N-1) copies of the SM baseline - and not term-by-term matching. Matching cannot work here: FeynRules' $-suffixed dummy index names diverge between kernels and Times is Orderless, so "rename in order of first appearance" is not canonical; and the SM sector is not even written the same way in two builds, since activating P1/P12/PW/PB switches gauge_normalization.fr to an algebraically equal but syntactically different A-Z branch. Arithmetic is immune to both. The price is that nothing cancels syntactically, so the merged Lagrangian is larger than a directly built one (+29% in LeafCount in the verified case); FeynRules collapses it when it extracts the vertices, which come out identical - verified against direct builds.*)
 (**)
 (*Like heft_fr_notebook.wl Cell 5, this cell runs at most once per kernel: FeynRules' LoadModel is not idempotent.*)
 
@@ -196,7 +190,7 @@ Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
 
 
 (* ::Text:: *)
-(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars, plus heft_export.json - its configuration, which Cells 9-10 read). Independent of Cell 7 - run either or both. Before exporting it corrects two bugs in FeynRules' FeynArts writer in memory (model_files/feynrules_fixes.wl: single-term vertices next to Levi-Civita structures were dropped, and ScalarProduct^2 was not written) and prints whether each was applied; FeynRules on disk is not changed, and heft_export.json records the result.*)
+(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars, plus heft_export.json - its configuration, which merge_exports.wl reads). Independent of Cell 7 - run either or both. Before exporting it corrects two bugs in FeynRules' FeynArts writer in memory (model_files/feynrules_fixes.wl: single-term vertices next to Levi-Civita structures were dropped, and ScalarProduct^2 was not written) and prints whether each was applied; FeynRules on disk is not changed, and heft_export.json records the result.*)
 
 
 HEFT$FromNotebook=True;
@@ -204,99 +198,3 @@ HEFT$FromNotebook=True;
 HEFT$NotebookCell=8;
 
 Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
-
-
-(* ::Section:: *)
-(*Cell 9 - find the FeynArts exports that match this configuration*)
-
-
-(* ::Text:: *)
-(*Prints every export in output/FeynArts/ made with exactly the configuration of Cell 2 - every option, the .fr digest (modelDigest), MaxVertexLegs and the FeynArts interface that wrote it - with its name and operators. Those names are what you put into MergeFeynArtsSources in Cell 10. It also reports near-misses with the option they differ in, and export folders without a heft_export.json (exported before 2026-09-29: re-export them with Cell 8 to use them).*)
-(**)
-(*Needs only Cell 2: no FeynRules, no model loading, and none of Cells 3-8, so it can run in a fresh kernel.*)
-
-
-HEFT$FromMergeNotebook=True;
-
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
-
-SetDirectory[HEFT$WorkspaceRoot];
-
-HEFT$MergeCell=9;
-
-Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr_merge.wl"}];
-
-
-(* ::Section:: *)
-(*Cell 10 - merge FeynArts exports*)
-
-
-(* ::Text:: *)
-(*Builds output/FeynArts/<OutputName>/ (.mod, .gen, .pars and heft_export.json) out of the exports named below. Every coupling becomes SM + the sum of each export's deviation from the SM-only export, the same arithmetic as Cell 5 one step later; this is exact because the model keeps one Wilson-coefficient insertion per vertex. Do NOT list the SM-only export: it is found automatically and subtracted. If Cell 9 shows several, name one in MergeFeynArtsBaseline.*)
-(**)
-(*Refused rather than warned about: an export not listed by Cell 9, an operator in two exports, a name listed twice, an OutputName equal to one of the inputs, and exports that differ outside their couplings. The result carries its own heft_export.json, so it can itself be a source of a later merge.*)
-(**)
-(*The .pars file is only united, not merged: FeynArts reads .mod and .gen alone. Where two exports hold different values for one parameter (e.g. a Kappa edited in one wcxf_output.json), the SM-only export's value is kept and the cell says so.*)
-
-
-MergeFeynArtsSources={};             (* e.g. {"HEFT_P1", "HEFT_P12", "HEFT_PW"} - names from the Cell 9 table *)
-
-MergeFeynArtsBaseline=Automatic;     (* Automatic = the one SM-only export Cell 9 finds; or its name, if there are several *)
-
-HEFT$FromMergeNotebook=True;
-
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
-
-SetDirectory[HEFT$WorkspaceRoot];
-
-HEFT$MergeCell=10;
-
-Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr_merge.wl"}];
-
-
-(* ::Section:: *)
-(*Cell 11 - find the UFO exports that match this configuration*)
-
-
-(* ::Text:: *)
-(*Prints every export in output/UFO/ made with exactly the configuration of Cell 2 - every option, the .fr digest (modelDigest), MaxVertexLegs and the FeynRules UFO interface that wrote it - with its name and operators. Those names are what you put into MergeUFOSources in Cell 12. It also reports near-misses with the option they differ in, and UFO folders without a UFO heft_export.json (exported before 2026-10-06: re-export them with Cell 7 to use them).*)
-(**)
-(*Needs only Cell 2: no FeynRules, no model loading, and none of Cells 3-10, so it can run in a fresh kernel.*)
-
-
-HEFT$FromMergeNotebook=True;
-
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
-
-SetDirectory[HEFT$WorkspaceRoot];
-
-HEFT$MergeCell=11;
-
-Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr_merge.wl"}];
-
-
-(* ::Section:: *)
-(*Cell 12 - merge UFO exports*)
-
-
-(* ::Text:: *)
-(*Builds output/UFO/<OutputName>/ (the UFO .py files and heft_export.json) out of the exports named below. Every coupling becomes SM + the sum of each export's deviation from the SM-only export, the same arithmetic as Cells 5 and 10; this is exact because the model keeps one Wilson-coefficient insertion per vertex. Do NOT list the SM-only export: it is found automatically and subtracted. If Cell 11 shows several, name one in MergeUFOBaseline.*)
-(**)
-(*Merged: vertices, couplings and Lorentz structures (compared by content, renumbered), parameters (an internal parameter that differs between exports, such as MZ in the heft scheme with P1/P12/PT, is merged the same way; the LHA block HEFTBOSONIC is renumbered). Copied, and required to be identical in every export: particles, coupling orders, propagators and the UFO library files. NOT written: decays.py - FeynRules' widths are quadratic in the couplings and cannot be added; let MadGraph compute the widths (compute_widths, or Auto in the param card).*)
-(**)
-(*Refused rather than warned about: an export not listed by Cell 11, an operator in two exports, a name listed twice, an OutputName equal to one of the inputs, exports that differ in a copied file, a baseline vertex missing from a sub-model, and a particle set written in two different orders. The result carries its own heft_export.json, so it can itself be a source of a later merge. Needs a Python 3 interpreter (standard library only); set HEFT$Python if it is not found.*)
-
-
-MergeUFOSources={};             (* e.g. {"HEFT_P1", "HEFT_P12", "HEFT_PW"} - names from the Cell 11 table *)
-
-MergeUFOBaseline=Automatic;     (* Automatic = the one SM-only export Cell 11 finds; or its name, if there are several *)
-
-HEFT$FromMergeNotebook=True;
-
-HEFT$WorkspaceRoot=DirectoryName@If[$Notebooks,NotebookFileName[],ExpandFileName@$InputFileName];
-
-SetDirectory[HEFT$WorkspaceRoot];
-
-HEFT$MergeCell=12;
-
-Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr_merge.wl"}];

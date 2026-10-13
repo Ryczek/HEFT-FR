@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 HEFT_cache/
 output/
+draft/

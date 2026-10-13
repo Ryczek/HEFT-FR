@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-(* FeynArts model merging.  Get'd by heft_fr_merge.wl for merge notebook Cells 9 (list the
-   exports) and 10 (merge them).  Needs lheft_cache.wl and lheft_merge.wl (loaded by
+(* FeynArts model merging.  Get'd by heft_fr_merge_exports.wl for Cells 3 (list the
+   exports) and 4 (merge them) of heft_merging/merge_exports.wl.  Needs lheft_cache.wl and lheft_merge.wl (loaded by
    HEFT$MergeBootstrap[]) and heft_export_meta.wl (loaded below).
 
    WHAT THIS DOES
@@ -62,7 +62,7 @@ HEFTFAToString[e_] := Block[{$Context = HEFTFA$Ctx, $ContextPath = {HEFTFA$Ctx, 
 
 
 (* ============================================================================
-   Index of the exports (Cell 9) and resolving names (Cell 10)
+   Index of the exports (Cell 3) and resolving names (Cell 4)
    ============================================================================ *)
 
 HEFTFAExportIndex[] := Module[{faDir = HEFTFAExportsDir[], dirs, entries = {}, noMeta = {}, m},
@@ -117,7 +117,7 @@ HEFTFAPrintCatalog[index_Association, current_Association] := Module[
         Print[Style["    SM baseline present: \"" <> First[lo]["name"] <> "\".", Darker[Green]]],
       True,
         Print[Style["    " <> ToString[Length[lo]] <> " SM baselines (" <>
-          StringRiffle[#["name"] & /@ lo, ", "] <> "): name one in MergeFeynArtsBaseline, Cell 10.",
+          StringRiffle[#["name"] & /@ lo, ", "] <> "): name one in MergeFeynArtsBaseline, Cell 4.",
           Orange]]
     ]
   ];
@@ -162,7 +162,7 @@ HEFTFAResolve[spec_, index_Association, compatible_List, current_Association] :=
     MemberQ[index["noMeta"], spec], HEFTFAError["\"" <> spec <> "\" has no heft_export.json " <>
       "(exported before export records existed): re-export it with Cell 8."],
     True, HEFTFAError["no FeynArts export called \"" <> spec <> "\" in " <> HEFTFAExportsDir[] <>
-      ". Cell 9 lists the ones available."]
+      ". Cell 3 of merge_exports.wl lists the ones available."]
   ]
 ];
 
@@ -475,7 +475,7 @@ HEFTFAWritePars[file_String, pars_Association] := Export[file, StringJoin[
 
 
 (* ============================================================================
-   Driver - merge notebook Cell 10
+   Driver - merge_exports.wl Cell 4
    ============================================================================ *)
 
 HEFTFAMergeRun[sourceNames_List, outName_String, baselineSpec_] := Module[

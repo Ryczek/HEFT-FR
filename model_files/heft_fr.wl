@@ -74,7 +74,7 @@ HEFT$CheckMaxVertexLegs[] := Module[{heftN = HEFT$MaxVertexLegsValue[]},
      Automatic (default) = FeynRules' own choice: index-free fermion chains unless some vertex has more
                            than two fermions, explicit Dirac indices otherwise;
      True                = explicit Dirac indices in every export.
-   Exports in the two forms cannot be merged (merge notebook Cells 9-10 refuse the mix), and an SM-only
+   Exports in the two forms cannot be merged (the FeynArts merge of heft_merging/merge_exports.wl refuses the mix), and an SM-only
    baseline is index-free under Automatic, so a FeynArts merge with four-fermion operators needs True
    for ALL its exports, the SM-only baseline included.  Export-time only: not part of the cache key,
    like MaxVertexLegs.  heft_export.json records the form actually written. *)
@@ -650,7 +650,7 @@ Module[{ufoOutDir},
          gone), and a WriteUFO now emits zero duplicate parameter blocks.  If duplicates ever
          reappear, that is a real defect to diagnose, not something to post-process away. *)
       (* heft_export.json: the configuration and operators this export was made with, which the
-         UFO merge (merge notebook Cells 11/12) needs to check that exports agree (2026-10-06). *)
+         UFO merge (heft_merging/merge_exports.wl) needs to check that exports agree (2026-10-06). *)
       Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
       HEFTExportWriteMeta[ufoOutDir, "ufo"];
       Print[Style["[HEFT] UFO written to " <> ufoOutDir <> " in ", Bold], TimeUsed[] - CPUTime, " seconds"];
@@ -743,7 +743,7 @@ Quiet[CreateDirectory[outputDir["."], CreateIntermediateDirectories -> True],
         Quiet @ DeleteDirectory[faBase]
       ];
       (* heft_export.json: the configuration and operators this export was made with, which
-         the FeynArts merge (merge notebook Cells 9/10) needs to check that exports agree. *)
+         the FeynArts merge (heft_merging/merge_exports.wl) needs to check that exports agree. *)
       Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
       HEFTExportWriteMeta[feynArtsOutDir, "feynarts"];
       Print[Style["[HEFT] FeynArts export in ", Bold], TimeUsed[] - cput, " seconds"];

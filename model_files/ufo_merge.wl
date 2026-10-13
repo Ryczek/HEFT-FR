@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-(* UFO model merging.  Get'd by heft_fr_merge.wl for merge notebook Cells 11 (list the UFO
-   exports) and 12 (merge them).  Needs lheft_cache.wl and lheft_merge.wl (loaded by
+(* UFO model merging.  Get'd by heft_fr_merge_exports.wl for Cells 5 (list the UFO
+   exports) and 6 (merge them) of heft_merging/merge_exports.wl.  Needs lheft_cache.wl and lheft_merge.wl (loaded by
    HEFT$MergeBootstrap[]) and heft_export_meta.wl (loaded below).  The merge itself is done by
    model_files/ufo_merge.py; this file does what fa_merge.wl does for FeynArts before the merge -
    find the exports, check their heft_export.json records against the Cell 2 configuration, find
@@ -36,7 +36,7 @@ HEFTUFOPython[] := If[StringQ[HEFT$Python], HEFT$Python,
 
 
 (* ============================================================================
-   Index of the exports (Cell 11) and resolving names (Cell 12)
+   Index of the exports (Cell 5) and resolving names (Cell 6)
    ============================================================================ *)
 
 HEFTUFOExportIndex[] := Module[{dir = HEFTUFOExportsDir[], dirs, entries = {}, noMeta = {}, m},
@@ -91,7 +91,7 @@ HEFTUFOPrintCatalog[index_Association, current_Association] := Module[
         Print[Style["    SM baseline present: \"" <> First[lo]["name"] <> "\".", Darker[Green]]],
       True,
         Print[Style["    " <> ToString[Length[lo]] <> " SM baselines (" <>
-          StringRiffle[#["name"] & /@ lo, ", "] <> "): name one in MergeUFOBaseline, Cell 12.",
+          StringRiffle[#["name"] & /@ lo, ", "] <> "): name one in MergeUFOBaseline, Cell 6.",
           Orange]]
     ]
   ];
@@ -135,7 +135,7 @@ HEFTUFOResolve[spec_, index_Association, compatible_List, current_Association] :
     MemberQ[index["noMeta"], spec], HEFTUFOError["\"" <> spec <> "\" has no UFO heft_export.json " <>
       "(exported before 2026-10-06): re-export it with Cell 7."],
     True, HEFTUFOError["no UFO export called \"" <> spec <> "\" in " <> HEFTUFOExportsDir[] <>
-      ". Cell 11 lists the ones available."]
+      ". Cell 5 of merge_exports.wl lists the ones available."]
   ]
 ];
 
@@ -159,7 +159,7 @@ HEFTUFOFindBaseline[compatible_List, spec_] := Module[{lo, hit},
 
 
 (* ============================================================================
-   Driver - merge notebook Cell 12
+   Driver - merge_exports.wl Cell 6
    ============================================================================ *)
 
 HEFTUFOMergeRun[sourceNames_List, outName_String, baselineSpec_] := Module[

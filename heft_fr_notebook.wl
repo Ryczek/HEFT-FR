@@ -206,7 +206,7 @@ Get@FileNameJoin[{HEFT$WorkspaceRoot,"model_files","heft_fr.wl"}];
 
 
 (* ::Text:: *)
-(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars, plus heft_export.json - the configuration it was made with, which merging exports in heft_fr_merge_models.wl needs). Fermions are written in FeynRules' default form: index-free, or with explicit Dirac indices when the model has a four-fermion vertex; heft_export.json records which. Before exporting it corrects two bugs in FeynRules' FeynArts writer in memory (model_files/feynrules_fixes.wl: single-term vertices next to Levi-Civita structures were dropped, and ScalarProduct^2 was not written) and prints whether each was applied; FeynRules on disk is not changed, and heft_export.json records the result. Like Cell 7 it needs only LHEFT from Cell 5, and the two are independent - run this one, Cell 7, or both.*)
+(*Writes output/FeynArts/<OutputName>/ (.mod, .gen, .pars, plus heft_export.json - the configuration it was made with, which merging exports in heft_merging/merge_exports.wl needs). Fermions are written in FeynRules' default form: index-free, or with explicit Dirac indices when the model has a four-fermion vertex; heft_export.json records which. Before exporting it corrects two bugs in FeynRules' FeynArts writer in memory (model_files/feynrules_fixes.wl: single-term vertices next to Levi-Civita structures were dropped, and ScalarProduct^2 was not written) and prints whether each was applied; FeynRules on disk is not changed, and heft_export.json records the result. Like Cell 7 it needs only LHEFT from Cell 5, and the two are independent - run this one, Cell 7, or both.*)
 
 
 HEFT$NotebookCell=8;
