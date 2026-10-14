@@ -645,20 +645,22 @@ value is kept and the cell says so.
 0 differing couplings, at first order in `WCOrder` and exactly. FeynArts' own `ZZ → hh` amplitude
 agrees too.
 
-**The bosonic operators, merged** (`TESTS/T37`, `T38`, `T39`, `HiggsMaxOrder = 3`,
-`MaxVertexLegs = 6`, `"heft"`, Delta framework): `output/FeynArts/HEFT_Bosonic_FA/` holds 43
-operators, the 42 bosonic ones except `PGGG` and `SGGG` plus the user W-Higgs operators `PWHD1`,
-`PWHD2`, `SWHD`. Each was exported on its own, 3.7 h in all (1.5 h of it `SWWW`), and they were
-merged in 2 s. A direct FeynArts export of the bosonic set has never finished. `PGGG`'s export
-did not finish in 8 h; `SGGG` and `SWHDT` were not included. Three subsets merged this way (one
-with the CP-odd `S1`, `S8`, `SB`, `SG`, one with the W-Higgs operators) equal their direct exports
-coupling for coupling. Rebuilt on 2026-10-06 after the fix of the quartic gauge vertices of `PW`
-and `P12` (`TESTS/T39`, `NOTES.md` §6).
+**The bosonic operators, merged** (2026-10-13, `TESTS/T47`; `HiggsMaxOrder = 3`, `MaxVertexLegs = 6`,
+`"heft"`, Delta framework): `output/FeynArts/HEFT_Bosonic_FA/` and `output/UFO/HEFT_Bosonic_UFO/` hold
+**47 operators**, the 42 bosonic ones except `PGGG` and `SGGG`, plus all seven user operators. Each was
+exported on its own, plus one SM-only export, from an unmodified FeynRules 2.3.49. Exports took
+2.5 h for FeynArts and 1.2 h for UFO; each merge took 2–3 s. The merged FeynArts model has 96 couplings
+in 24 generic classes, and the merged UFO model 332 vertices and 565 couplings. A subset of seven
+operators (`P1`, `PT`, `PW`, `SB`, `S2D`, `PWHD1`, `PGHD1`) merged this way equals its direct export in
+both formats, and every export kept every vertex FeynRules computed. A direct FeynArts export of the
+bosonic set has never finished. `PGGG` did not finish exporting in 8 h (2026-09-30), and `SGGG` has
+not been tried. Per-operator times are in [Performance](#performance).
 
 
 ## Merging UFO exports
 
-The UFO writer is the slowest step of the pipeline (about 10 h for the full bosonic model). Cells 5
+A direct UFO export of the full bosonic model took about 10 h; merging single-operator exports
+takes 1.2 h for 47 bosonic and user operators (see the paragraph above and [Performance](#performance)). Cells 5
 and 6 of [`heft_merging/merge_exports.wl`](heft_merging/merge_exports.wl) merge UFO exports already on
 disk, in the same way as its Cells 3 and 4 merge FeynArts exports: set the configuration in Cell 2,
 then
@@ -725,6 +727,30 @@ other options at their defaults, all cells in one kernel (Intel i7-9750H, 6 core
 
 Cells 6, 7 and 8 each read `LHEFT` independently, so an export costs only the cells you run:
 UFO alone is ~2 min here, FeynArts alone ~1 min. On a cache hit, Cell 5 takes a second or two.
+
+**One operator at a time** (2026-10-13, `TESTS/T47`, same machine): the export of every bosonic and
+user operator on its own, at `HiggsMaxOrder = 3`, `MaxVertexLegs = 6`, `"heft"`, Delta framework,
+one kernel per operator, Cell 6 not run. Wall-clock seconds; the UFO pass reused the cached
+Lagrangian (its Cell 5 is 1–4 s).
+
+| Operator | Cell 5 (build) | Cell 8 (FeynArts) | Cell 7 (UFO) |
+|---|---|---|---|
+| SM only | 8 | 9 | 35 |
+| typical (`PG`, `PT`, `P2`, `S1`, …; 37 of 47) | 6–15 | 9–34 | 24–73 |
+| `P1`, `P12`, `P14` | 12–24 | 19–28 | 69–73 |
+| `SW`, `PWHD1`, `SGHD` | 14–32 | 63–83 | 33–78 |
+| `SWHD` | 73 | 228 | 82 |
+| `SWHDT` | 123 | 849 | 124 |
+| `PWWW` | 227 | 426 | 458 |
+| `SWWW` | 725 | 4135 | 949 |
+
+All 48 exports took 2.5 h for FeynArts (1.4 h of it `SWWW`) and 1.2 h for UFO; each merge took 2–3 s.
+The cost depends on the operator, not on how many there are: in FeynArts, `SWWW` alone takes longer
+than the other 46 together.
+
+**Cell 6 can dominate a fermionic run.** It computes and lists every Feynman rule with FeynRules'
+`FeynmanRules`, which the exports do not need. For the four-fermion `RL2` in `"gf"` it ran for more
+than 38 min, while Cells 7 and 8 took 2 min (`TESTS/T46`). Skip it when you only need the exports.
 
 
 ## Repository layout
@@ -819,9 +845,10 @@ real.
 
 **One `LoadModel` per kernel.** See [Rules of the road](#rules-of-the-road).
 
-**`PGGG`, `SGGG` and `SWWW` are slow to export to FeynArts.** At `HiggsMaxOrder = 3` and
-`MaxVertexLegs = 6`, `SWWW` alone takes 2 h and `PGGG` did not finish in 8 h, in FeynRules'
-FeynArts writer.
+**A few operators are slow to export to FeynArts.** At `HiggsMaxOrder = 3` and `MaxVertexLegs = 6`,
+`SWWW` takes 12 min to build and 69 min in FeynRules' FeynArts writer (16 min for UFO), and `PGGG`
+did not finish in 8 h. `SGGG` has not been tried. Export them on their own and merge
+([Merging FeynArts exports](#merging-feynarts-exports)).
 
 **FeynArts merges with four-fermion operators need `FeynArtsDiracIndices = True` for every export**
 (the default fermion forms differ). Alternatively use the [cached-Lagrangian
