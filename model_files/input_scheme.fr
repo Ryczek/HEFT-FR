@@ -11,57 +11,15 @@ EWInputScheme::invalid =
   "Unknown EWInputScheme `1`. Supported: \"heft\", \"gf\". Using no EW input replacement.";
 
 (* ---------------------------------------------------------------------------
-   HARD GATE: the DERIVED schemes are NLO-only; "heft" carries no order restriction.
-
-   "gf" and "aem" invert a muon-decay / gauge-mixing extraction that was derived to first
-   order in ChiralOrder: every correction term below is linear in ChiralOrder and switched on
-   by HEFTMaxOrder >= 1.  At HEFTMaxOrder >= 2 the Lagrangian carries NNLO operators the
-   extraction knows nothing about, so the inputs would be silently NLO-accurate while
-   everything around them is not - no message, no failure, just wrong-at-NNLO numbers in the
-   parameter card and in the Lagrangian.  Refuse instead.  Extending the derivation to
-   O(ChiralOrder^2) is not implemented; if it ever is, lift the bound here.
-
-   "heft" is exempt by construction: EWinputrepl = {}, nothing is substituted and nothing can
-   be inconsistent, so it is the scheme to use at NNLO and beyond.
-
-   This is the MODEL-LEVEL gate, so it fires for any entry point that reaches LoadModel -
-   including headless scripts that Get HEFT_Model.fr directly and never touch heft_fr.wl.
-   heft_fr.wl's Cell 3 carries the same rule as an early, cheaper abort during configuration;
-   both must move together if the bound ever changes.
+   "gf" and "aem" invert a muon-decay / gauge-mixing extraction derived to first order in the
+   Wilson coefficients: every correction term below is linear in WCOrder and comes from P1,
+   P12, PT, RL2 or RL5 (all chiral order 0).  That is exactly the model's own precision - a
+   single EFT insertion per vertex, fixed since 2026-09-17 - so there is no order to check any
+   more.  The former gate (HEFTEWInputSchemeCheckOrder, refusing EFTMaxOrder / MaxEFTInsertions
+   above 1) went with the option.  Products of these shifts with any other coefficient are
+   WCOrder^2 and are cut by HEFTTruncateOrders (HEFT_Model.fr): that is a documented
+   limitation (README "Power counting and the single-insertion rule"), not an accident.
    --------------------------------------------------------------------------- *)
-
-HEFTEWInputScheme::maxorder =
-  "EWInputScheme \"`1`\" cannot be used with HEFTMaxOrder = `2`. The derived EW input schemes \
-(\"gf\", \"aem\") are valid to NLO only - every shift they apply is linear in ChiralOrder - so \
-at HEFTMaxOrder >= 2 the extracted inputs would be silently NLO-accurate while the Lagrangian \
-is not. Use EWInputScheme = \"heft\" (no order restriction) for NNLO and beyond, or set \
-HEFTMaxOrder = 1. Aborting.";
-
-(* True for the two schemes that actually invert a set of measurements. *)
-HEFTEWInputSchemeDerivedQ[s_] := MemberQ[{"gf", "aem"}, s];
-
-(* Max chiral order the derived schemes are valid to. Raise this - and the matching bound in
-   heft_fr.wl - only once the O(ChiralOrder^2) extraction exists. *)
-HEFTEWInputSchemeMaxOrder = 1;
-
-HEFTEWInputSchemeCheckOrder[] :=
-  Module[{ord},
-    ord = Which[
-      ValueQ[HEFTMaxOrder], HEFTMaxOrder,
-      ValueQ[Global`HEFTMaxOrder], Global`HEFTMaxOrder,
-      True, 1
-    ];
-    (* TrueQ, not a bare comparison: an unset or non-numeric HEFTMaxOrder would otherwise leave
-       ord > 1 unevaluated and the If would fall through silently. *)
-    If[HEFTEWInputSchemeDerivedQ[EWInputScheme] &&
-       NumericQ[ord] && TrueQ[ord > HEFTEWInputSchemeMaxOrder],
-      Message[HEFTEWInputScheme::maxorder, EWInputScheme, ord];
-      Abort[]
-    ];
-    True
-  ];
-
-HEFTEWInputSchemeCheckOrder[];
 
 (* Symbolic identity in generation space (applied to LHEFT before FeynmanRules). *)
 HEFTIdentityCKMRepl = {
@@ -69,84 +27,121 @@ HEFTIdentityCKMRepl = {
   Conjugate[CKM[ff1_, ff2_]] :> IndexDelta[ff1, ff2]
 };
 
+(* "heft": GW, G1 and vev are the inputs and the Lagrangian is left untouched (EWinputrepl =
+   {}), but MZ and MW are PREDICTIONS (Internal, fields.fr / parameters_SM.fr, 2026-09-23).
+   Their values are the Lagrangian's own mass terms, at first order in WCOrder:
+     MZ^2 = (GW^2+G1^2) vev^2/4 + WCOrder vev^2/2 (-CPTn0 (GW^2+G1^2) + 2 CP12n0 GW^2
+                                                    - 2 CP1n0 G1 GW),
+   (CPTn0 enters with a minus since LPT has the paper's sign, 2026-09-24.)
+     MW^2 = GW^2 vev^2/4   (no operator contributes).
+   These are two-field terms, which FeynRules never turns into vertices
+   (Core/VertexRoutine.m:630): before this, the declared MZ/MW were independent externals and
+   the P1/P12/PT shifts of the Z mass never reached the propagator.  PT only rescales the
+   existing Z mass direction (gw W3 - g1 B), so it changes nothing in gauge_normalization.fr.
+   The rules go into M$Parameters only (HEFTHeftMassRepl, applied below), NOT into
+   EWinputrepl: the Lagrangian contains neither MZ nor MW, and "heft" leaves it alone. *)
+HEFTHeftMassRules[] :=
+  Module[{c1, c12, cT},
+    c1  = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],  CP1n0,  0];
+    c12 = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"], CP12n0, 0];
+    cT  = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["PT"],  CPTn0,  0];
+    {
+      MZ -> vev/2*Sqrt[GW^2 + G1^2]*
+              (1 + WCOrder*(-cT + 2*(c12*GW^2 - c1*G1*GW)/(GW^2 + G1^2))),
+      MW -> GW*vev/2
+    }
+  ];
+HEFTHeftMassRepl = {};
+
 Switch[EWInputScheme,
   "heft",
-  EWinputrepl = {},
+  EWinputrepl = {};
+  HEFTHeftMassRepl = HEFTHeftMassRules[],
   "gf",
-  (* HEFTMaxOrder == 0: plain SM tree-level relations.
-     HEFTMaxOrder >= 1: NLO shift from the muon-decay extraction of Gf, via
-     the RL2NLO/RL5NLO 4-lepton contact operators (e-mu charged current,
-     flavor slice [1,2,2,1]) and the P1NLO/P12NLO gauge-mixing operators;
-     kept proportional to ChiralOrder for power counting, matching the NLO
-     Lagrangian convention.
+  (* Tree-level relations plus the linear (single-insertion) shift from the muon-decay
+     extraction of Gf, via
+     the RL2/RL5 4-lepton contact operators (e-mu charged current,
+     flavor slice [1,2,2,1]) and the P1/P12/PT gauge-mixing operators;
+     each term carries exactly the bookkeeping factors its operator carries in
+     the Lagrangian - WCOrder, all five having chiral order 0 - so HEFTTruncateOrders
+     re-truncates them.
 
      Each NLO coefficient is gated on its operator being in the configured
-     active piece list (HEFTActiveNLOPieces), mirroring the Gnormaux/
-     Wnormaux/... pattern in gauge_normalization.fr: an operator that was
+     active piece list (HEFTActiveEFTPieces), mirroring the
+     P12norm/eps pattern in gauge_normalization.fr: an operator that was
      not selected contributes 0 here, exactly as it contributes nothing to
-     LNLO/LNLO4Ferm. CFTn0 is a LO Higgs-form-factor coefficient (always
-     defined, not part of the NLO operator catalogue), so it is used
-     unconditionally. *)
-  (* CL2NLOn0 / CL5NLOn0 (not the old CL2NLOn0RE / CL5NLOn0RE): since 2026-08-06 every
+     LEFTBosonic/LEFT4F. CPTn0 is PT's (formerly CFTn0, switched by IncludeCustodialT).
+     Every CPTn0 term here (and in "aem" and the "heft" MZ rule) changed sign on 2026-09-24, when
+     LPT took the paper's sign: the relations are linear in CPTn0 and were extracted from LPT. *)
+  (* CRL2n0 / CRL5n0 (earlier CL2NLOn0 / CL5NLOn0, and before 2026-08-06 CL2NLOn0RE / CL5NLOn0RE): every
      fermionic Wilson coefficient is a real flavour tensor named C<op>n<n>, living in the
      flare function.  The n = 0 entry is the one the muon-decay extraction needs. *)
-  HEFTGfCL2aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["RL2NLO"],
-    CL2NLOn0[1, 2, 2, 1], 0];
-  HEFTGfCL5aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["RL5NLO"],
-    CL5NLOn0[1, 2, 2, 1], 0];
-  HEFTGfCP1aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["P1NLO"],
-    CP1NLOn0, 0];
-  HEFTGfCP12aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["P12NLO"],
-    CP12NLOn0, 0];
-  HEFTGfCPTaux = If[IncludeCustodialT==True, CFTn0, 0];
+  (* Muon decay, re-derived 2026-10-08 (TESTS/T43) after RL2/RL5 got their SU(2) contraction and
+     + h.c.: the contact term is L > K (ebar g^mu P_L mu)(vmbar g_mu P_L ve) with
+       K = 2 WCOrder (4 Pi)^2/LamHEFT^2 [(C2_1221 + C2_2112) - (C5_1221 + C5_2112)]
+     (RL5 with the opposite sign: T = sigma3 gives -1 on a charged-lepton x neutrino current), and
+     4 Gf/Sqrt[2] = 2/vev^2 - K.  So the aux below are the half-sums over the two flavour orderings,
+     and every CL term enters with the sign of (CL5aux - CL2aux) in vev.  Before, the aux was the
+     [1,2,2,1] entry alone and every CL term had the opposite sign (closure residual
+     -128 Pi^2 WCOrder (C2 - C5)/LamHEFT^2 for symmetric tensors). *)
+  HEFTGfCL2aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL2"],
+    (CRL2n0[1, 2, 2, 1] + CRL2n0[2, 1, 1, 2])/2, 0];
+  HEFTGfCL5aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL5"],
+    (CRL5n0[1, 2, 2, 1] + CRL5n0[2, 1, 1, 2])/2, 0];
+  HEFTGfCP1aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],
+    CP1n0, 0];
+  HEFTGfCP12aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"],
+    CP12n0, 0];
+  HEFTGfCPTaux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["PT"],
+    CPTn0, 0];
 
   (* The muon-decay extraction is a linear system in the two unknowns GW and G1, so the
      solution is linear in the four NLO coefficients.  The two combinations that appear
      are S0 = GW^2 + G1^2 and D0 = GW^2 - G1^2, which are declared Internal parameters in
-     LO/parameters_LO.fr. *)
+     parameters/parameters_SM.fr. *)
 
-  EWinputrepl = If[HEFTMaxOrder == 0,
-    {
-      vev -> 1/2^(1/4)/Sqrt[Gf],
-      GW -> 2^(5/4)*Sqrt[Gf]*MW,
-      G1 -> 2^(5/4)*Sqrt[Gf]*Sqrt[MZ^2 - MW^2],
-      GS -> Sqrt[4 Pi aS],
-      hlambda -> Gf*MH^2/Sqrt[2]
-    },
-    {
+  EWinputrepl = {
       vev -> 1/(2^(1/4)*Sqrt[Gf]) +
-        8*2^(1/4)*ChiralOrder*Pi^2*
-          (HEFTGfCL2aux - HEFTGfCL5aux)/(Gf^(3/2)*LamHEFT^2),
+        8*2^(1/4)*WCOrder*Pi^2*
+          (HEFTGfCL5aux - HEFTGfCL2aux)/(Gf^(3/2)*LamHEFT^2),
       GW -> 2^(5/4)*Sqrt[Gf]*MW +
-        16*2^(3/4)*ChiralOrder*MW*Pi^2*
-          (HEFTGfCL5aux - HEFTGfCL2aux)/(Sqrt[Gf]*LamHEFT^2),
+        16*2^(3/4)*WCOrder*MW*Pi^2*
+          (HEFTGfCL2aux - HEFTGfCL5aux)/(Sqrt[Gf]*LamHEFT^2),
       G1 -> 2^(5/4)*Sqrt[Gf]*Sqrt[MZ^2 - MW^2]
-          - 4*2^(1/4)*HEFTGfCP12aux*ChiralOrder*Sqrt[Gf]*MW^2/Sqrt[MZ^2 - MW^2]
-          - 2^(5/4)*HEFTGfCPTaux*ChiralOrder*Sqrt[Gf]*MZ^2/Sqrt[MZ^2 - MW^2]
-          + 4*2^(1/4)*HEFTGfCP1aux*ChiralOrder*Sqrt[Gf]*MW
-          + 16*2^(3/4)*ChiralOrder*Pi^2*
-            (HEFTGfCL5aux - HEFTGfCL2aux)*Sqrt[MZ^2 - MW^2]/(Sqrt[Gf]*LamHEFT^2),
+          - 4*2^(1/4)*HEFTGfCP12aux*WCOrder*Sqrt[Gf]*MW^2/Sqrt[MZ^2 - MW^2]
+          + 2^(5/4)*HEFTGfCPTaux*WCOrder*Sqrt[Gf]*MZ^2/Sqrt[MZ^2 - MW^2]
+          + 4*2^(1/4)*HEFTGfCP1aux*WCOrder*Sqrt[Gf]*MW
+          + 16*2^(3/4)*WCOrder*Pi^2*
+            (HEFTGfCL2aux - HEFTGfCL5aux)*Sqrt[MZ^2 - MW^2]/(Sqrt[Gf]*LamHEFT^2),
       GS -> Sqrt[4 Pi aS],
       hlambda -> Gf*MH^2/Sqrt[2] +
-        16*ChiralOrder*MH^2*Pi^2*
-          (HEFTGfCL5aux - HEFTGfCL2aux)/LamHEFT^2
-    }
-  ],
+        16*WCOrder*MH^2*Pi^2*
+          (HEFTGfCL2aux - HEFTGfCL5aux)/LamHEFT^2
+    },
   "aem",
-  HEFTaemCL2aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["RL2NLO"],
-    CL2NLOn0[1, 2, 2, 1], 0];
-  HEFTaemCL5aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["RL5NLO"],
-    CL5NLOn0[1, 2, 2, 1], 0];
-  HEFTaemCP1aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["P1NLO"],
-    CP1NLOn0, 0];
-  HEFTaemCP12aux = If[ValueQ[HEFTActiveNLOPieces] && HEFTPieceActiveQ["P12NLO"],
-    CP12NLOn0, 0];
-  HEFTaemCPTaux = If[IncludeCustodialT==True, CFTn0, 0];
+  (* Muon decay, re-derived 2026-10-08 (TESTS/T43) after RL2/RL5 got their SU(2) contraction and
+     + h.c.: the contact term is L > K (ebar g^mu P_L mu)(vmbar g_mu P_L ve) with
+       K = 2 WCOrder (4 Pi)^2/LamHEFT^2 [(C2_1221 + C2_2112) - (C5_1221 + C5_2112)]
+     (RL5 with the opposite sign: T = sigma3 gives -1 on a charged-lepton x neutrino current), and
+     4 Gf/Sqrt[2] = 2/vev^2 - K.  So the aux below (as in "gf") are the half-sums over the two flavour orderings,
+     and every CL term enters with the sign of (CL5aux - CL2aux) in vev.  Before, the aux was the
+     [1,2,2,1] entry alone and every CL term had the opposite sign (closure residual
+     -128 Pi^2 WCOrder (C2 - C5)/LamHEFT^2 for symmetric tensors). *)
+  HEFTaemCL2aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL2"],
+    (CRL2n0[1, 2, 2, 1] + CRL2n0[2, 1, 1, 2])/2, 0];
+  HEFTaemCL5aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["RL5"],
+    (CRL5n0[1, 2, 2, 1] + CRL5n0[2, 1, 1, 2])/2, 0];
+  HEFTaemCP1aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P1"],
+    CP1n0, 0];
+  HEFTaemCP12aux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["P12"],
+    CP12n0, 0];
+  HEFTaemCPTaux = If[ValueQ[HEFTActiveEFTPieces] && HEFTPieceActiveQ["PT"],
+    CPTn0, 0];
 
 
   (* Inputs: alpha_EM (as aEWM = alpha_EM itself), Gf, MZ, MH (+ aS).
      MW is NOT an input here - it is a PREDICTION, MW = GW vev/2, declared Internal in
-     LO/parameters_LO.fr and Mass -> {MW, Internal} in fields_LO.fr, exactly the way
+     parameters/parameters_SM.fr and Mass -> {MW, Internal} in fields.fr, exactly the way
      FeynRules' own SM.fr does it in its alpha-scheme.
 
      vev and hlambda come from Gf and MH exactly as in "gf" above - the muon-decay
@@ -175,76 +170,69 @@ Switch[EWInputScheme,
      self-contained, and it is deliberate.
 
      COST, measured and known: inlining the nested radical puts it at every occurrence of GW
-     and G1 in the Lagrangian, where it must then survive HEFTTruncateChiralOrder's Series
+     and G1 in the Lagrangian, where it must then survive HEFTTruncateOrders's Series
      expansion.  The declared-symbol version was measured at LeafCount 35963 / 129 s against
      171861 / 736 s for the inlined one, same configuration.  This file now takes the second
-     option by choice. *)
-  EWinputrepl = If[HEFTMaxOrder == 0,
-    {
-      vev -> 1/2^(1/4)/Sqrt[Gf],
-      GW -> 2^(3/4)*Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]],
-      G1 -> 2^(3/4)*Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]],
-      MW -> Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)],
-      GS -> Sqrt[4 Pi aS],
-      hlambda -> Gf*MH^2/Sqrt[2]
-    },
-    {
+     option by choice; see TESTS.md T15 for the current number. *)
+  EWinputrepl = {
       vev -> 1/(2^(1/4)*Sqrt[Gf])
-        + 8*2^(1/4)*ChiralOrder*Pi^2*
-            (HEFTaemCL2aux - HEFTaemCL5aux)/(Gf^(3/2)*LamHEFT^2),
+        + 8*2^(1/4)*WCOrder*Pi^2*
+            (HEFTaemCL5aux - HEFTaemCL2aux)/(Gf^(3/2)*LamHEFT^2),
 
       GW -> 2^(3/4)*Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]
-        - HEFTaemCPTaux*ChiralOrder*
+        + HEFTaemCPTaux*WCOrder*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 + Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/2^(1/4)
-        - 2^(7/4)*HEFTaemCP12aux*ChiralOrder*
+        - 2^(7/4)*HEFTaemCP12aux*WCOrder*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]
-        + 2^(7/4)*HEFTaemCP1aux*ChiralOrder*
+        + 2^(7/4)*HEFTaemCP1aux*WCOrder*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        - 4*2^(5/4)*ChiralOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 + Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
       
       G1 -> 2^(3/4)*Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]
-        - HEFTaemCPTaux*ChiralOrder*
+        + HEFTaemCPTaux*WCOrder*
             Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 - Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/2^(1/4)
-        - 2^(7/4)*HEFTaemCP1aux*ChiralOrder*
+        - 2^(7/4)*HEFTaemCP1aux*WCOrder*
             Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        - 4*2^(5/4)*ChiralOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        - 4*2^(5/4)*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[Gf*MZ^2 - MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]]*
             (1 - Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
       MW -> Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]
-        - HEFTaemCPTaux*ChiralOrder*
+        + HEFTaemCPTaux*WCOrder*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]*
             (1 + Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/2
-        - 2*HEFTaemCP12aux*ChiralOrder*
+        - 2*HEFTaemCP12aux*WCOrder*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]
-        + 2*HEFTaemCP1aux*ChiralOrder*
+        + 2*HEFTaemCP1aux*WCOrder*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]*
             Sqrt[Pi*aEWM*Gf/Sqrt[2]]/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi]
-        + 4*Sqrt[2]*ChiralOrder*Pi^2*(HEFTaemCL2aux - HEFTaemCL5aux)*
+        + 4*Sqrt[2]*WCOrder*Pi^2*(HEFTaemCL5aux - HEFTaemCL2aux)*
             Sqrt[(Gf*MZ^2 + MZ*Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(2*Gf)]*
             (1 - Gf*MZ/Sqrt[Gf^2*MZ^2 - 2*Sqrt[2]*aEWM*Gf*Pi])/(Gf*LamHEFT^2),
             
       GS -> Sqrt[4 Pi aS],
       hlambda -> Gf*MH^2/Sqrt[2] +
-        16*ChiralOrder*MH^2*Pi^2*
-          (HEFTaemCL5aux - HEFTaemCL2aux)/LamHEFT^2
-    }
-  ],
+        16*WCOrder*MH^2*Pi^2*
+          (HEFTaemCL2aux - HEFTaemCL5aux)/LamHEFT^2
+    },
 
   _,
-  (Message[EWInputScheme::invalid, EWInputScheme]; EWinputrepl = {})
+  (* Falls back to "heft", as fields.fr and parameters_SM.fr do - so MZ/MW are Internal here
+     too and need their values. *)
+  (Message[EWInputScheme::invalid, EWInputScheme]; EWinputrepl = {};
+   HEFTHeftMassRepl = HEFTHeftMassRules[])
 ];
 
 (* ---------------------------------------------------------------------------
    SINGLE SOURCE for the derived EW parameters: EWinputrepl is written into M$Parameters.
 
    The rules above are applied to the LAGRANGIAN (HEFT_Model.fr, end of LHEFTMassBasis).
-   M$Parameters is a separate object that substitution never touches, so LO/parameters_LO.fr
+   M$Parameters is a separate object that substitution never touches, so parameters/parameters_SM.fr
    had to restate the same relations as Value -> ... for the parameter card: two encodings of
    one physics relation, free to drift apart.  They did - the "gf" G1 coefficients were wrong
    for two days (README SS "Input scheme (EW)", fixed 2026-08-12).
@@ -253,38 +241,40 @@ Switch[EWInputScheme,
    Value carries only the TREE-LEVEL relation, and it is what FeynRules resolves through
    MR$Definitions at vertex extraction - which runs AFTER LHEFTMassBasis, so every Definition
    mentioning one of these symbols escaped the input scheme completely.  The Yukawas are
-   exactly that: yu/yd/yl and yuH/ydH/ylH are all Sqrt[2] M<f>/vev (parameters_LO.fr), keyed on
+   exactly that: yu/yd/yl and yuH/ydH/ylH are all Sqrt[2] M<f>/vev (parameters_SM.fr), keyed on
    NUMERIC generation indices, so they cannot fire during the
    ExpandIndices[..., FlavorExpand -> {SU2W, SU2D}] inside HEFTLHEFTMassBasisRaw (Generation is
    never expanded) and resolve only at export.  LYukawa is
    -vev/Sqrt[2] (yu + yuH H/vev + ...): the prefactor vev IS replaced by the scheme, the vev
    inside yu is NOT, so the two stopped cancelling and the fermion mass term came out as
-   -M<f> (1 + ChiralOrder dvev) against a propagator mass of M<f> - the same class of bug as
+   -M<f> (1 + WCOrder dvev) against a propagator mass of M<f> - the same class of bug as
    the Kappa/mass one fixed 2026-08-06.  Latent rather than visible: dvev is non-zero only with
-   RL2NLO or RL5NLO active, they being the sole source of the vev shift in both schemes.
+   RL2 or RL5 active, they being the sole source of the vev shift in both schemes.
+   (Since 2026-10-12 the Yukawa Definitions carry no vev at all - LYukawa divides by vev
+   explicitly, so the substitution and the one-insertion cut act on it; NOTES.md SS10.7.  The
+   patch below still sets every declared value and the parameter card.)
 
    Patching M$Parameters from EWinputrepl fixes both at once - the parameter card, the
    Lagrangian-level replacement, and everything MR$Definitions resolves later are one
    expression by construction.
 
-   This has to happen HERE.  parameters_LO.fr is loaded before parameters_NLO.fr, so the Wilson
+   This has to happen HERE.  parameters_SM.fr is loaded before parameters_EFT.fr, so the Wilson
    coefficients the NLO shift needs do not exist yet there; this file is loaded last
    (HEFT_Model.fr) but still while the model files are being READ, i.e. before FeynRules
-   processes M$Parameters.  At HEFTMaxOrder == 0 the rules are the tree-level ones, so the
-   patch is then a no-op in content.
+   processes M$Parameters.
 
    Two consequences - true of "aem"'s MW since 2026-08-12, now true of the whole set:
      - the exported values depend on the Wilson coefficients, so at their default of 1 they
        carry an unsuppressed O(1) NLO shift (that is what an O(1) coefficient means, not a bug);
-     - with RL2NLO/RL5NLO active the shift carries CL2NLOn0[1,2,2,1] / CL5NLOn0[1,2,2,1], i.e.
+     - with RL2/RL5 active the shift carries CRL2n0[1,2,2,1] / CRL5n0[1,2,2,1], i.e.
        INDEXED external parameters inside an Internal value, which runs into the open
-       indexed-parameter WriteUFO bug (see README, "Known limitations").  With those two
-       inactive - the usual
+       indexed-parameter WriteUFO bug (TODO.md, HIGH).  With those two inactive - the usual
        case - only scalar parameters appear and the export is clean.
 
-   LO/parameters_LO.fr keeps the DECLARATION (ParameterType, InteractionOrder, TeX,
+   parameters/parameters_SM.fr keeps the DECLARATION (ParameterType, InteractionOrder, TeX,
    Description) and a tree-level Value.  For "gf"/"aem" that Value is superseded here; for
-   "heft" EWinputrepl is empty, nothing is patched, and the five stay External as declared.
+   "heft" EWinputrepl is empty and the five stay External as declared; only MZ and MW are
+   patched there, from HEFTHeftMassRepl (see the Switch above).
    --------------------------------------------------------------------------- *)
 
 HEFTEWInputPatch::missing =
@@ -292,7 +282,7 @@ HEFTEWInputPatch::missing =
 for it - its exported value is therefore NOT the one the Lagrangian uses.";
 
 (* Set Value -> ... in sym's M$Parameters entry, inserting it if the declaration has none.
-   For "gf"/"aem" the declarations in LO/parameters_LO.fr deliberately carry NO Value - the
+   For "gf"/"aem" the declarations in parameters/parameters_SM.fr deliberately carry NO Value - the
    scheme is the only place a value comes from - so insertion is the normal path there, not a
    fallback.  Returns True if an entry was found, so a rule that patches nothing is reported
    rather than lost. *)
@@ -319,14 +309,15 @@ HEFTApplyEWInputToParameters[repl_List] :=
   ];
 
 If[EWinputrepl =!= {}, HEFTApplyEWInputToParameters[EWinputrepl]];
+If[HEFTHeftMassRepl =!= {}, HEFTApplyEWInputToParameters[HEFTHeftMassRepl]];
 
 (* Nothing may be left un-valued.  Since the derived parameters are declared without a Value,
    a rule that failed to land would otherwise ship an Internal parameter FeynRules cannot
    evaluate - so fail here, loudly, instead of downstream.  Internal parameters that carry
-   Definitions instead of a Value (Wnorm, gw, g1, gs, muH, ...) are legitimate and skipped. *)
+   Definitions instead of a Value (AZnorm, gw, g1, gs, muH, ...) are legitimate and skipped. *)
 HEFTEWInputPatch::novalue =
   "EWInputScheme \"`1`\": Internal parameter(s) `2` have neither Value nor Definitions after \
-the input-scheme patch. LO/parameters_LO.fr declares the derived parameters without a Value \
+the input-scheme patch. parameters/parameters_SM.fr declares the derived parameters without a Value \
 on purpose; every one of them must be covered by a rule in EWinputrepl.";
 
 Module[{unvalued},

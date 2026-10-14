@@ -14,7 +14,7 @@
    TeXForm renders the literal "$" unescaped, which breaks compilation of that formula. *)
 
 (* Display name for every physical field this model can ever produce as an external leg -
-   fixed by fields_LO.fr's ClassMembers (A, Z, W/Wbar, G, H, and the three-generation
+   fixed by fields.fr's ClassMembers (A, Z, W/Wbar, G, H, and the three-generation
    lepton/quark classes), not run-dependent. Anything not in this table (should not happen
    in unitary gauge - no ghosts/Goldstones reach FeynmanRules) falls back to its raw symbol
    name rather than failing. *)
@@ -65,7 +65,7 @@ HEFT$LatexParticleFullName = <|
   vt -> "tau neutrino", vtbar -> "tau antineutrino"
 |>;
 
-(* Every index type the model declares (fields_LO.fr's IndexStyle lines, plus FeynRules'
+(* Every index type the model declares (fields.fr's IndexStyle lines, plus FeynRules'
    builtin Lorentz/Spin) - a run only ever uses a subset; which ones is read off the actual
    vertices at export time, not hardcoded per run. *)
 HEFT$LatexIndexInfo = <|

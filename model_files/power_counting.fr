@@ -1,31 +1,43 @@
 (* Power-counting parameters for HEFT (Brivio et al. 1604.06801).
-   Max-expansion integers, set in the notebook Configuration and passed on by heft_fr.wl:
-     HEFTMaxOrder       — chiral catalogue layer (ChiralOrder^n truncation)
+   Expansion controls, set in the notebook Configuration and passed on by heft_fr.wl:
+     (ChiralOrder is a label only - nothing is cut on it; WCOrder is always cut at WCOrder^1,
+      one Wilson-coefficient insertion per vertex.  Neither is an option since 2026-09-17.)
      HiggsMaxOrder      — H/vev truncation for F-functions (internal NEFT)
-   GoldstoneMaxOrder (the LamGold / U-matrix series order) is no longer among them: it is
-   fixed at 1 in HEFT_Model.fr and only the unimplemented Rxi branch reads it.
-   LamHEFT (Λ) is declared in LO/parameters_LO.fr. *)
+   LamHEFT (Λ) is declared in parameters/parameters_SM.fr.
+   LamGold (the Goldstone-matrix expansion parameter) was removed 2026-09-18 with the Rxi gauge
+   branch: the model is unitary gauge only and there are no Goldstones to expand. *)
 
 powerCountingParams = {
+  (* ChiralOrder^n on every EFT term, n counted from its W/V/d/D content: 2 -> n = 0, 3 -> 1,
+     4 -> 2 (e.g. PG, PW, P1, PT: 0; P2, S2, PWWW, PGGG: 1; PDH, P6: 2).  SM terms carry none. *)
   ChiralOrder == {
     ParameterType    -> External,
     BlockName        -> HEFT,
     Value            -> 1,
-    InteractionOrder -> {ExpansionChiral, 1},
-    Description      -> "Chiral-dimension bookkeeper N_chi (LO=0, NLO=1, NNLO=2, ...)"
+    InteractionOrder -> {ChiralOrder, 1},
+    Description      -> "Chiral-order bookkeeper: ChiralOrder^n, n from the W/V/d/D count of the operator"
   },
-  LamF == {
+  (* WCOrder counts Wilson-coefficient insertions and flags EVERY EFT parameter: each EFT
+     operator carries exactly one power, and so do
+     the Delta-framework deviations and the F-function (h/v tower) coefficients of the SM-like
+     sector.  Kappa-framework rescalings multiply SM couplings and are deliberately not flagged.
+     "Leading order" is ChiralOrder^0 and nothing else: P1, P12, PT, ... are chiral order 0 and
+     still carry one WCOrder each, because WCOrder counts coefficient insertions, not orders. *)
+  WCOrder == {
     ParameterType    -> External,
-    BlockName        -> HEFTEXP,
+    BlockName        -> HEFT,
+    Value            -> 1,
+    InteractionOrder -> {WCOrder, 1},
+    Description      -> "Wilson-coefficient order: one power per Wilson-coefficient insertion"
+  },
+  (* Internal, fixed to 1 (2026-10-13, plan 1.6): powercountingreplacements sets LamF -> 1 before any
+     vertex is computed, so as an External in its own block HEFTEXP it was an input in every
+     parameter card that changed nothing. *)
+  LamF == {
+    ParameterType    -> Internal,
     Value            -> 1,
     InteractionOrder -> {ExpansionF, 1},
     Description      -> "H/v form-factor expansion counting parameter (LamF)"
-  },
-  LamGold == {
-    ParameterType    -> External,
-    BlockName        -> HEFTGold,
-    Value            -> 1,
-    Description      -> "Goldstone matrix expansion counting parameter (LamGold)"
   }
 };
 
@@ -35,4 +47,4 @@ If[ValueQ[M$Parameters],
   M$Parameters = powerCountingParams
 ];
 
-powercountingreplacements = {LamF -> 1, LamGold -> 1};
+powercountingreplacements = {LamF -> 1};

@@ -1,15 +1,15 @@
 (* ::Package:: *)
 
-(* Guard: this file is only ever meant to be Get-ed from heft_fr_merge_models.wl, which sets
-   HEFT$FromMergeNotebook = True in its Cell 3. Evaluating it standalone would run with no
-   configuration at all, so quit instead. *)
+(* Guard: this file is only ever meant to be Get-ed from heft_merging/merge_cached_models.wl, which
+   sets HEFT$FromMergeNotebook = True. Evaluating it standalone would run with no configuration at
+   all, so quit instead. *)
 If[!TrueQ[HEFT$FromMergeNotebook], Quit[]]
 
-(* HEFT model-merging engine, driven by heft_fr_merge_models.wl.  Mirrors heft_fr.wl cell for
-   cell, so the two notebooks read the same way:
+(* HEFT model merging of CACHED LAGRANGIANS, driven by heft_merging/merge_cached_models.wl.  Mirrors
+   heft_fr.wl cell for cell, so the two notebooks read the same way:
 
    CELL 1  Reference - what merging does, when it is exact, and the rules it enforces
-   CELL 2  Configuration (notebook only, no code here) - everything EXCEPT NLOOperators,
+   CELL 2  Configuration (notebook only, no code here) - everything EXCEPT EFTOperators,
            which is not chosen but derived from the sub-models you merge
    CELL 3  Echo the configuration and print every cached model that matches it
    CELL 4  Pick the sub-models by name (MergeSources), write the WCxf files for their union
@@ -19,49 +19,18 @@ If[!TrueQ[HEFT$FromMergeNotebook], Quit[]]
    OutputName and HEFT$WorkspaceRoot, so the notebook Get's model_files/heft_fr.wl for them -
    literally the same three cells the ordinary notebook runs, not a copy of them.
 
-   The merge itself lives in model_files/lheft_merge.wl. *)
+   Merging FeynArts and UFO EXPORTS is the other notebook, heft_merging/merge_exports.wl, driven by
+   heft_fr_merge_exports.wl (until 2026-10-13 they were Cells 9-12 of one merge notebook).
+   The Lagrangian merge lives in model_files/lheft_merge.wl; the helpers shared by both engines in
+   model_files/heft_merge_common.wl. *)
 
 HEFT$MergeShouldRunCell[heftN_Integer] :=
   !ValueQ[HEFT$MergeCell] || HEFT$MergeCell === heftN;
 
-(* Bootstrap shared by cells 3, 4 and 5; idempotent, so a cell run out of order still works
-   as long as Cell 2 (Configuration) has been evaluated in this kernel. *)
-HEFT$MergeBootstrap[] := Module[{},
-  If[!ValueQ[HEFT$WorkspaceRoot],
-    HEFT$WorkspaceRoot = DirectoryName @ DirectoryName @ ExpandFileName @ $InputFileName
-  ];
-  Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_defaults.wl"}];
-  HEFT$ApplyConfigDefaults[];
-  HEFT$ModelFile       = FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "HEFT_Model.fr"}];
-  HEFT$RestrictionsDir = FileNameJoin[{HEFT$WorkspaceRoot, "restrictions"}];
-  Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "lheft_cache.wl"}];
-  Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "lheft_merge.wl"}];
-  HEFTMergeCheckKeys[];
+If[!ValueQ[HEFT$WorkspaceRoot],
+  HEFT$WorkspaceRoot = DirectoryName @ DirectoryName @ ExpandFileName @ $InputFileName
 ];
-
-HEFT$MergeEnsureFeynRules[] := Module[{},
-  If[!StringQ[$FeynRulesPath] || !DirectoryQ[$FeynRulesPath],
-    Print[Style["[HEFT merge] ERROR: FeynRules path not found: " <> ToString[$FeynRulesPath],
-      Red, Bold]];
-    Abort[]
-  ];
-  If[!MemberQ[$Packages, "FeynRules`"],
-    Get[FileNameJoin[{$FeynRulesPath, "FeynRules.m"}]]
-  ]
-];
-
-HEFT$MergePrintBanner[title_String] := Print[
-  Style["\n" <> StringRepeat["=", 72] <> "\n  " <> title <> "\n" <> StringRepeat["=", 72],
-    Bold, FontSize -> 14]
-];
-
-HEFT$MergePrintSubsection[title_String] := Print[
-  Style["\n  " <> title, Bold, FontSize -> 14]
-];
-
-HEFT$MergePrintKV[label_String, heftValue_] := Print[
-  "    ", Style[StringPadRight[label <> ":", 22], Bold], ToString[heftValue, InputForm]
-];
+Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_merge_common.wl"}];
 
 
 (* =============================================================================
@@ -81,7 +50,7 @@ HEFT$PrintAbout[];
 HEFT$MergePrintSubsection["What this notebook does"];
 Print["    Builds one large model out of several small cached ones, without re-running the"];
 Print["    expensive mass-basis pass. ExpandIndices is linear in the Lagrangian, so"];
-Print[Style["\n        LHEFT(A u B) = LHEFT(LO) + (LHEFT(A) - LHEFT(LO)) + (LHEFT(B) - LHEFT(LO))\n",
+Print[Style["\n        LHEFT(A u B) = LHEFT(SM) + (LHEFT(A) - LHEFT(SM)) + (LHEFT(B) - LHEFT(SM))\n",
   FontFamily -> "Monospace"]];
 Print["    and every LHEFT(x) is already on disk in HEFT_cache/ from an earlier run of"];
 Print["    heft_fr_notebook.wl. Only Feynman rules and the export are recomputed."];
@@ -96,6 +65,10 @@ Print["    4.  Cell 5  - merges, and leaves the result in LHEFT (also cached, so
 Print["                  notebook finds it later as a normal cache hit)."];
 Print["    5.  Cells 6/7/8 - Feynman rules, UFO, FeynArts. The very same cells as in"];
 Print["                  heft_fr_notebook.wl."];
+Print[""];
+Print["    To merge FeynArts or UFO EXPORTS instead (one step later in the pipeline, so the"];
+Print["    expensive export is also paid only for the small models), use the other notebook,"];
+Print["    heft_merging/merge_exports.wl."];
 
 HEFT$MergePrintSubsection["What has to agree, and what is refused"];
 Print["    Two cached models may be merged only if EVERY hashed configuration option agrees;"];
@@ -105,19 +78,14 @@ Print["    before and after an edit to any model file are never merged together.
 Print[""];
 Print["    Checked, and refused rather than warned about:"];
 Print["      \[Bullet] any hashed option differing between two sub-models;"];
-Print[Style["      \[Bullet] HEFTMaxOrder > 1", Bold],
-  " - merging is exact only at linear order in ChiralOrder."];
-Print["        Above it the gauge normalisations (eps is a product, the kinetic diagonal is"];
-Print["        Wnorm^2 P12norm^2) and the EW input scheme mix operators non-linearly, so a"];
-Print["        build with one operator has different physical fields than one with two;"];
-Print["      \[Bullet] a missing LO baseline - a cached build with NLOOperators = {}. Every"];
-Print["        sub-model carries the whole LO Lagrangian, so without subtracting it N"];
-Print["        sub-models give N x LO and every SM vertex is scaled by N;"];
+Print["      \[Bullet] a missing SM baseline - a cached build with EFTOperators = {}. Every"];
+Print["        sub-model carries the whole SM Lagrangian, so without subtracting it N"];
+Print["        sub-models give N x SM and every SM vertex is scaled by N;"];
 Print["      \[Bullet] an operator appearing in two selected sub-models (it would be added twice);"];
 Print["      \[Bullet] the same cache entry listed twice in MergeSources."];
 
 HEFT$MergePrintSubsection["Configuration options"];
-Print[Style["    The same options as heft_fr_notebook.wl, minus NLOOperators. Their full"]];
+Print[Style["    The same options as heft_fr_notebook.wl, minus EFTOperators. Their full"]];
 Print[Style["    reference table is printed by Cell 1 of that notebook.", Gray]];
 
 Print[Style["\n[HEFT merge] Cell 1 done. Next: Cell 2 (Configuration).", Bold]];
@@ -145,15 +113,13 @@ HEFT$MergePrintBanner["HEFT FeynRules \[LongDash] model merging"];
 
 HEFT$MergePrintSubsection["Active configuration"];
 Print[Style["    " <> StringRepeat["-", 68], Darker[Gray]]];
-HEFT$MergePrintKV["Gauge", HEFTGauge];
-HEFT$MergePrintKV["NLO basis", HEFTNLOBasis];
-HEFT$MergePrintKV["HEFTMaxOrder", HEFTMaxOrder];
+HEFT$MergePrintKV["Gauge", "unitary (fixed)"];
+HEFT$MergePrintKV["Operator basis", "1604.06801 (fixed)"];
+HEFT$MergePrintKV["Chiral order", "label only (no cut)"];
+HEFT$MergePrintKV["EFT insertions", "1 per vertex (fixed)"];
 HEFT$MergePrintKV["HiggsMaxOrder", HiggsMaxOrder];
 HEFT$MergePrintKV["KappaFramework", KappaFramework];
 HEFT$MergePrintKV["InitialiseWCs", InitialiseWCs];
-HEFT$MergePrintKV["LOYukawaExpansion", LOYukawaExpansion];
-HEFT$MergePrintKV["IncludeCustodialT", IncludeCustodialT];
-HEFT$MergePrintKV["Combine2Derivatives", Combine2Derivatives];
 HEFT$MergePrintKV["EWInputScheme", EWInputScheme];
 HEFT$MergePrintKV["Massless.rst", Massless];
 HEFT$MergePrintKV["DiagonalCKM.rst", DiagonalCKM];
@@ -161,17 +127,11 @@ HEFT$MergePrintKV["OutputName", OutputName];
 (* Export-time only, and not hashed, so unlike everything above it it need not match the
    sub-models. Cells 6/7/8 (heft_fr.wl's own) validate it at the point of use. *)
 HEFT$MergePrintKV["MaxVertexLegs", MaxVertexLegs];
+HEFT$MergePrintKV["FeynArtsDiracIndices", If[ValueQ[FeynArtsDiracIndices], FeynArtsDiracIndices, Automatic]];
 Print[Style["    " <> StringRepeat["-", 68], Darker[Gray]]];
 
-(* The same order gate the ordinary notebook applies, for the same reason: "gf"/"aem" are
-   derived at O(ChiralOrder) only.  It is a stricter bound here anyway - merging itself is
-   refused above HEFTMaxOrder = 1 in Cell 5, whatever the scheme. *)
-If[MemberQ[{"gf", "aem"}, EWInputScheme] && NumericQ[HEFTMaxOrder] && TrueQ[HEFTMaxOrder > 1],
-  Print[Style["\n    EWInputScheme = \"" <> ToString[EWInputScheme] <>
-    "\" cannot be used with HEFTMaxOrder = " <> ToString[HEFTMaxOrder] <>
-    " (the derived schemes are NLO-only).", Bold, Red]];
-  Abort[]
-];
+(* No order gate: the model is single-insertion by construction (HEFT_Model.fr, 2026-09-17), which
+   is exactly the precision "gf"/"aem" are derived at and the one at which merging is exact. *)
 
 (* Merging needs no FeynRules and no loaded model: the cache index is meta.json plus the .fr
    digests, all readable from disk.  So Cell 3 is instant, and you can browse the cache
@@ -220,21 +180,21 @@ HEFT$MergePlan = HEFTMergeValidate[HEFT$MergeCompatible, MergeSources, HEFT$Merg
 If[HEFT$MergePlan === $Failed, Abort[]];
 
 HEFT$MergePrintSubsection["Merge plan"];
-Print["    ", Style[StringPadRight["LO baseline", 34], Bold], HEFT$MergePlan["lo"]["folder"]];
+Print["    ", Style[StringPadRight["SM baseline", 34], Bold], HEFT$MergePlan["lo"]["folder"]];
 Do[
   Print["    ", Style[StringPadRight[e["name"], 34], Bold],
     HEFTMergeOperatorSummary[e["operators"]]],
   {e, HEFT$MergePlan["sources"]}
 ];
 
-(* NLOOperators is DERIVED here - it is the union of the selected sub-models' operator lists.
+(* EFTOperators is DERIVED here - it is the union of the selected sub-models' operator lists.
    Everything downstream (the cache key of the merged model, the WCxf key generation, and the
    LoadModel in Cell 5) reads it from this point on, exactly as in the ordinary notebook. *)
-NLOOperators = HEFT$MergePlan["operators"];
+EFTOperators = HEFT$MergePlan["operators"];
 
 HEFT$MergePrintSubsection["Resulting operator selection"];
-Print["    ", Style[ToString[Length[NLOOperators]] <> " operator(s): ", Bold],
-  StringRiffle[NLOOperators, ", "]];
+Print["    ", Style[ToString[Length[EFTOperators]] <> " operator(s): ", Bold],
+  StringRiffle[EFTOperators, ", "]];
 
 (* WCxf files for the union, written exactly the way heft_fr.wl Cell 3 writes them.  They
    must be regenerated here: a file written for one sub-model has no keys for the other's
@@ -245,12 +205,8 @@ HEFTWCxfInitFile   = FileNameJoin[{HEFTWCxfDir, "wcxf_init.json"}];
 HEFTWCxfOutputFile = FileNameJoin[{HEFTWCxfDir, "wcxf_output.json"}];
 Global`KappaFramework      = KappaFramework;
 Global`InitialiseWCs       = InitialiseWCs;
-Global`LOYukawaExpansion   = LOYukawaExpansion;
-Global`IncludeCustodialT   = IncludeCustodialT;
-Global`Combine2Derivatives = Combine2Derivatives;
 Global`HiggsMaxOrder       = HiggsMaxOrder;
-Global`HEFTNLOBasis        = HEFTNLOBasis;
-Global`HEFTActiveNLOPieces = NLOOperators;
+Global`HEFTActiveEFTPieces = EFTOperators;
 Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "wcxf_input.fr"}]];
 HEFTWriteWCxfPointFiles[HEFTWCxfInitFile, HEFTWCxfOutputFile];
 
@@ -288,19 +244,13 @@ If[TrueQ[MR$ModelLoaded],
   Abort[]
 ];
 
-(* Configuration -> model flags.  HEFTActiveNLOPieces is the UNION, so LoadModel declares
+(* Configuration -> model flags.  HEFTActiveEFTPieces is the UNION, so LoadModel declares
    every parameter both sub-models need; that is what makes one export off the merged
    Lagrangian possible at all. *)
 Global`KappaFramework      = KappaFramework;
 Global`InitialiseWCs       = InitialiseWCs;
-Global`LOYukawaExpansion   = LOYukawaExpansion;
-Global`IncludeCustodialT   = IncludeCustodialT;
-Global`Combine2Derivatives = Combine2Derivatives;
-Global`HEFTMaxOrder        = HEFTMaxOrder;
 Global`HiggsMaxOrder       = HiggsMaxOrder;
-Global`HEFTActiveNLOPieces = NLOOperators;
-Global`HEFTNLOBasis        = HEFTNLOBasis;
-Global`HEFTGauge           = HEFTGauge;
+Global`HEFTActiveEFTPieces = EFTOperators;
 Global`EWInputScheme       = EWInputScheme;
 
 HEFTWCxfDir        = FileNameJoin[{HEFT$WorkspaceRoot, "wcxf"}];
@@ -317,7 +267,7 @@ Print[Style["[HEFT merge WCxf] Wilson coefficients from: ", Bold], HEFTWCxfOutpu
 CPUTime = TimeUsed[];
 LoadModel[HEFT$ModelFile];
 Print[Style["\n[HEFT merge] Model loaded in ", Bold], TimeUsed[] - CPUTime, " seconds (",
-  Length[NLOOperators], " operator(s) declared)"];
+  Length[EFTOperators], " operator(s) declared)"];
 
 (* Optional parameter restrictions, exactly as heft_fr.wl Cell 5 applies them. *)
 HEFT$RestrictionPaths = {};

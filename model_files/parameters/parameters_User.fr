@@ -1,0 +1,85 @@
+(* ============================================================================================
+   USER-DEFINED OPERATORS - parameters
+   ============================================================================================
+
+   THIS IS THE FILE WHERE YOU DECLARE THE FLARE FUNCTIONS AND WILSON COEFFICIENTS OF YOUR OWN
+   OPERATORS.  Its partner is Lagrangian/Lagrangian_User.fr; see README SS "Adding your own
+   operators" for the full procedure.  Shipped as worked examples: the three gluon-Higgs operators
+   of chiral dimension two (NNLO), and four W-Higgs operators PWHD1, PWHD2, SWHD, SWHDT (the HEFT
+   analogues of SMEFT's Q_{W^2H^2D^2}, Lagrangian_User.fr), which use the combined form below.
+
+   One row per operator: {flare function, operator label, coefficient prefix, nmin}.  From it
+   the model builds
+
+       FC<label>[h, NEFT] = Sum_{n = nmin}^{NEFT} C<prefix><n> (LamF h/vev)^n
+
+   gated on the label being selected, and declares every coefficient as an External parameter
+   (and so a WCxf key and an entry in the exported parameter card).
+
+   An operator with a derivative on each of two flares, del[F,mu] del[F,nu], gets ONE combined
+   flare instead (two flares in one term break the single-insertion rule): one row
+   {flare, label, coefficient prefix, extraPow} in userCombinedDerivFlareSpecs builds
+
+       FC<label>Combined[h, NEFT] = (LamF/vev)^extraPow Sum_{nh = extraPow}^{extraPow NEFT}
+                                      C<prefix><nh>prime (LamF h/vev)^(nh - extraPow)
+
+   exactly as combinedDerivFlareSpecs does for PDH, P8, P20-P22 (parameters_EFT.fr), and the
+   Lagrangian carries del[H,mu] del[H,nu] FC<label>Combined[H, NEFT]; nh counts all Higgs fields
+   of the term, the two differentiated ones included.  Its WCxf row goes into
+   heft1604CombinedDerivOpPrefixes (wcxf_input.fr).  nmin = 1 for an operator
+   whose flare appears under a derivative, since a constant term there drops out, and one flare
+   per operator term - HEFT_Model.fr (HEFTFlareSpecCheck) refuses to load otherwise, and also
+   when the operator's HEFT1604ScalarOpPrefixes row in wcxf_input.fr disagrees with this one.
+
+   LOADED AFTER parameters/parameters_EFT.fr, which is where the machinery this file uses
+   lives - DefineScalarFlare, DefineCombinedDerivFlare, MakeScalarCoeffTable,
+   MakeCombinedCoeffTable, bosonicWCProps, HEFTBuildNLOParameterEntries and
+   HEFTRegisterNLOWilsonCoefficients.  This file only APPENDS its rows to scalarFlareSpecs /
+   scalarCoeffSpecs and combinedDerivFlareSpecs / combinedDerivCoeffSpecs and re-runs the
+   registration, so user operators go through exactly the
+   same registration path as the shipped NLO ones.  Do not duplicate the builders here. *)
+
+If[!ValueQ[scalarFlareSpecs] || !ValueQ[scalarCoeffSpecs],
+  Print[Style["[HEFT] ERROR: parameters/parameters_User.fr loaded before the NLO parameter file. " <>
+    "HEFT_Model.fr must Get parameters/parameters_EFT.fr first.", Red, Bold]];
+  Abort[]
+];
+
+(* Empty since 2026-10-05: the gluon-Higgs examples PGHD1, PGHD2, SGHD moved to the combined form
+   below.  Kept, with the machinery, for user operators with an ordinary flare. *)
+userScalarFlareSpecs = {};
+
+(* {flare, label, prefix, extraPow}: the gluon-Higgs examples and the W-Higgs analogues of SMEFT's
+   Q_{W^2H^2D^2} (Lagrangian_User.fr), extraPow = 2 (one del[H,mu] del[H,nu]). *)
+userCombinedDerivFlareSpecs = {
+  {FCPGHD1Combined, "PGHD1", "CPGHD1n", 2},
+  {FCPGHD2Combined, "PGHD2", "CPGHD2n", 2},
+  {FCSGHDCombined,  "SGHD",  "CSGHDn",  2},
+  {FCPWHD1Combined, "PWHD1", "CPWHD1n", 2},
+  {FCPWHD2Combined, "PWHD2", "CPWHD2n", 2},
+  {FCSWHDCombined,  "SWHD",  "CSWHDn",  2},
+  {FCSWHDTCombined, "SWHDT", "CSWHDTn", 2}
+};
+userCombinedDerivCoeffSpecs = Rest /@ userCombinedDerivFlareSpecs;
+
+(* Coefficient specs mirror the flare specs exactly - same op, prefix and nmin - so a flare
+   and its M$Parameters entries can never drift apart. *)
+userScalarCoeffSpecs = Rest /@ userScalarFlareSpecs;
+
+(* Append to the shared spec lists, skipping rows already there, so a re-Get of this file in
+   the same kernel cannot append them twice - a duplicated row would declare the same
+   M$Parameters entry twice (UniqueParameterEntries dedupes it, but silently). *)
+scalarFlareSpecs = Join[scalarFlareSpecs, Select[userScalarFlareSpecs, !MemberQ[scalarFlareSpecs, #] &]];
+scalarCoeffSpecs = Join[scalarCoeffSpecs, Select[userScalarCoeffSpecs, !MemberQ[scalarCoeffSpecs, #] &]];
+combinedDerivFlareSpecs = Join[combinedDerivFlareSpecs,
+  Select[userCombinedDerivFlareSpecs, !MemberQ[combinedDerivFlareSpecs, #] &]];
+combinedDerivCoeffSpecs = Join[combinedDerivCoeffSpecs,
+  Select[userCombinedDerivCoeffSpecs, !MemberQ[combinedDerivCoeffSpecs, #] &]];
+
+(* Define the user flares now, and re-register so M$Parameters picks up their coefficient
+   tables for whichever of these operators HEFTActiveEFTPieces selects.  HEFT_Model.fr calls
+   HEFTRegisterNLOWilsonCoefficients[] again after the Lagrangians load; that call is
+   idempotent and covers these rows too, because they are in the shared lists. *)
+Scan[(DefineScalarFlare @@ #) &, userScalarFlareSpecs];
+Scan[(DefineCombinedDerivFlare @@ #) &, userCombinedDerivFlareSpecs];
+HEFTRegisterNLOWilsonCoefficients[];

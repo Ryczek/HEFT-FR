@@ -1,4 +1,4 @@
-(* LHEFT disk cache for heft_fr.wl.  Fixed directory: HEFT_cache/  (no option).
+(* LHEFT disk cache for heft_fr.wl.  Fixed directory: HEFT_Frules/HEFT_cache/  (no option).
 
    Layout: one subfolder per *configuration*,
      HEFT_cache/<OutputName>__<configHash>/{LHEFT.mx, meta.json}
@@ -22,7 +22,7 @@
    Wilson coefficients are NOT part of the key at all.  Every one of them is an External
    FeynRules parameter, so a value never enters LHEFT; it reaches the output through
    M$Parameters when Cell 7 exports.  And since 2026-08-05 values do not decide which operators
-   are in the Lagrangian either - that is NLOOperators alone (HEFTPieceActiveQ in wcxf_input.fr
+   are in the Lagrangian either - that is EFTOperators alone (HEFTPieceActiveQ in wcxf_input.fr
    is now a plain MemberQ, and the LO HEFTLOIf gates are gone).  So *any* edit to
    wcxf/wcxf_output.json, zeros included, is a cache hit: re-run Cell 5 (a LoadModel, seconds)
    and Cell 7, and the new numbers are in the export.
@@ -58,15 +58,18 @@ HEFTLHEFTModelDigest[] := Module[{paths, digests},
       "input_scheme.fr",
       "wcxf_input.fr",
       "power_counting.fr",
-      "fields_LO.fr",
-      "LO/parameters_LO.fr",
-      "LO/Lagrangian_LO.fr",
-      "NLO/basis_1604_06801/parameters_NLO.fr",
-      "NLO/basis_1604_06801/Lagrangian_Bosonic_NLO.fr",
-      "NLO/basis_1604_06801/Lagrangian_Fermionic_2F_NLO.fr",
-      "NLO/basis_1604_06801/Lagrangian_Fermionic_4F_NLO.fr",
-      "NNLO/parameters_NNLO.fr",
-      "NNLO/Lagrangian_Bosonic_NNLO.fr"
+      "fields.fr",
+      "parameters/parameters_SM.fr",
+      "Lagrangian/Lagrangian_SM.fr",
+      "parameters/parameters_EFT.fr",
+      "parameters/parameters_EFT_Bosonic.fr",
+      "parameters/parameters_EFT_2F.fr",
+      "parameters/parameters_EFT_4F.fr",
+      "Lagrangian/Lagrangian_EFT_Bosonic.fr",
+      "Lagrangian/Lagrangian_EFT_2F.fr",
+      "Lagrangian/Lagrangian_EFT_4F.fr",
+      "parameters/parameters_User.fr",
+      "Lagrangian/Lagrangian_User.fr"
     },
     FileExistsQ
   ];
@@ -77,16 +80,10 @@ HEFTLHEFTModelDigest[] := Module[{paths, digests},
 HEFTLHEFTCacheMeta[] := Module[{},
   <|
     "outputName"        -> OutputName,
-    "operators"         -> Sort[NLOOperators],
-    "basis"             -> HEFTNLOBasis,
-    "heftMaxOrder"      -> HEFTMaxOrder,
+    "operators"         -> Sort[EFTOperators],
     "higgsMaxOrder"     -> HiggsMaxOrder,
-    "gauge"             -> HEFTGauge,
     "ewScheme"          -> EWInputScheme,
     "kappaFramework"    -> KappaFramework,
-    "loYukawaExpansion" -> LOYukawaExpansion,
-    "includeCustodialT" -> IncludeCustodialT,
-    "combine2Derivatives" -> Combine2Derivatives,
     "massless"          -> Massless,
     "diagonalCKM"       -> DiagonalCKM,
     "modelDigest"       -> HEFTLHEFTModelDigest[]
@@ -95,10 +92,12 @@ HEFTLHEFTCacheMeta[] := Module[{},
 
 (* Everything except "outputName": the name is metadata about where output goes, not physics,
    and a match under a different name is exactly what the lookup is for. *)
+(* Gauge and basis are not keys: both are hard-coded (unitary, 1604.06801) since 2026-09-18,
+   so two builds can no longer differ in them. *)
 HEFTLHEFTCacheCompareKeys = {
-  "operators", "basis", "heftMaxOrder", "higgsMaxOrder",
-  "gauge", "ewScheme", "kappaFramework", "loYukawaExpansion", "includeCustodialT",
-  "combine2Derivatives", "massless", "diagonalCKM", "modelDigest"
+  "operators", "higgsMaxOrder",
+  "ewScheme", "kappaFramework",
+  "massless", "diagonalCKM", "modelDigest"
 };
 
 (* Sort[Normal[...]] before hashing: two Associations with the same pairs in a different key
@@ -230,8 +229,7 @@ HEFTLHEFTEstimateBuildSeconds[meta_Association] := Module[
     If[stored =!= None && NumericQ[Lookup[stored, "buildSeconds", None]],
       score =
         Abs[Length[Lookup[stored, "operators", {}]] - Length[meta["operators"]]] +
-        If[Lookup[stored, "basis", None] === meta["basis"], 0, 5] +
-        If[Lookup[stored, "heftMaxOrder", None] === meta["heftMaxOrder"], 0, 5];
+        If[Lookup[stored, "higgsMaxOrder", None] === meta["higgsMaxOrder"], 0, 5];
       If[score < bestScore, bestScore = score; best = stored]
     ],
     {sd, Select[FileNames["*", dir], DirectoryQ]}

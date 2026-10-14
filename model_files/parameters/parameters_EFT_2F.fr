@@ -1,0 +1,65 @@
+(* ============================================================================================
+   EFT parameters - TWO-FERMION (2F) sector (1604.06801 eq. 2.20 / 2.21)
+   ============================================================================================
+
+   Loaded by parameters/parameters_EFT.fr, which defines every builder used here
+   (Define2FermFlare, Define2FermCombinedFlare, HEFT2FermValueRules, tensorWCProps,
+   MakeFermCoeffTable, MakeFermCombinedCoeffTable) and, after the three sector files, assembles
+   them all in HEFTBuildNLOParameterEntries[].
+
+   Quark operators NQ1--NQ36 and lepton operators NL1--NL17.  NQ9, NQ10, NL3 carry a derivative
+   on two flares and use one combined flare (ferm2FCombinedFlareSpecs below); NQ11--NQ14,
+   NQ21--NQ24, NL4, NL5, NL8, NL9 carry a derivative on one flare and start at n = 1
+   (HEFT1604Fermion2FDerivOps, wcxf_input.fr).
+
+   nmin = 0 for a normal flare, nmin = 1 for a flare under a derivative (its constant term drops
+   out) - the list HEFT1604Fermion2FDerivOps in wcxf_input.fr, read here and by the WCxf key
+   generator, so the two cannot drift (until 2026-09-17 these started at n = 0 everywhere,
+   declaring an n = 0 tensor the Lagrangian never used).  NQ9, NQ10 and NL3 (structure
+   del[F] del[F']) no longer have two flares: since 2026-09-17 they use ONE combined flare each,
+   the fermionic counterpart of the bosonic PDH/P8/P20-P22 form, so no term carries two
+   coefficients any more.
+
+   The spec lists below are consumed twice: Define2FermFlare / Define2FermCombinedFlare build the
+   flares, MakeFermCoeffTable / MakeFermCombinedCoeffTable declare the matching M$Parameters
+   tensors. *)
+
+HEFT2FNLOCount = 8;
+HEFT2FNLOCountExtended = 36;
+
+(* NQ1-NQ36 except the combined ones; nmin from HEFT2FFlareNmin (wcxf_input.fr). *)
+ferm2FFlareSpecs = Table[
+  With[{op = "NQ" <> ToString[i]}, {Symbol["FC" <> op], op, "C" <> op <> "n", HEFT2FFlareNmin[op]}],
+  {i, Select[Range[1, HEFT2FNLOCountExtended], !MemberQ[HEFT1604Fermion2FCombinedOps, "NQ" <> ToString[#]] &]}
+];
+
+(* Leptonic 2F operators NL1--NL14 (1604.06801 eq. 2.20, paper numbering):
+   NL1, NL2 real n0 (j = 1, 2); NL3--NL11 complex n0 (j = 3-11, 1/Lambda);
+   NL12--NL14 complex n0 (j = 12-14, 4 pi/Lambda).
+   NL3 carries a derivative on two flares and uses one combined flare, like NQ9.
+   (NLF1--NLF3 duplicated NL15--NL17 and were removed 2026-09-15.) *)
+HEFT2FLeptonNLOCount = 17;  (* NL1--NL14 from 1604.06801 eq. 2.20 + NL15--NL17 from eq. 2.21 flavour structures *)
+
+(* NL1-NL17 except the combined ones; nmin from HEFT2FFlareNmin (wcxf_input.fr). *)
+ferm2FFlareSpecs = Join[
+  ferm2FFlareSpecs,
+  Table[
+    With[{op = "NL" <> ToString[i]}, {Symbol["FC" <> op], op, "C" <> op <> "n", HEFT2FFlareNmin[op]}],
+    {i, Select[Range[1, HEFT2FLeptonNLOCount], !MemberQ[HEFT1604Fermion2FCombinedOps, "NL" <> ToString[#]] &]}
+  ]
+];
+
+(* Fermionic combined flares: NQ9, NQ10, NL3 - del[FC..a, mu] del[FC..b, mu] with flavour-tensor
+   coefficients, rewritten exactly like P8 (extraPow = 2), entry by entry in flavour space.  The
+   label list HEFT1604Fermion2FCombinedOps lives in wcxf_input.fr (shared with the WCxf key
+   generator). *)
+ferm2FCombinedFlareSpecs = ({Symbol["FC" <> # <> "Combined"], #, "C" <> # <> "n", 2} &) /@
+  HEFT1604Fermion2FCombinedOps;
+ferm2FCombinedCoeffSpecs = Rest /@ ferm2FCombinedFlareSpecs;
+
+(* Coefficient specs mirror the flare specs exactly - same op, prefix and nmin - so a
+   flare and its M$Parameters tensors can never drift apart. *)
+ferm2FCoeffSpecs = Rest /@ ferm2FFlareSpecs;
+
+Scan[(Define2FermFlare @@ #) &, ferm2FFlareSpecs];
+Scan[(Define2FermCombinedFlare @@ #) &, ferm2FCombinedFlareSpecs];

@@ -1,0 +1,91 @@
+If[ValueQ[Global`KappaFramework], KappaFramework = Global`KappaFramework];
+If[!ValueQ[KappaFramework], KappaFramework = True];
+
+
+(* SM building blocks and Lagrangian (SM / HEFT-LO).
+
+   WCOrder flags every EFT parameter of this sector: the Delta-framework deviations
+   (DeltaFCn*, DeltaLam*, the Delta Yukawas via dyuH/dydH/dylH) and the F-function towers
+   FFC / FVHiggs / FQU / FQD / FLE.  Kappa-framework rescalings multiply SM couplings and are
+   not flagged.  Nothing here carries ChiralOrder: SM terms have chiral order 0.  The custodial-
+   breaking PT lives in Lagrangian_EFT_Bosonic.fr. *)
+
+If[TrueQ[KappaFramework],
+FC := 1 + 2*KappaV*H/vev + Kappa2V*H^2/vev^2 + WCOrder*FFC[H, NEFT],
+FC := 1 + 2*(1 + WCOrder*DeltaFCn1)*H/vev + (1 + WCOrder*DeltaFCn2)*H^2/vev^2 + WCOrder*FFC[H, NEFT]
+];
+
+PC := Block[{mu}, Tr[VU[mu].VU[mu]] FC];
+
+(* SM potential + (Kappa - 1) deformation (FeynRules-safe, cf. Delta (1 + Delta) form). *)
+If[TrueQ[KappaFramework],
+VHiggs := -1/4*vev^4*hlambda + hlambda*vev^2*H^2
+        + Kappa3H*hlambda*vev*H^3
+        + Kappa4H*1/4*hlambda*H^4
+        + vev^4*WCOrder*FVHiggs[H, NEFT],
+VHiggs := -1/4*vev^4*hlambda + hlambda*vev^2*H^2
+        + (1 + WCOrder*DeltaLam3)*hlambda*vev*H^3
+        + (1 + WCOrder*DeltaLam4)*1/4*hlambda*H^4
+        + vev^4*WCOrder*FVHiggs[H, NEFT]
+];
+
+LGauge := Block[{mu, nu, al, be, ii, aa},
+  ExpandIndices[
+    -1/4 FS[B, mu, nu] FS[B, mu, nu]
+    - 1/4 FS[Wi, mu, nu, ii] FS[Wi, mu, nu, ii]
+    - 1/4 FS[Gl, mu, nu, aa] FS[Gl, mu, nu, aa]
+    - gs^2/16/Pi^2 thetaS Eps[mu, nu, al, be] HC[FS[Gl, al, be, aa]] FS[Gl, mu, nu, aa],
+    FlavorExpand -> SU2W, NoDefinitions -> True]
+];
+
+LGaugeHiggs := Block[{mu, aux},
+  aux = ExpandIndices[-vev^2/4*PC, FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+];
+
+LFermions := Block[{mu, aux},
+  aux = ExpandIndices[
+    I*(QLbar.Ga[mu].DC[QL, mu] + LLbar.Ga[mu].DC[LL, mu] + uRbar.Ga[mu].DC[uR, mu]
+      + dRbar.Ga[mu].DC[dR, mu] + lRbar.Ga[mu].DC[lR, mu]),
+    FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+  aux /. {
+    CKM[a_, b_] Conjugate[CKM[a_, c_]] -> IndexDelta[b, c],
+    CKM[b_, a_] Conjugate[CKM[c_, a_]] -> IndexDelta[b, c]
+  }
+];
+
+LHiggs := Block[{mu},
+  ExpandIndices[1/2 del[H, mu] del[H, mu], FlavorExpand -> {SU2D, SU2W}, NoDefinitions -> True] - VHiggs
+];
+
+(* Delta framework: the single-Higgs Yukawa deviation DeltaY... is its own tensor dyuH/dydH/dylH
+   (parameters_SM.fr) so that it can carry WCOrder HERE, in the Lagrangian.  Inside yuH's
+   Definitions it would be invisible to the coupling orders: FeynRules takes a parameter's order
+   from its declared InteractionOrder and never looks into its Definitions.  Kappa framework:
+   the Kappas stay inside yuH (not flagged), and there is no deviation tensor. *)
+HEFTdyuH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dyuH[f1, f2]];
+HEFTdydH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dydH[f1, f2]];
+HEFTdylH[f1_, f2_] := If[TrueQ[KappaFramework], 0, WCOrder*dylH[f1, f2]];
+
+(* yu/yuH... are vev times the Yukawa (Sqrt[2] M<f>, parameters_SM.fr); the 1/vev is written here so that
+   the "gf"/"aem" substitution and the one-insertion cut act on it (2026-10-12, NOTES.md SS10.7).  The
+   mass term -vev/Sqrt[2] yu/vev = -M<f> cancels symbolically. *)
+LYukawa := Block[{sp, ii, jj, cc, ff1, ff2, ff3, yuk},
+  yuk = -vev/Sqrt[2] * ExpandIndices[
+      Sum[(yu[ff1, ff2]/vev + (yuH[ff1, ff2]/vev + HEFTdyuH[ff1, ff2])*H/vev + WCOrder*FQU[H, NEFT, ff1, ff2])
+          QLbar[sp, ii, ff1, cc].uR[sp, ff2, cc] UFerm[ii, 1], {ii, 1, 2}] +
+      Sum[(yd[ff2, ff3]/vev + (ydH[ff2, ff3]/vev + HEFTdydH[ff2, ff3])*H/vev + WCOrder*FQD[H, NEFT, ff2, ff3])
+          CKM[ff1, ff2] QLbar[sp, ii, ff1, cc].dR[sp, ff3, cc] UFerm[ii, 2], {ii, 1, 2}] +
+      Sum[(yl[ff1, ff3]/vev + (ylH[ff1, ff3]/vev + HEFTdylH[ff1, ff3])*H/vev + WCOrder*FLE[H, NEFT, ff1, ff3])
+          LLbar[sp, ii, ff1].lR[sp, ff3] UFerm[ii, 2], {ii, 1, 2}],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+  yuk = yuk /. {
+    CKM[a_, b_] Conjugate[CKM[a_, c_]] -> IndexDelta[b, c],
+    CKM[b_, a_] Conjugate[CKM[c_, a_]] -> IndexDelta[b, c]
+  };
+  yuk + HC[yuk]
+];
+
+LSM := LGauge + LGaugeHiggs + LFermions + LHiggs + LYukawa;
+

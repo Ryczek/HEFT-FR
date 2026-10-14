@@ -54,8 +54,8 @@ HEFT$NBShouldRunCell[heftN_Integer] :=
 HEFT$MaxVertexLegsValue[] := If[ValueQ[MaxVertexLegs], MaxVertexLegs, Automatic];
 
 (* Automatic, or an integer >= 3.  Anything smaller is refused rather than honoured: FeynRules
-   returns no 1- or 2-point vertices at all (confirmed the hard way), so MaxVertexLegs = 2
-   would export an empty model, not a restricted one. *)
+   returns no 1- or 2-point vertices at all (TESTS.md T9 records this being confirmed the hard
+   way), so MaxVertexLegs = 2 would export an empty model, not a restricted one. *)
 HEFT$CheckMaxVertexLegs[] := Module[{heftN = HEFT$MaxVertexLegsValue[]},
   If[heftN === Automatic, Return[True]];
   If[!IntegerQ[heftN] || heftN < 3,
@@ -67,6 +67,25 @@ HEFT$CheckMaxVertexLegs[] := Module[{heftN = HEFT$MaxVertexLegsValue[]},
     Abort[]
   ];
   True
+];
+
+(* FeynArtsDiracIndices - fermion form of the FeynArts export (Cell 8); opt-in explicit Dirac indices
+   (user decision 2026-10-13, TODO.md plan 1.1d).
+     Automatic (default) = FeynRules' own choice: index-free fermion chains unless some vertex has more
+                           than two fermions, explicit Dirac indices otherwise;
+     True                = explicit Dirac indices in every export.
+   Exports in the two forms cannot be merged (the FeynArts merge of heft_merging/merge_exports.wl refuses the mix), and an SM-only
+   baseline is index-free under Automatic, so a FeynArts merge with four-fermion operators needs True
+   for ALL its exports, the SM-only baseline included.  Export-time only: not part of the cache key,
+   like MaxVertexLegs.  heft_export.json records the form actually written. *)
+HEFT$FeynArtsDiracIndicesValue[] := If[ValueQ[FeynArtsDiracIndices], FeynArtsDiracIndices, Automatic];
+
+HEFT$CheckFeynArtsDiracIndices[] := Module[{v = HEFT$FeynArtsDiracIndicesValue[]},
+  If[MemberQ[{Automatic, True}, v], Return[True]];
+  Print[Style["[HEFT] ERROR: FeynArtsDiracIndices = " <> ToString[v, InputForm] <>
+    " is not a usable value. Use Automatic (default, FeynRules' choice) or True (explicit Dirac " <>
+    "indices in every FeynArts export).", Red, Bold]];
+  Abort[]
 ];
 
 (* =============================================================================
@@ -84,8 +103,8 @@ If[HEFT$NBShouldRunCell[3],
    remains closed.
 
    This check catches the other half of the problem.  After the Reference cell quits, the
-   Configuration section has not run - but this cell sets HEFT$FromNotebook /
-   HEFT$WorkspaceRoot itself, so without the check Cell 3 would sail on and
+   Configuration section has not run - but this cell sets HEFT$FromNotebook
+   itself, so without the check Cell 3 would sail on and
    HEFT$ApplyConfigDefaults[] would quietly substitute defaults for every option the user had
    chosen.  The Configuration cell sets HEFT$ConfigEvaluated = True as its last line. *)
 If[!TrueQ[HEFT$ConfigEvaluated],
@@ -97,7 +116,7 @@ If[!TrueQ[HEFT$ConfigEvaluated],
 
 (* ======================= PATHS & FEYNRULES ======================= *)
 
-(* This file lives in model_files/; the workspace root is one level up. *)
+(* This file lives in HEFT_Frules/model_files/; the workspace root is one level up. *)
 If[!ValueQ[HEFT$WorkspaceRoot],
   HEFT$WorkspaceRoot = DirectoryName @ DirectoryName @ ExpandFileName @ $InputFileName
 ];
@@ -108,15 +127,24 @@ Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_defaults.wl"}];
 
 HEFT$ApplyConfigDefaults[];
 
-(* Master model file in model_files/ *)
+(* Old option names, and values the truncation cannot use (heft_defaults.wl). *)
+HEFT$CheckExpansionOptions[];
+
+(* Master model file in HEFT_Frules/model_files *)
 HEFT$ModelFile = FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "HEFT_Model.fr"}];
 
 (* FeynRules .rst restriction files (HEFT-specific; see restrictions/*.rst) *)
 HEFT$RestrictionsDir = FileNameJoin[{HEFT$WorkspaceRoot, "restrictions"}];
 
 HEFT$EnsureFeynRulesLoaded[] := Module[{},
-  If[!StringQ[$FeynRulesPath] || !DirectoryQ[$FeynRulesPath],
-    Print[Style["[HEFT] ERROR: FeynRules path not found: " <> ToString[$FeynRulesPath], Red, Bold]];
+  If[!StringQ[$FeynRulesPath] || $FeynRulesPath === "",
+    Print[Style["[HEFT] ERROR: $FeynRulesPath is not set. In Cell 2 (Configuration) set it to the folder of your " <>
+      "FeynRules installation, the one containing FeynRules.m.", Red, Bold]];
+    Abort[]
+  ];
+  If[!FileExistsQ[FileNameJoin[{$FeynRulesPath, "FeynRules.m"}]],
+    Print[Style["[HEFT] ERROR: no FeynRules.m in $FeynRulesPath = " <> $FeynRulesPath <>
+      ". Set it in Cell 2 (Configuration) to the folder of your FeynRules installation.", Red, Bold]];
     Abort[]
   ];
   If[!MemberQ[$Packages, "FeynRules`"],
@@ -167,38 +195,18 @@ HEFTPrintOperatorGrid[ops_List, cols_Integer: 4] := Module[{padded, rows},
 
 HEFTCatalogFlatten[catalog_List] := Join @@ catalog[[All, 2]];
 
-(* All configuration variables (HEFTNLOBasis, NLOOperators, OutputName,
-   ForceRebuildLHEFT, HEFTGauge, HEFTMaxOrder, HiggsMaxOrder,
-   KappaFramework, InitialiseWCs, LOYukawaExpansion, IncludeCustodialT, EWInputScheme, Massless, DiagonalCKM,
+(* All configuration variables (EFTOperators, OutputName,
+   ForceRebuildLHEFT, HiggsMaxOrder,
+   KappaFramework, InitialiseWCs, EWInputScheme, Massless, DiagonalCKM,
    MaxVertexLegs) are
    already defaulted above by
    HEFT$ApplyConfigDefaults[] if still unset at this point. *)
 
 Get @ FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_notebook_reference.wl"}];
 
-{HEFT$OperatorCatalogNLO, HEFT$OperatorCatalogHigher} =
-  HEFT$OperatorCatalogsForBasis[HEFTNLOBasis];
-
-(* The 2206.07722 basis is not implemented in this release - refused here at configuration
-   time, and again inside LoadModel (HEFT_Model.fr), so headless entry points that never run
-   this cell cannot slip past it.  HEFT$SupportedNLOBases (heft_defaults.wl) is the list this
-   check reads. *)
-If[HEFTNLOBasis === "2206.07722",
-  (
-    Print[Style["[HEFT] ERROR: NLO basis \"2206.07722\" is not yet implemented.", Red, Bold]];
-    Print[Style["        Use HEFTNLOBasis = \"1604.06801\"; the 2206.07722 " <>
-      "operator files are not part of this release.", Red]];
-    Abort[];
-  )
-];
-
-If[!MemberQ[HEFT$SupportedNLOBases, HEFTNLOBasis],
-  (
-    Print[Style["[HEFT] ERROR: unknown NLO basis: " <> ToString[HEFTNLOBasis] <>
-      ". Supported: " <> StringRiffle[HEFT$SupportedNLOBases, ", "] <> ".", Red, Bold]];
-    Abort[];
-  )
-];
+(* The operator basis is Brivio et al. 1604.06801, hard-coded (2026-09-18): there is no basis
+   option and therefore nothing to validate. *)
+{HEFT$OperatorCatalogNLO, HEFT$OperatorCatalogHigher} = HEFT$OperatorCatalogs[];
 
 HEFTAvailableOperatorsNLO    = HEFTCatalogFlatten[HEFT$OperatorCatalogNLO];
 HEFTAvailableOperatorsHigher = HEFTCatalogFlatten[HEFT$OperatorCatalogHigher];
@@ -208,56 +216,28 @@ HEFTPrintBanner["HEFT FeynRules"];
 
 HEFTPrintSubsection["Active configuration"];
 HEFTPrintOptions[{
-  {"Gauge", HEFTGauge},
-  {"NLO basis", HEFTNLOBasis},
-  {"HEFTMaxOrder", HEFTMaxOrder},
+  {"Gauge", "unitary (fixed)"},
+  {"Operator basis", "1604.06801 (fixed)"},
+  {"Chiral order", "label only (no cut)"},
+  {"EFT insertions", "1 per vertex (fixed)"},
   {"HiggsMaxOrder", HiggsMaxOrder},
   {"KappaFramework", KappaFramework},
   {"InitialiseWCs", InitialiseWCs},
-  {"LOYukawaExpansion", LOYukawaExpansion},
-  {"IncludeCustodialT", IncludeCustodialT},
-  {"Combine2Derivatives", Combine2Derivatives},
   {"EWInputScheme", EWInputScheme},
   {"Massless.rst", Massless},
   {"DiagonalCKM.rst", DiagonalCKM},
   {"ForceRebuildLHEFT", ForceRebuildLHEFT}
 }];
 
-(* ======================= INPUT SCHEME vs CHIRAL ORDER ======================= *)
+(* ======================= INPUT SCHEME vs EFT ORDER ======================= *)
 
-(* Supported combinations:
-     EWInputScheme = "heft"         -> any HEFTMaxOrder (0, 1, 2, 3)
-     EWInputScheme = "gf" / "aem"   -> HEFTMaxOrder <= 1 only
+(* No check any more.  "gf"/"aem" are derived at a single EFT insertion, and since 2026-09-17 the
+   whole model is single-insertion by construction (HEFT_Model.fr), so every scheme is valid for
+   every configuration.  The gate that stood here refused "gf"/"aem" above EFTMaxOrder /
+   MaxEFTInsertions = 1 and went with that option; its model-level twin in input_scheme.fr too. *)
 
-   The "gf" and "aem" EW input schemes are derived at NLO only: every shift they apply is
-   linear in ChiralOrder (the muon-decay extraction of Gf, the gauge-mixing corrections).
-   At HEFTMaxOrder >= 2 the Lagrangian carries NNLO operators the extraction knows nothing
-   about, so the EW inputs would be silently NLO-accurate while everything around them is
-   not.  Caught here, during configuration, rather than after an expensive LoadModel.
-   "heft" is exempt: it replaces nothing, so there is nothing to be inconsistent - it is
-   the scheme to use at NNLO and beyond.
-
-   input_scheme.fr carries the same rule as HEFTEWInputSchemeCheckOrder[], which fires during
-   LoadModel and so also covers entry points that never run this file (headless scripts that
-   Get HEFT_Model.fr directly).  This check is the early, cheap one; the two bounds must move
-   together if the O(ChiralOrder^2) extraction is ever implemented. *)
-If[MemberQ[{"gf", "aem"}, EWInputScheme] && NumericQ[HEFTMaxOrder] && TrueQ[HEFTMaxOrder > 1],
-  HEFTPrintSubsection["Configuration error"];
-  Print[Style["    EWInputScheme = \"" <> ToString[EWInputScheme] <>
-    "\" cannot be used with HEFTMaxOrder = " <> ToString[HEFTMaxOrder] <> ".", Bold, Red]];
-  Print[Style["    The EW input schemes are derived at NLO only \[LongDash] every shift is " <>
-    "linear in ChiralOrder.  At HEFTMaxOrder >= 2 the Lagrangian contains NNLO operators " <>
-    "the extraction does not account for, so the inputs would be silently NLO-accurate.",
-    Darker[Red]]];
-  Print[Style["    Supported: \"heft\" at any HEFTMaxOrder; \"gf\"/\"aem\" at HEFTMaxOrder <= 1.",
-    Darker[Red]]];
-  Print[Style["    Use EWInputScheme = \"heft\" for NNLO and beyond, or set HEFTMaxOrder = 1, " <>
-    "then re-run Cell 2 (Configuration) and this cell.", Bold, Red]];
-  Abort[]
-];
-
-unknownOps = Complement[NLOOperators, HEFTAvailableOperators];
-If[NLOOperators =!= {} && unknownOps =!= {},
+unknownOps = Complement[EFTOperators, HEFTAvailableOperators];
+If[EFTOperators =!= {} && unknownOps =!= {},
   HEFTPrintSubsection["Selection error"];
   Print[Style["    Unknown operator(s): ", Bold, Red], unknownOps];
   Print[Style["    See the Reference section above for valid labels.", Darker[Red]]];
@@ -265,21 +245,27 @@ If[NLOOperators =!= {} && unknownOps =!= {},
 ];
 
 HEFTPrintSubsection["Selected operators"];
-If[NLOOperators === {},
-  Print[Style["    (none \[LongDash] LO only)", Gray]],
-  HEFTPrintOperatorGrid[NLOOperators, 3];
-  Print[Style["    " <> ToString[Length[NLOOperators]] <> " operator(s) active", Gray]]
+If[EFTOperators === {},
+  Print[Style["    (none \[LongDash] SM only)", Gray]],
+  HEFTPrintOperatorGrid[EFTOperators, 3];
+  Print[Style["    " <> ToString[Length[EFTOperators]] <> " operator(s) active", Gray]]
 ];
 
 (* Checked here, during configuration, so a typo costs nothing: Cells 6/7/8 check it again at
    the point of use, since either may be run in a kernel where this cell was not. *)
 HEFT$CheckMaxVertexLegs[];
+HEFT$CheckFeynArtsDiracIndices[];
 
 HEFTPrintSubsection["Output"];
 HEFTPrintOptions[{
   {"OutputName", OutputName},
-  {"MaxVertexLegs", HEFT$MaxVertexLegsValue[]}
+  {"MaxVertexLegs", HEFT$MaxVertexLegsValue[]},
+  {"FeynArtsDiracIndices", HEFT$FeynArtsDiracIndicesValue[]}
 }];
+If[HEFT$FeynArtsDiracIndicesValue[] === True,
+  Print[Style["    Cell 8 will write explicit Dirac indices. To merge FeynArts exports, every export of the " <>
+    "merge (the SM-only baseline included) must have been made this way.", Gray]]
+];
 If[HEFT$MaxVertexLegsValue[] =!= Automatic,
   Print[Style["    Cells 6/7/8 will keep only vertices with at most " <>
     ToString[HEFT$MaxVertexLegsValue[]] <> " legs. Not part of the cache key \[LongDash] " <>
@@ -299,12 +285,8 @@ HEFTWCxfOutputFile = FileNameJoin[{HEFTWCxfDir, "wcxf_output.json"}];
 HEFTPrintSubsection["WCxf \[LongDash] Wilson-coefficient files"];
 Global`KappaFramework = KappaFramework;
 Global`InitialiseWCs = InitialiseWCs;
-Global`LOYukawaExpansion = LOYukawaExpansion;
-Global`IncludeCustodialT = IncludeCustodialT;
-Global`Combine2Derivatives = Combine2Derivatives;
 Global`HiggsMaxOrder = HiggsMaxOrder;
-Global`HEFTNLOBasis = HEFTNLOBasis;
-Global`HEFTActiveNLOPieces = NLOOperators;
+Global`HEFTActiveEFTPieces = EFTOperators;
 Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "wcxf_input.fr"}]];
 HEFTWriteWCxfPointFiles[HEFTWCxfInitFile, HEFTWCxfOutputFile];
 
@@ -339,7 +321,7 @@ If[!ValueQ[HEFTWCxfOutputFile],
 Print[Style["\n[HEFT] Cell 4: edit Wilson coefficients in:\n  ", Bold], HEFTWCxfOutputFile];
 Print["[HEFT] Defaults for reference (regenerated in cell 3): ", HEFTWCxfInitFile];
 Print["[HEFT] Every coefficient starts at 1. A value of 0 is simply 0 in the exported model \[LongDash]"];
-Print["[HEFT] it does not remove anything; which operators exist is NLOOperators alone."];
+Print["[HEFT] it does not remove anything; which operators exist is EFTOperators alone."];
 Print["[HEFT] Leave the file untouched to run with the defaults."];
 Print[Style["[HEFT] When finished editing, run cell 5 \[LongDash] do not re-run cell 3, " <>
   "it rewrites this file back to defaults.", Bold]];
@@ -374,20 +356,14 @@ HEFT$EnsureFeynRulesLoaded[];
 (* Configuration -> model flags (Global` survives FeynRules model context during LoadModel). *)
 Global`KappaFramework = KappaFramework;
 Global`InitialiseWCs = InitialiseWCs;
-Global`LOYukawaExpansion = LOYukawaExpansion;
-Global`IncludeCustodialT = IncludeCustodialT;
-Global`Combine2Derivatives = Combine2Derivatives;
-Global`HEFTMaxOrder = HEFTMaxOrder;
 Global`HiggsMaxOrder = HiggsMaxOrder;
-Global`HEFTActiveNLOPieces = NLOOperators;
-Global`HEFTNLOBasis = HEFTNLOBasis;
-Global`HEFTGauge = HEFTGauge;
+Global`HEFTActiveEFTPieces = EFTOperators;
 Global`EWInputScheme = EWInputScheme;
 
 (* WCxf: the model always reads its Wilson coefficients from wcxf_output.json, exactly as it
    is on disk right now - defaults if Cell 3 just wrote it, your values if you edited it. *)
 If[!ValueQ[HEFT$WorkspaceRoot],
-  Print[Style["[HEFT] ERROR: HEFT$WorkspaceRoot undefined. Run cell 3 first.", Red, Bold]]; Abort[]
+  Print[Style["[HEFT] ERROR: HEFT$WorkspaceRoot undefined. Run cells 2 and 3 first.", Red, Bold]]; Abort[]
 ];
 HEFTWCxfDir = FileNameJoin[{HEFT$WorkspaceRoot, "wcxf"}];
 HEFTWCxfInitFile = FileNameJoin[{HEFTWCxfDir, "wcxf_init.json"}];
@@ -441,9 +417,9 @@ If[TrueQ[MR$ModelLoaded],
 CPUTime = TimeUsed[];
 LoadModel[HEFT$ModelFile];
 Print[Style["\n[HEFT] Model loaded in ", Bold], TimeUsed[] - CPUTime, " seconds"];
-If[NLOOperators === {},
-  Print[Style["[HEFT] Lagrangian: LO only (no NLO operators selected).", Bold]],
-  Print[Style["[HEFT] Lagrangian: LO + ", Bold], Length[NLOOperators], Style[" NLO piece(s).", Bold]]
+If[EFTOperators === {},
+  Print[Style["[HEFT] Lagrangian: SM only (no EFT operators selected).", Bold]],
+  Print[Style["[HEFT] Lagrangian: SM + ", Bold], Length[EFTOperators], Style[" EFT operator(s).", Bold]]
 ];
 
 (* Optional parameter restrictions (FeynRules LoadRestriction) *)
@@ -525,6 +501,26 @@ HEFT$VertexLegOptions[] := Module[{heftN},
   {MaxParticles -> heftN}
 ];
 
+(* HEFT$PrintVertices[{{W, Wbar, H}, {Z, Z, H}, ...}] prints the Feynman rule of each listed vertex
+   from RulesHEFT (Cell 6); a single vertex {W, Wbar, H} works too, and a second argument selects
+   from another vertex list instead. Leg order does not matter (SelectVertices sorts). Defined here,
+   after FeynRules is loaded, for the same reason as HEFT$VertexLegOptions: SelectVertices and
+   SelectParticles live in FeynRules`. SelectVertices itself prints an "Applying seclection
+   rules..." line on every call, and "Vertex ... not found." for a vertex absent from the build. *)
+HEFT$PrintVertices[parts_List, rules_ : Automatic] := Module[{verts, list, v},
+  verts = If[rules === Automatic, RulesHEFT, rules];
+  If[!ListQ[verts],
+    Print[Style["[HEFT] ERROR: RulesHEFT undefined. Run cell 6 first.", Red, Bold]]; Abort[]
+  ];
+  list = If[MatchQ[parts, {__List}], parts, {parts}];
+  Do[
+    v = SelectVertices[verts, SelectParticles -> p];
+    Print[Style[StringRiffle[ToString /@ p, "-"] <> " vertex:", Bold]];
+    If[v === {}, Print["   not in this build"], Scan[Print["   ", #[[2]]] &, v]],
+    {p, list}
+  ]
+];
+
 
 (* =============================================================================
    CELL 6 \[LongDash] Compute Feynman rules from LHEFT
@@ -551,8 +547,8 @@ Module[{feynRulesOutDir, latexOutDir, texFile, txtFile, strm, i},
   latexOutDir = FileNameJoin[{feynRulesOutDir, "latex"}];
   CreateDirectory[latexOutDir, CreateIntermediateDirectories -> True];
 
-  (* Evaluate LHEFT once so FeynmanRules receives the truncated Lagrangian (ChiralOrder and
-     LamGold truncations are already applied inside LHEFT). *)
+  (* Evaluate LHEFT once so FeynmanRules receives the truncated Lagrangian (the single-insertion
+     WCOrder cut is already applied inside LHEFT). *)
   CPUTime = TimeUsed[];
   RulesHEFT = FeynmanRules[LHEFT, FlavorExpand -> True, Sequence @@ HEFT$VertexLegOptions[]];
   Print[Style["[HEFT] Feynman rules computed in ", Bold], TimeUsed[] - CPUTime, " seconds"];
@@ -640,6 +636,23 @@ Module[{ufoOutDir},
         CreateDirectory::eexist];
       CPUTime = TimeUsed[];
       WriteUFO[LHEFT, Output -> ufoOutDir, Sequence @@ HEFT$VertexLegOptions[]];
+      (* No post-processing of parameters.py.  additional_scripts/ufo_cleanup.py used to run
+         here to delete duplicate Parameter blocks; it was removed 2026-08-21 together with
+         the two declarations that caused them, because it was masking real defects rather
+         than fixing a FeynRules quirk:
+           - the 9 fermion masses were declared BOTH by fields.fr's Mass -> lists and as
+             External BlockName -> YUKAWA parameters with different values, so the cleanup
+             silently deleted the MASS-block entry and the YUKAWA value became the propagator
+             mass (top exported as 172, not 172.76; no fermion MASS block at all);
+           - aEWM was External on SMINPUTS[1], colliding with aEWM1, so FeynRules dropped
+             aEWM1 entirely and emitted aEWM twice - the cleanup tidied away the debris.
+         Both are fixed at source (aEWM is now Internal = 1/aEWM1, and the YUKAWA block is
+         gone), and a WriteUFO now emits zero duplicate parameter blocks.  If duplicates ever
+         reappear, that is a real defect to diagnose, not something to post-process away. *)
+      (* heft_export.json: the configuration and operators this export was made with, which the
+         UFO merge (heft_merging/merge_exports.wl) needs to check that exports agree (2026-10-06). *)
+      Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
+      HEFTExportWriteMeta[ufoOutDir, "ufo"];
       Print[Style["[HEFT] UFO written to " <> ufoOutDir <> " in ", Bold], TimeUsed[] - CPUTime, " seconds"];
 ];
 
@@ -678,14 +691,43 @@ Quiet[CreateDirectory[outputDir["."], CreateIntermediateDirectories -> True],
        export in the same kernel inherits that nested directory as its cwd and the files end up
        one level too deep instead. So: restore the working directory afterwards, then flatten
        anything that did land in the nested folder and remove it. *)
-    Module[{feynArtsOutDir, cput, faBase, cwd, nestedFiles, target},
+    (* Fermion form: FeynArtsDiracIndices (top of this file).  Automatic = FeynRules' default
+       DiracIndices -> Automatic (user decision 2026-09-29): fermion chains index-free
+       (NonCommutative[...], flipping rules, $FermionLines = True) unless some vertex has more than
+       two fermions, explicit Dirac indices (DiracObject[...][di1,di2]) otherwise.  True = explicit
+       indices always (opt-in, user decision 2026-10-13), so that exports with and without
+       four-fermion operators can be merged.  Exports in the two forms cannot be merged (merge
+       notebook Cell 10 refuses the mix); heft_export.json records the form actually written.
+       The option symbol is taken from WriteFeynArtsOutput's own option list: it has no usage
+       message, so its context cannot be relied on, and a mis-contexted option would be accepted
+       in silence and do nothing (cf. MaxParticles). *)
+    (* Two corrections to FeynRules' FeynArts writer, applied in memory (feynrules_fixes.wl,
+       TESTS/T38): single-term vertices next to Levi-Civita structures were silently dropped
+       (S1, S8, SB, SG lost hhhW+W-), and ScalarProduct[p_a,p_b]^2 was not written to the .gen.
+       FeynRules on disk is not changed; the status goes into heft_export.json. *)
+    Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "feynrules_fixes.wl"}]];
+    HEFTApplyFeynRulesFixes[];
+    Module[{feynArtsOutDir, cput, faBase, cwd, nestedFiles, target, diracOpt, diracOpts = {}},
+      HEFT$CheckFeynArtsDiracIndices[];
+      If[HEFT$FeynArtsDiracIndicesValue[] === True,
+        diracOpt = SelectFirst[First /@ Options[WriteFeynArtsOutput],
+          SymbolName[#] === "DiracIndices" &, None];
+        If[diracOpt === None,
+          Print[Style["[HEFT] ERROR: FeynArtsDiracIndices = True, but WriteFeynArtsOutput has no " <>
+            "DiracIndices option in this FeynRules; the export is refused rather than written in " <>
+            "the other form.", Red, Bold]];
+          Abort[]
+        ];
+        diracOpts = {diracOpt -> True};
+        Print[Style["[HEFT] FeynArts export with explicit Dirac indices (FeynArtsDiracIndices = True).", Bold]]
+      ];
       feynArtsOutDir = outputDir[{"FeynArts", OutputName}];
       Quiet[CreateDirectory[feynArtsOutDir, CreateIntermediateDirectories -> True],
         CreateDirectory::eexist];
       faBase = FileNameJoin[{feynArtsOutDir, OutputName}];
       cput = TimeUsed[];
       cwd = Directory[];
-      WriteFeynArtsOutput[LHEFT, Output -> faBase, Sequence @@ HEFT$VertexLegOptions[]];
+      WriteFeynArtsOutput[LHEFT, Output -> faBase, Sequence @@ diracOpts, Sequence @@ HEFT$VertexLegOptions[]];
       Quiet @ SetDirectory[cwd];
       If[DirectoryQ[faBase],
         nestedFiles = Select[FileNames["*", faBase], !DirectoryQ[#] &];
@@ -700,6 +742,10 @@ Quiet[CreateDirectory[outputDir["."], CreateIntermediateDirectories -> True],
         (* Only succeeds once the directory is empty, which is exactly when it should go. *)
         Quiet @ DeleteDirectory[faBase]
       ];
+      (* heft_export.json: the configuration and operators this export was made with, which
+         the FeynArts merge (heft_merging/merge_exports.wl) needs to check that exports agree. *)
+      Get[FileNameJoin[{HEFT$WorkspaceRoot, "model_files", "heft_export_meta.wl"}]];
+      HEFTExportWriteMeta[feynArtsOutDir, "feynarts"];
       Print[Style["[HEFT] FeynArts export in ", Bold], TimeUsed[] - cput, " seconds"];
       Print[Style["[HEFT] FeynArts written to ", Bold], feynArtsOutDir];
       Print["[HEFT]   ", FileNameTake /@ Select[FileNames["*", feynArtsOutDir], !DirectoryQ[#] &]];

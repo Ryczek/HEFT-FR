@@ -1,0 +1,395 @@
+(* NLO building blocks and Lagrangian pieces (HEFT), bosonic sector. *)
+(* Only define pieces that are requested in HEFTActiveEFTPieces. *)
+
+(* If HEFTActiveEFTPieces is not set, default to empty (no NLO pieces). *)
+If[ValueQ[Global`HEFTActiveEFTPieces], HEFTActiveEFTPieces = Global`HEFTActiveEFTPieces];
+If[!ValueQ[HEFTActiveEFTPieces], HEFTActiveEFTPieces = {}];
+
+(* Define only the requested NLO Lagrangian pieces *)
+
+(* Gluon triple operators (QCD cubic, CP-even and CP-odd) *)
+
+LPGGG := Block[{mu, nu, al, ii, jj, kk},
+    ExpandIndices[
+      4*Pi*WCOrder*ChiralOrder/LamHEFT^2 f[ii,jj,kk] FS[Gl, mu, nu, ii] FS[Gl, nu, al, jj] FS[Gl, al, mu, kk]
+          FCPGGG[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+LSGGG := Block[{mu, nu, al, be, ga, ii, jj, kk},
+    ExpandIndices[
+      4*Pi*WCOrder*ChiralOrder/LamHEFT^2 f[ii,jj,kk] Eps[mu, nu, be, ga]/2 HC[FS[Gl, be, ga, ii]] FS[Gl, nu, al, jj] FS[Gl, al, mu, kk]
+          FCSGGG[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+(* Weak triple operators (QCD cubic, CP-even and CP-odd) *)
+LPWWW := Block[{mu, nu, al, ii, jj, kk},
+    ExpandIndices[4*Pi*WCOrder*ChiralOrder/LamHEFT^2 Eps[ii,jj,kk] FS[Wi, mu, nu, ii] FS[Wi, nu, al, jj] FS[Wi, al, mu, kk]
+        FCPWWW[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LSWWW := Block[{mu, nu, al, be, ga, ii, jj, kk},
+    ExpandIndices[4*Pi*WCOrder*ChiralOrder/LamHEFT^2 Eps[ii,jj,kk] Eps[mu, nu, be, ga]/2 HC[FS[Wi, be, ga, ii]] FS[Wi, nu, al, jj] FS[Wi, al, mu, kk]
+        FCSWWW[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+
+(* ----------------------------- Remaining CP-even bosonic operators ----------------------------- *)
+
+(* PT - custodial-symmetry breaking Tr[T.V_mu] Tr[T.V^mu] F_T(h), chiral order 0.  Moved here from
+   Lagrangian_SM.fr and selected by the EFTOperators label "PT" (it used to be switched on by default
+   through IncludeCustodialT).
+   SIGN = 1604.06801's (2026-09-24, user decision): P_T = +v^2/4 Tr(T V_mu) Tr(T V^mu) F_T
+   (paperV4.tex:715), so CPTn<n> is the paper's c_T tower and delta M_Z/M_Z = -c_T.  Until then LPT
+   carried -vev^2/4, left over from when it sat inside LGaugeHiggs as -vev^2/4 (PT + PC); the CPTn0
+   terms of input_scheme.fr were flipped with it (TESTS/FR_1604/PT_sign.md). *)
+LPT := Block[{mu, aux},
+    aux = ExpandIndices[vev^2/4*WCOrder*Tr[TT.VU[mu]] Tr[TT.VU[mu]] FCPT[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+(* PDH, P8, P20, P21, P22: one combined flare FC<op>Combined[H,NEFT] (CPDHn<nh>prime, nh = the
+   total number of Higgs fields in the term, the differentiated ones included) instead of two
+   independently-truncated flares with a derivative on each, so a fixed power of h/vev carries a
+   single WC.  The only form since 2026-09-17 (Combine2Derivatives removed).  See the block
+   comment above combinedDerivFlareSpecs in parameters_EFT.fr for the (symbolically verified)
+   derivation.
+   NORMALISATION: 1/(4 Pi)^2 added 2026-09-28 (user decision), a deliberate deviation from the
+   paper.  1604.06801 prints P_DH = (d F_DH d F'_DH)^2 without it, but the paper's own NDA
+   master formula (four derivatives, four h) gives 1/(4 Pi)^2 - the same factor it puts on P6,
+   P8, P11 and P20-P22.  CPDHn<nh>prime here = the paper's c_DH coefficients times (4 Pi)^2. *)
+LPDH := Block[{mu, nu},
+    WCOrder*ChiralOrder^2 1/(4*Pi)^2 FCPDHCombined[H, NEFT] del[H, mu] del[H, mu] del[H, nu] del[H, nu]
+  ];
+
+LPG := Block[{mu, nu, a},
+    ExpandIndices[
+      -WCOrder 1/4 FS[Gl, mu, nu, a] FS[Gl, mu, nu, a] FCPG[H, NEFT], NoDefinitions -> True]
+  ];
+
+LPW := Block[{mu, nu, ii},
+    ExpandIndices[- WCOrder 1/4 FS[Wi, mu, nu, ii] FS[Wi, mu, nu, ii]
+        FCPW[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LPB := Block[{mu, nu},
+    ExpandIndices[
+      -WCOrder 1/4 FS[B, mu, nu] FS[B, mu, nu] FCPB[H, NEFT], NoDefinitions -> True]
+  ];
+
+
+ LP1 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder FS[B, mu, nu] Tr[TT.FSWi[mu, nu]]
+        FCP1[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP2 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) FS[B,mu,nu] Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])]
+        FCP2[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+LP3 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) Tr[FSWi[mu,nu].(VU[mu].VU[nu] - VU[nu].VU[mu])] FCP3[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP4 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) FS[B,mu,nu] Tr[TT . VU[mu]] del[FCP4[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP5 := Block[{mu, nu, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) Tr[FSWi[mu,nu] . VU[mu]] del[FCP5[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP6 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu].VU[mu]] Tr[VU[nu].VU[nu]] FCP6[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+(* Combined flare: see the comment on LPDH above. *)
+LP8 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu].VU[nu]] *
+        del[H,mu] del[H,nu] FCP8Combined[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+
+  LP11 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu].VU[nu]] Tr[VU[mu].VU[nu]] FCP11[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+LP12 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder Tr[TT . FSWi[mu,nu]] Tr[TT . FSWi[mu,nu]]
+        FCP12[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LP13 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) Tr[TT . FSWi[mu,nu]] Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])]
+        FCP13[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP14 := Block[{mu, nu, rho, lambda, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder 1/(4*Pi)
+      Eps[mu, nu, rho, lambda] 
+      Tr[TT . VU[mu]] Tr[VU[nu] . FSWi[rho,lambda]]
+      FCP14[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP17 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) 
+      Tr[TT . FSWi[mu,nu]] Tr[TT. VU[mu]] del[FCP17[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP18 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[TT . (VU[mu] . VU[nu] - VU[nu] . VU[mu])] Tr[TT . VU[mu]] del[FCP18[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  (* P20, P21, P22: combined flares, see the comment on LPDH above. *)
+  LP20 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu] . VU[mu]] *
+        del[H,nu] del[H,nu] FCP20Combined[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+  LP21 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[mu]] *
+        del[H,nu] del[H,nu] FCP21Combined[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+  LP22 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[nu]] *
+        del[H,mu] del[H,nu] FCP22Combined[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP23 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu] . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[nu]] FCP23[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+
+  LP24 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[VU[mu] . VU[nu]] Tr[TT . VU[mu]] Tr[TT . VU[nu]] FCP24[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LP26 := Block[{mu, nu, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 1/(4*Pi)^2 Tr[TT . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[mu]] Tr[TT . VU[nu]] FCP26[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+
+
+(* ----------------------------------------- Remaining CP-odd bosonic operators ----------------------------------------- *)
+
+  (* S2D in its FINAL form, after the Goldstone-matrix redefinition of 1604.06801 (section 2.2):
+     U -> U exp[-i theta sigma3], theta = -WCOrder CS2Dn1 h/(2 vev), kept at one insertion
+     (2026-09-23).  As written in the paper, the n = 1 term of F_2D is a Z-h mixing
+     -1/4 CS2Dn1 vev Sqrt[GW^2+G1^2] Z_mu d^mu h: a two-field term, which FeynRules never turns
+     into a vertex (Core/VertexRoutine.m:630), so S2D had no effect at HiggsMaxOrder = 1 and
+     was incomplete above.  The redefinition removes it; what is left, written out here:
+       (1) Z-h sector: the same operator with F_2D -> F_2D - CS2Dn1 (h/v + KappaV (h/v)^2
+           + Kappa2V/3 (h/v)^3).  The first term cancels the mixing; the other two come from
+           the SM FC in LGaugeHiggs, so they are present at EVERY HiggsMaxOrder.  In the Delta
+           framework KappaV = Kappa2V = 1 (their Delta parts times CS2Dn1 are WCOrder^2).
+       (2) Yukawas: UFerm -> 1 - I theta sigma3 gives the up-type Yukawas a phase (1 - I theta)
+           and the down-type / lepton ones (1 + I theta): CP-odd h f fbar and h h f fbar terms,
+           i.e. -I c h/(2 Sqrt[2]) (yu + yuH h/v) on up-type and +I c h/(2 Sqrt[2]) (...) on
+           down-type and leptons, plus h.c., c = WCOrder CS2Dn1.
+           FQU/FQD/FLE and the Delta-framework dyuH/dydH/dylH times theta are WCOrder^2.
+           yu/yuH... are vev times the Yukawa since 2026-10-12 (parameters_SM.fr), hence the /vev.
+     The sign of theta follows from VU = +(D_mu U) U^dagger for the D_mu of the fermions, which
+     holds since FR$DSign = -1 (HEFT_Model.fr, 2026-09-23); only (2) depends on it.  With
+     FeynRules' default FR$DSign = +1 (before 2026-09-23) theta and block (2) had the opposite sign.  Nothing else changes at one insertion: the
+     (d theta)^2 term and theta inside other EFT operators are WCOrder^2, so the masses, the
+     h kinetic term, gauge_normalization.fr and the input schemes are untouched. *)
+  
+  LS2D := Block[{mu, nu, aux, yuk, sp, ii, cc, ff1, ff2, ff3, kv, k2v},
+    kv  = If[TrueQ[KappaFramework], KappaV,  1];
+    k2v = If[TrueQ[KappaFramework], Kappa2V, 1];
+    aux = ExpandIndices[WCOrder I vev^2/4 Tr[TT . VU[mu]]
+        del[FCS2D[H, NEFT] - CS2Dn1*(LamF*H/vev + kv*H^2/vev^2 + k2v/3*H^3/vev^3), mu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True];
+    yuk = -I*WCOrder*CS2Dn1*H/(2*Sqrt[2]) * ExpandIndices[
+        Sum[(yu[ff1, ff2]/vev + yuH[ff1, ff2]/vev*H/vev)
+            QLbar[sp, ii, ff1, cc].uR[sp, ff2, cc] UFerm[ii, 1], {ii, 1, 2}] -
+        Sum[(yd[ff2, ff3]/vev + ydH[ff2, ff3]/vev*H/vev)
+            CKM[ff1, ff2] QLbar[sp, ii, ff1, cc].dR[sp, ff3, cc] UFerm[ii, 2], {ii, 1, 2}] -
+        Sum[(yl[ff1, ff3]/vev + ylH[ff1, ff3]/vev*H/vev)
+            LLbar[sp, ii, ff1].lR[sp, ff3] UFerm[ii, 2], {ii, 1, 2}],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux + yuk + HC[yuk]
+  ];
+ 
+  (* S_B~, S_W~, S_G~: all three -1/4 X X~ Fbar, like P_B, P_W, P_G (user decision 2026-10-07).
+     1604.06801 writes -B B~, -Tr(W W~) = -1/2 W^a W~^a and -G^a G~^a, so C_model = 4 c_paper for
+     S_B~ and S_G~, 2 c_paper for S_W~.  Until 2026-10-07 LSB was -B B~ and LSW -W^a W~^a. *)
+  LSB := Block[{mu, nu, al, be},
+    ExpandIndices[
+      -WCOrder 1/4 Eps[mu, nu, al, be]/2 HC[FS[B, al, be]] FS[B, mu, nu] FCSB[H, NEFT], NoDefinitions -> True]
+  ];
+  
+  (* No coupling constant in front of an operator (user rule 2026-10-06: it would spoil the power
+     counting).  Until then LSG carried gs^2, so CSGn<n> now means gs^2 times what it meant before. *)
+  LSG := Block[{mu, nu, al, be, a},
+    ExpandIndices[
+      -WCOrder 1/4 Eps[mu, nu, al, be]/2 HC[FS[Gl, al, be, a]] FS[Gl, mu, nu, a] FCSG[H, NEFT], NoDefinitions -> True]
+  ];
+
+  LSW := Block[{mu, nu, al, be, ii},
+    ExpandIndices[- WCOrder 1/4 Eps[mu, nu, al, be]/2 HC[FS[Wi, al, be, ii]] FS[Wi, mu, nu, ii]
+        FCSW[H, NEFT], FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LS1 := Block[{mu, nu, al, be, aux},
+    aux = ExpandIndices[WCOrder Eps[mu, nu, al, be]/2 HC[FS[B, al, be]] Tr[TT . FSWi[mu,nu]]
+        FCS1[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS2 := Block[{mu, nu, al, be, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder I/(4*Pi) 1/2 Eps[mu,nu,al,be] HC[FS[B,al,be]] Tr[TT . VU[mu]] del[FCS2[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS3 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder  I/(4*Pi) 1/2 Eps[mu,nu,al,be] Tr[HC[FSWi[al,be]] . VU[mu]] del[FCS3[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS4 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder 1/(4*Pi) Tr[FSWi[mu,nu] . VU[mu]] Tr[TT . VU[nu]] FCS4[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS5 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 I/(4*Pi)^2 Tr[VU[mu] . VU[nu]] Tr[TT . VU[mu]] del[FCS5[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS6 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder^2 I/(4*Pi)^2 Tr[VU[mu] . VU[mu]] Tr[TT . VU[nu]] del[FCS6[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS7 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder*ChiralOrder 1/(4*Pi) Tr[TT . (FSWi[mu,nu] . VU[mu] - VU[mu] . FSWi[mu,nu])] del[FCS7[H, NEFT],nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+ 
+  LS8 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[WCOrder 1/2 Eps[mu,nu,al,be] Tr[TT . HC[FSWi[al,be]]] Tr[TT . FSWi[mu,nu]] FCS8[H, NEFT],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS9 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[I/(4*Pi) WCOrder*ChiralOrder 1/2 Eps[mu,nu,al,be] Tr[TT . FSWi[al,be]] Tr[TT . VU[mu]] del[FCS9[H, NEFT], nu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+  
+  LS15 := Block[{mu, nu, al, be, a, aux},
+    aux = ExpandIndices[I/(4*Pi)^2 WCOrder*ChiralOrder^2 Tr[TT . VU[mu]] Tr[TT . VU[nu]] Tr[TT . VU[nu]] del[FCS15[H, NEFT], mu],
+      FlavorExpand -> {SU2D}, NoDefinitions -> True];
+    aux = ExpandIndices[aux, FlavorExpand -> {SU2W}, NoDefinitions -> True]
+  ];
+
+(* Total bosonic EFT Lagrangian of the 1604.06801 basis.  Every operator carries WCOrder once and
+   ChiralOrder^n from its W/V/d/D count (2 -> 0, 3 -> 1, 4 -> 2).  User-defined operators: Lagrangian_User.fr. *)
+
+LEFTBosonicaux = 0;
+If[HEFTPieceActiveQ[ "PT"],           LEFTBosonicaux += Hold[LPT]];
+If[HEFTPieceActiveQ[ "PGGG"],       LEFTBosonicaux += Hold[LPGGG]];
+If[HEFTPieceActiveQ[ "SGGG"],  LEFTBosonicaux += Hold[LSGGG]];
+If[HEFTPieceActiveQ[ "PWWW"],       LEFTBosonicaux += Hold[LPWWW]];
+If[HEFTPieceActiveQ[ "SWWW"],  LEFTBosonicaux += Hold[LSWWW]];
+If[HEFTPieceActiveQ[ "PDH"],           LEFTBosonicaux += Hold[LPDH]];
+If[HEFTPieceActiveQ[ "PG"],        LEFTBosonicaux += Hold[LPG]];
+If[HEFTPieceActiveQ[ "SG"],   LEFTBosonicaux += Hold[LSG]];
+If[HEFTPieceActiveQ[ "PW"],        LEFTBosonicaux += Hold[LPW]];
+If[HEFTPieceActiveQ[ "SW"],   LEFTBosonicaux += Hold[LSW]];
+If[HEFTPieceActiveQ[ "PB"],        LEFTBosonicaux += Hold[LPB]];
+If[HEFTPieceActiveQ[ "SB"],   LEFTBosonicaux += Hold[LSB]];
+If[HEFTPieceActiveQ[ "P1"],        LEFTBosonicaux += Hold[LP1]];
+If[HEFTPieceActiveQ[ "P2"],        LEFTBosonicaux += Hold[LP2]];
+If[HEFTPieceActiveQ[ "P3"],        LEFTBosonicaux += Hold[LP3]];
+If[HEFTPieceActiveQ[ "P4"],        LEFTBosonicaux += Hold[LP4]];
+If[HEFTPieceActiveQ[ "P5"],        LEFTBosonicaux += Hold[LP5]];
+If[HEFTPieceActiveQ[ "P6"],        LEFTBosonicaux += Hold[LP6]];
+If[HEFTPieceActiveQ[ "P8"],        LEFTBosonicaux += Hold[LP8]];
+If[HEFTPieceActiveQ[ "P11"],       LEFTBosonicaux += Hold[LP11]];
+If[HEFTPieceActiveQ[ "P12"],       LEFTBosonicaux += Hold[LP12]];
+If[HEFTPieceActiveQ[ "P13"],       LEFTBosonicaux += Hold[LP13]];
+If[HEFTPieceActiveQ[ "P14"],       LEFTBosonicaux += Hold[LP14]];
+If[HEFTPieceActiveQ[ "P17"],       LEFTBosonicaux += Hold[LP17]];
+If[HEFTPieceActiveQ[ "P18"],       LEFTBosonicaux += Hold[LP18]];
+If[HEFTPieceActiveQ[ "P20"],       LEFTBosonicaux += Hold[LP20]];
+If[HEFTPieceActiveQ[ "P21"],       LEFTBosonicaux += Hold[LP21]];
+If[HEFTPieceActiveQ[ "P22"],       LEFTBosonicaux += Hold[LP22]];
+If[HEFTPieceActiveQ[ "P23"],       LEFTBosonicaux += Hold[LP23]];
+If[HEFTPieceActiveQ[ "P24"],       LEFTBosonicaux += Hold[LP24]];
+If[HEFTPieceActiveQ[ "P26"],       LEFTBosonicaux += Hold[LP26]];
+If[HEFTPieceActiveQ[ "S2D"],       LEFTBosonicaux += Hold[LS2D]];
+If[HEFTPieceActiveQ[ "S1"],        LEFTBosonicaux += Hold[LS1]];
+If[HEFTPieceActiveQ[ "S2"],        LEFTBosonicaux += Hold[LS2]];
+If[HEFTPieceActiveQ[ "S3"],        LEFTBosonicaux += Hold[LS3]];
+If[HEFTPieceActiveQ[ "S4"],        LEFTBosonicaux += Hold[LS4]];
+If[HEFTPieceActiveQ[ "S5"],        LEFTBosonicaux += Hold[LS5]];
+If[HEFTPieceActiveQ[ "S6"],        LEFTBosonicaux += Hold[LS6]];
+If[HEFTPieceActiveQ[ "S7"],        LEFTBosonicaux += Hold[LS7]];
+If[HEFTPieceActiveQ[ "S8"],        LEFTBosonicaux += Hold[LS8]];
+If[HEFTPieceActiveQ[ "S9"],        LEFTBosonicaux += Hold[LS9]];
+If[HEFTPieceActiveQ[ "S15"],       LEFTBosonicaux += Hold[LS15]];
+
+(* Each selected operator is added HELD and released only when LEFTBosonic is used, i.e. in the
+   mass-basis step (HEFT_Model.fr), after the model has finished loading (2026-10-05, TESTS/T39).
+   Evaluated while this file loads, as it was before, an operator came out unexpanded, and in
+   one with the same non-abelian field strength twice (PW, P12, PG) the two factors were
+   identical down to their dummy indices, so Mathematica stored FS.FS as a square, (...)^2.
+   Expanding that square later, FeynRules contracted Eps[ii,bb,cc]^2 to 6 although bb, cc also
+   sit on the gauge fields: the non-abelian quartic came out wrong, with spurious purely neutral
+   AAAA/AAZZ/ZZZZ vertices as the visible symptom. *)
+LEFTBosonic := ReleaseHold[LEFTBosonicaux];

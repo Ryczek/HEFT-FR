@@ -1,7 +1,7 @@
 (******************************************************************)
 (* HEFT restriction: diagonal CKM                                  *)
 (* Sets Wolfenstein parameters to zero so CKM -> 1 in flavour    *)
-(* space (consistent with CKM Value in parameters_LO.fr).          *)
+(* space (consistent with CKM Value in parameters_SM.fr).          *)
 (******************************************************************)
 
 M$Restrictions = {

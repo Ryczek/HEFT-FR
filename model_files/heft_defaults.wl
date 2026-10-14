@@ -4,38 +4,31 @@
    heft_fr_notebook.wl normally sets every variable inline, so it stays
    self-contained; these defaults are the safety net for anything it omits. *)
 
-(* NLO bases that can actually be built.  "2206.07722" is deliberately NOT here: the basis is
-   not implemented in this release and both order gates - heft_fr.wl Cell 3 and
-   HEFT_Model.fr's own check inside LoadModel - refuse it.  Re-enabling it means adding the
-   operator files under model_files/NLO/basis_2206_07722/, listing the basis here, AND lifting
-   the literal check in HEFT_Model.fr, which cannot read this file (it runs inside the
-   FeynRules model context, where this symbol would land in the wrong context). *)
-HEFT$SupportedNLOBases = {"1604.06801"};
+(* The gauge (unitary) and the operator basis (Brivio et al. 1604.06801) are hard-coded, not
+   configuration options - both switches were removed 2026-09-18.  Nothing to default here. *)
 
 HEFT$DefaultConfig = <|
-  "feynRulesPath" -> "/Users/michalryczkowski/Library/Mathematica/Applications/feynrules-current",
-  "gauge" -> "unitary", "basis" -> "1604.06801",
-  "heftMaxOrder" -> 1, "higgsMaxOrder" -> 3,
-  "kappaFramework" -> True, "initialiseWCs" -> 1, "loYukawaExpansion" -> True, "includeCustodialT" -> True,
-  "combine2Derivatives" -> False,
+  "feynRulesPath" -> "",   (* no default: the user sets it in Cell 2 (2026-10-13) *)
+  "higgsMaxOrder" -> 3,
+  "kappaFramework" -> True, "initialiseWCs" -> 1,
   "ewScheme" -> "heft",
   "massless" -> False, "diagonalCKM" -> False,
   "operators" -> {}, "outputName" -> "HEFT_run",
   "maxVertexLegs" -> Automatic,
+  "feynArtsDiracIndices" -> Automatic,
   "forceRebuild" -> False
 |>;
 
 (* Maps each key above to the actual Global configuration symbol used by heft_fr.wl. *)
 HEFT$ConfigSymbolForKey = <|
-  "feynRulesPath" -> "$FeynRulesPath", "gauge" -> "HEFTGauge", "basis" -> "HEFTNLOBasis",
-  "heftMaxOrder" -> "HEFTMaxOrder",
+  "feynRulesPath" -> "$FeynRulesPath",
   "higgsMaxOrder" -> "HiggsMaxOrder", "kappaFramework" -> "KappaFramework",
-  "initialiseWCs" -> "InitialiseWCs", "loYukawaExpansion" -> "LOYukawaExpansion", "includeCustodialT" -> "IncludeCustodialT",
-  "combine2Derivatives" -> "Combine2Derivatives",
+  "initialiseWCs" -> "InitialiseWCs",
   "ewScheme" -> "EWInputScheme",
-  "massless" -> "Massless", "diagonalCKM" -> "DiagonalCKM", "operators" -> "NLOOperators",
+  "massless" -> "Massless", "diagonalCKM" -> "DiagonalCKM", "operators" -> "EFTOperators",
   "outputName" -> "OutputName",
   "maxVertexLegs" -> "MaxVertexLegs",
+  "feynArtsDiracIndices" -> "FeynArtsDiracIndices",
   "forceRebuild" -> "ForceRebuildLHEFT"
 |>;
 
@@ -56,4 +49,35 @@ HEFT$ApplyConfigDefaults[] := Do[
     ToExpression[HEFT$ConfigSymbolForKey[key] <> " = " <> ToString[HEFT$DefaultConfig[key], InputForm]]
   ],
   {key, Keys[HEFT$DefaultConfig]}
+];
+
+(* Removed expansion options, checked right after the defaults are applied (heft_fr.wl Cell 3
+   and the merge bootstrap).  A Configuration cell still setting one would otherwise be ignored
+   without a word, and the build would run on something else:
+     - HEFTMaxOrder (renamed MaxChiralOrder 2026-09-16) was removed 2026-09-17: ChiralOrder is a
+       label only, nothing is truncated on it;
+     - EFTMaxOrder (renamed MaxEFTInsertions 2026-09-16) was removed 2026-09-17: the model keeps a
+       single EFT insertion per vertex, always;
+     - Combine2Derivatives was removed 2026-09-17: PDH/P8/P20/P21/P22 always use one combined
+       Wilson-coefficient family;
+     - LOYukawaExpansion was removed 2026-09-28: the FQU/FQD/FLE tower is always present, and
+       setting its coefficients to 0 neglects it. *)
+HEFT$RemovedOptionMessages = {
+  "HEFTMaxOrder" -> "removed (2026-09-17) - chiral order is a label only, every selected operator is kept; delete the line",
+  "MaxChiralOrder" -> "removed (2026-09-17) - chiral order is a label only, every selected operator is kept; delete the line",
+  "EFTMaxOrder" -> "removed (2026-09-17) - the model always keeps a single EFT insertion per vertex; delete the line",
+  "MaxEFTInsertions" -> "removed (2026-09-17) - the model always keeps a single EFT insertion per vertex; delete the line",
+  "Combine2Derivatives" -> "removed (2026-09-17) - PDH/P8/P20/P21/P22 always use one combined coefficient family; delete the line",
+  "LOYukawaExpansion" -> "removed (2026-09-28) - the FQU/FQD/FLE Yukawa tower is always in the model; set CQUn/CQDn/CLEn to 0 in wcxf_output.json to neglect it, and delete the line"
+};
+HEFT$CheckExpansionOptions[] := Module[{set},
+  set = Select[Keys[HEFT$RemovedOptionMessages],
+    HEFT$SymbolHasValueQ["Global`" <> #] &];
+  If[set =!= {},
+    Scan[Print[Style["[HEFT] ERROR: " <> # <> " is " <> (# /. HEFT$RemovedOptionMessages) <> ".", Red, Bold]] &, set];
+    Print[Style["[HEFT] Fix the Configuration cell, restart the kernel (the old names still hold " <>
+      "values in this one), and re-run.", Red]];
+    Abort[]
+  ];
+  True
 ];

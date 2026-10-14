@@ -2,69 +2,78 @@
 
    Entry point: HEFT$PrintNotebookReference[] (called from the notebook's Reference
    section). It always prints the "About" block (what this model is, who wrote it,
-   references); the configuration-option table and the operator catalogue are only
-   printed when Global`IgnoreReference is not True. *)
+   references) AND the operator catalogue; only the configuration-option table is
+   suppressed, by Global`IgnoreInstructions = True.  (Before 2026-09-22 the flag was
+   IgnoreReference and it hid the catalogue too; PrintHigherOrder, which used to gate
+   the user-defined operators, is gone - they are always listed.) *)
 
-HEFT$Version = "0.5";
+HEFT$Version = "1.0";
 
 (* Each group is {title, operator labels, category}; category in {"Bosonic","2F","4F"}. *)
 
 HEFT$Catalog1604NLO = {
   {"Bosonic - scalar / gauge kinetic",
-    {"DH", "GHNLO", "GHtildeNLO", "WHNLO", "WtildeHNLO", "BHNLO", "BtildeHNLO"}, "Bosonic"},
+    {"PT", "PDH", "PG", "SG", "PW", "SW", "PB", "SB"}, "Bosonic"},
   {"Bosonic - cubic gauge",
-    {"GGGNLO", "WWWNLO", "WWWtildeNLO", "GGGtildeNLO"}, "Bosonic"},
+    {"PGGG", "PWWW", "SWWW", "SGGG"}, "Bosonic"},
   {"Bosonic - CP-even (P operators)",
-    {"P1NLO", "P2NLO", "P3NLO", "P4NLO", "P5NLO", "P6NLO", "P8NLO", "P11NLO", "P12NLO",
-     "P13NLO", "P14NLO", "P17NLO", "P18NLO", "P20NLO", "P21NLO", "P22NLO",
-     "P23NLO", "P24NLO", "P26NLO"}, "Bosonic"},
+    {"P1", "P2", "P3", "P4", "P5", "P6", "P8", "P11", "P12",
+     "P13", "P14", "P17", "P18", "P20", "P21", "P22",
+     "P23", "P24", "P26"}, "Bosonic"},
   {"Bosonic - CP-odd (S operators)",
-    {"S2DNLO", "S1NLO", "S2NLO", "S3NLO", "S4NLO", "S5NLO", "S6NLO", "S7NLO",
-     "S8NLO", "S9NLO", "S15NLO"}, "Bosonic"},
+    {"S2D", "S1", "S2", "S3", "S4", "S5", "S6", "S7",
+     "S8", "S9", "S15"}, "Bosonic"},
   {"Fermionic 2F - quark (NQ1-NQ36)",
-    Table["NQ" <> ToString[heftI] <> "NLO", {heftI, 1, 36}], "2F"},
-  {"Fermionic 2F - lepton (NL1-NL17, NLF1-NLF3)",
-    Join[Table["NL" <> ToString[heftI] <> "NLO", {heftI, 1, 17}], {"NLF1NLO", "NLF2NLO", "NLF3NLO"}], "2F"},
+    Table["NQ" <> ToString[heftI], {heftI, 1, 36}], "2F"},
+  {"Fermionic 2F - lepton (NL1-NL17)",
+    Table["NL" <> ToString[heftI], {heftI, 1, 17}], "2F"},
   {"Fermionic 4F - quark (RQ1-RQ26)",
-    Table["RQ" <> ToString[heftI] <> "NLO", {heftI, 1, 26}], "4F"},
+    Table["RQ" <> ToString[heftI], {heftI, 1, 26}], "4F"},
   {"Fermionic 4F - quark-lepton (RQL1-RQL23)",
-    Table["RQL" <> ToString[heftI] <> "NLO", {heftI, 1, 23}], "4F"},
+    Table["RQL" <> ToString[heftI], {heftI, 1, 23}], "4F"},
   {"Fermionic 4F - lepton (RL1-RL7)",
-    Table["RL" <> ToString[heftI] <> "NLO", {heftI, 1, 7}], "4F"}
+    Table["RL" <> ToString[heftI], {heftI, 1, 7}], "4F"}
 };
 
-(* Not part of the 1604.06801 paper itself - NNLO operators implemented as an extension
-   beyond that paper's NLO basis, and shipped as worked examples rather than as a complete
-   NNLO basis. Only printed when PrintHigherOrder = True (see Reference cell).
-   NNNLO (GHDNNNLO) was dropped from this release. *)
+(* Not part of the 1604.06801 paper itself - the user-defined operators of
+   parameters_User.fr / Lagrangian_User.fr, shipped with the gluon-Higgs NNLO operators as the
+   worked example.  Add the label of every operator you define there to this list, or Cell 3
+   rejects it as unknown.  Always printed with the rest of the catalogue (the PrintHigherOrder
+   gate was removed 2026-09-22).  NNNLO (GHDNNNLO) was dropped from this release. *)
 HEFT$Catalog1604Higher = {
-  {"NNLO (need HEFTMaxOrder >= 2)",
-    {"GHNNLO1", "GHNNLO2", "GHtildeNNLO",
-     "WLh2WRD2NNLO", "WLh3D4NNLO"}, "Bosonic"}
+  {"User-defined - gluon-Higgs examples",
+    {"PGHD1", "PGHD2", "SGHD"}, "Bosonic"},
+  {"User-defined - W-Higgs examples (SMEFT Q_W2H2D2 analogues)",
+    {"PWHD1", "PWHD2", "SWHD", "SWHDT"}, "Bosonic"}
 };
 
-HEFT$Catalog2206NLO = {
-  {"UhD4 operators (UhD4n1 - UhD4n15)",
-    Table["UhD4n" <> ToString[heftI], {heftI, 1, 15}], "Bosonic"},
-  {"X2Uh operators (X2Uhn1 - X2Uhn10)",
-    Table["X2Uhn" <> ToString[heftI], {heftI, 1, 10}], "Bosonic"},
-  {"XUhD2 operators (XUhD2n1 - XUhD2n8)",
-    Table["XUhD2n" <> ToString[heftI], {heftI, 1, 8}], "Bosonic"},
-  {"X3 operators (X3n1 - X3n6)",
-    Table["X3n" <> ToString[heftI], {heftI, 1, 6}], "Bosonic"}
-};
-
-(* Not part of the 2206.07722 paper itself - see note on HEFT$Catalog1604Higher above. *)
-HEFT$Catalog2206Higher = {
-  {"NNLO (need HEFTMaxOrder >= 2)",
-    {"WL2h2T2D2NNLO", "BL2h2D2NNLO"}, "Bosonic"}
-};
-
-HEFT$OperatorCatalogsForBasis[basis_String] := Switch[basis,
-  "1604.06801", {HEFT$Catalog1604NLO, HEFT$Catalog1604Higher},
-  "2206.07722", {HEFT$Catalog2206NLO, HEFT$Catalog2206Higher},
-  _, {{}, {}}
+(* chiral dimension of every operator label - the power n of ChiralOrder^n the operator carries in the
+   Lagrangian, from its W/V/d/D count (bosonic 2 -> 0, 3 -> 1, 4 -> 2; fermionic d Psi^2 phi^4
+   class 0, d^2 Psi^2 phi^2 class 1).  A LABEL ONLY: nothing is truncated on it (since 2026-09-17),
+   it is printed in the Reference tables and is the UFO coupling order ChiralOrder.
+   Must match the Lagrangian files: the ChiralOrder^n factor inside each bosonic L<op>, the
+   LEFT2F block a 2F operator is added to (LEFT2F1Lamaux = 1, the others 0), LEFT4F = 0, and
+   Lagrangian_User.fr for the user labels.  Add a row for every operator you add. *)
+HEFT$OperatorChiralOrder = Association @ Join[
+  Thread[{"PT", "PG", "PB", "PW", "P1", "P12", "S2D", "SB", "SW", "SG", "S1", "S8"} -> 0],
+  Thread[{"P2", "P3", "P4", "P5", "P13", "P14", "P17", "S2", "S3", "S4", "S7", "S9",
+    "PWWW", "PGGG", "SWWW", "SGGG"} -> 1],
+  Thread[{"PDH", "P6", "P8", "P11", "P18", "P20", "P21", "P22", "P23", "P24", "P26",
+    "S5", "S6", "S15"} -> 2],
+  Thread[{"PGHD1", "PGHD2", "SGHD"} -> 2],
+  Thread[{"PWHD1", "PWHD2", "SWHD", "SWHDT"} -> 2],
+  Thread[Table["NQ" <> ToString[heftI], {heftI, Join[Range[1, 8], Range[29, 36]]}] -> 0],
+  Thread[Table["NQ" <> ToString[heftI], {heftI, 9, 28}] -> 1],
+  Thread[Table["NL" <> ToString[heftI], {heftI, Join[{1, 2}, Range[12, 17]]}] -> 0],
+  Thread[Table["NL" <> ToString[heftI], {heftI, 3, 11}] -> 1],
+  Thread[Table["RQ" <> ToString[heftI], {heftI, 1, 26}] -> 0],
+  Thread[Table["RQL" <> ToString[heftI], {heftI, 1, 23}] -> 0],
+  Thread[Table["RL" <> ToString[heftI], {heftI, 1, 7}] -> 0]
 ];
+
+(* The operator basis is fixed at Brivio et al. 1604.06801 (2026-09-18): no dispatch, no
+   basis argument. *)
+HEFT$OperatorCatalogs[] := {HEFT$Catalog1604NLO, HEFT$Catalog1604Higher};
 
 HEFTCatalogFlatten[catalog_List] := Join @@ catalog[[All, 2]];
 
@@ -83,29 +92,33 @@ HEFT$CategoryLabel = <|
 
 HEFT$CatalogCategory[heftEntry_List] := If[Length[heftEntry] >= 3, heftEntry[[3]], "Bosonic"];
 
-HEFT$RefPrintCategoryTable[groups_List] := Module[{rows, heftHeader},
+(* One row per group, one column per chiral dimension that occurs in the category: each operator
+   sits in the column of its chiral dimension (HEFT$OperatorChiralOrder).  An operator missing from
+   that table is shown under "?" instead of being dropped. *)
+HEFT$RefPrintCategoryTable[groups_List] := Module[{orders, heftHeader, rows, cell},
   If[groups === {}, Return[]];
-  heftHeader = {Style["Group", Bold, FontSize -> 12], Style["#", Bold, FontSize -> 12],
-    Style["Operators", Bold, FontSize -> 12]};
+  orders = Union[Lookup[HEFT$OperatorChiralOrder, Flatten[groups[[All, 2]]], "?"]];
+  heftHeader = Join[
+    {Style["Group", Bold, FontSize -> 12], Style["#", Bold, FontSize -> 12]},
+    Style["chiral dimension " <> ToString[#], Bold, FontSize -> 12] & /@ orders];
+  cell[ops_List] := Pane[If[ops === {}, "", StringJoin[Riffle[ops, ", "]]], 300];
   rows = Map[
-    Function[heftG, {heftG[[1]], Length[heftG[[2]]], Pane[StringJoin[Riffle[heftG[[2]], ", "]], 480]}],
+    Function[heftG, Join[{heftG[[1]], Length[heftG[[2]]]},
+      Function[o, cell[Select[heftG[[2]], Lookup[HEFT$OperatorChiralOrder, #, "?"] === o &]]] /@ orders]],
     groups
   ];
   Print @ Grid[
     Prepend[rows, heftHeader],
     Frame -> All,
-    Alignment -> {{Left, Center, Left}, Top},
+    Alignment -> {Join[{Left, Center}, ConstantArray[Left, Length[orders]]], Top},
     Spacings -> {1.5, 0.75},
-    ItemStyle -> {Automatic, Automatic, Directive[FontFamily -> "Monospace", FontSize -> 10]},
+    ItemStyle -> {Join[{Automatic, Automatic}, ConstantArray[Directive[FontFamily -> "Monospace", FontSize -> 10], Length[orders]]]},
     Background -> {None, {{1 -> GrayLevel[0.88]}}}
   ];
 ];
 
-HEFT$RefPrintOperatorCatalog[catalog_List] := Module[{total, cat, groups, heftC},
+HEFT$RefPrintOperatorCatalog[catalog_List] := Module[{cat, groups, heftC},
   If[catalog === {}, Return[]];
-  total = Total[Length /@ catalog[[All, 2]]];
-  Print[Style["    (" <> ToString[total] <> " operators in " <>
-    ToString[Length[catalog]] <> " groups)", Gray]];
   Do[
     cat = HEFT$CategoryOrder[[heftC]];
     groups = Select[catalog, HEFT$CatalogCategory[#] === cat &];
@@ -120,27 +133,26 @@ HEFT$RefPrintOperatorCatalog[catalog_List] := Module[{total, cat, groups, heftC}
 ];
 
 HEFT$ConfigOptionReference = {
-  {"$FeynRulesPath", "Path to your FeynRules installation."},
-  {"HEFTGauge", "\"unitary\" - the only supported value. An R_xi branch exists in the source but is unfinished and unsupported; see README SS \"Deferred configuration options\"."},
-  {"HEFTMaxOrder", "Chiral/LamHEFT truncation: 0 = LO only, 1 = NLO, 2 = NNLO. 2 requires EWInputScheme = \"heft\": the derived schemes are NLO-only and the combination is refused (see EWInputScheme below)."},
-  {"HiggsMaxOrder", "Max (H/vev)^n order in bosonic F-functions."},
-  {"KappaFramework", "True = Kappa* normalisation; False = Delta* (see README)."},
-  {"InitialiseWCs", "Default value cell 3 writes for the effective Wilson coefficients: 1 or 0. SM couplings keep their SM value either way (Kappa framework 1, Delta framework 0)."},
-  {"LOYukawaExpansion", "True (default) = keep the higher-order fermion-Higgs terms of the LO Yukawa sector (F-functions FQU/FQD/FLE, coefficients CQUn<n>/CQDn<n>/CLEn<n>, n >= 2). False = drop them and do not declare those coefficients at all. The SM Yukawa and its single-Higgs coupling are unaffected either way (they follow KappaQU.../DeltaYQU...)."},
-  {"IncludeCustodialT", "True (default) = keep the custodial-symmetry breaking operator PT = Tr[T.V_mu]Tr[T.V^mu] F_T(h) in LGaugeHiggs. False = drop it; its CFTn coefficients are then not declared either, since PT is their only user."},
-  {"Combine2Derivatives", "False (default) = unchanged behaviour. True = for DH/P8NLO/P20NLO/P21NLO/P22NLO only (each multiplies two independently h/vev-truncated flare functions via a derivative on each), replace the two WC families with one new combined family per operator (C<op>n<nh>prime, nh = the total number of Higgs fields in that term, the differentiated ones included), so a given vertex's coefficient is a single WC instead of the sum of products of the two originals it would otherwise be. Changes which Wilson coefficients exist for these 5 operators, so it is part of the LHEFT cache key."},
-  {"EWInputScheme", "\"heft\" (default) = G1/GW/GS/vev/hlambda are the model's own External inputs and the Lagrangian is left alone. \"gf\" = derived from (Gf, MW, MZ, MH). \"aem\" = derived from (alpha_EM as aEWM1, Gf, MZ, MH); MW is then a prediction, not an input, and is declared Internal. \"gf\"/\"aem\" also rewrite the mass-basis Lagrangian via HEFTEWInputRepl, with an NLO (ChiralOrder) shift when HEFTMaxOrder >= 1. ORDER RESTRICTION: \"heft\" works at any HEFTMaxOrder; \"gf\" and \"aem\" are derived to O(ChiralOrder) only and are REFUSED at HEFTMaxOrder >= 2 - Cell 3 aborts during configuration, and LoadModel aborts again in Cell 5."},
-  {"Massless", "True -> load restrictions/Massless.rst before Feynman rules."},
-  {"DiagonalCKM", "True -> load restrictions/DiagonalCKM.rst."},
-  {"HEFTNLOBasis", "\"1604.06801\" (Brivio et al.) - the only implemented basis. \"2206.07722\" (Sun et al.) is refused as not yet implemented; its catalogue can still be previewed here."},
-  {"NLOOperators", "List of active NLO/NNLO labels; {} = LO only. Must match basis."},
-  {"OutputName", "Subdirectory name under output/. The export format is not an option: run Cell 7 for UFO or Cell 8 for FeynArts (both, if you want both)."},
-  {"MaxVertexLegs", "Automatic (default) = every vertex is exported. An integer n >= 3 keeps only vertices with at most n legs, in all three output cells (6 Feynman rules, 7 UFO, 8 FeynArts) - it is passed on as FeynRules' own MaxParticles, which WriteUFO and WriteFeynArtsOutput forward to the FeynmanRules call they make internally, so it really does shrink the exported model. Values below 3 are refused: FeynRules returns no 1- or 2-point vertices, so a smaller cut would write an empty model. NOT part of the LHEFT cache key - it changes only what is read off the Lagrangian at export time, never the Lagrangian, so switching it never forces a rebuild. It is a way to cut an export down to the vertices a study needs, not a physics option: the quartics it drops first are the ones unitarising VV -> VV, and since the h-expansion is what generates high multiplicities it also truncates the flare tower in the output while wcxf_output.json still lists every coefficient."},
-  {"ForceRebuildLHEFT", "The only cache option. False (default) = always look HEFT_cache/ up first and load a matching build if there is one (under any OutputName); True = skip the lookup, rebuild LHEFTMassBasis, overwrite. Every build is saved either way."}
+  {"$FeynRulesPath", "Path to your FeynRules installation"},
+  {"HiggsMaxOrder", "Max (H/vev)^n order in bosonic F-functions"},
+  {"KappaFramework", "True = Kappa normalisation; False = Delta (see README and documentation)"},
+  {"InitialiseWCs", "Default value cell 3 writes for the effective Wilson coefficients: 1 or 0. SM couplings keep their SM value either way (Kappa framework 1, Delta framework 0)"},
+  {"EWInputScheme", "\"heft\" (default) = (G1,GW,vev,hlambda) are the model's External input parameters"},
+  {"", "\"gf\" = (G1,GW,vev,hlambda) derived from (Gf, MW, MZ, MH)"},
+  {"", "\"aem\" = (G1,GW,vev,hlambda) derived from (alpha_EM, Gf, MZ, MH)"},
+  {"Massless", "True -> load restrictions/Massless.rst before Feynman rules"},
+  {"DiagonalCKM", "True -> load restrictions/DiagonalCKM.rst"},
+  {"EFTOperators", "List of active EFT operator labels, must be chosen from the catalogue below"},
+  {"OutputName", "Output directory name under HEFT_Frules/output/"},
+  {"MaxVertexLegs", "Automatic (default) = every vertex is exported. An integer n >= 3 keeps only vertices with at most n legs"},
+  {"FeynArtsDiracIndices", "Automatic (default) = FeynRules' fermion form: explicit Dirac indices only if a vertex has 4 fermions;"},
+  {"", "True = explicit Dirac indices in every FeynArts export (Cell 8), needed to merge FeynArts exports with four-fermion operators"},
+  {"ForceRebuildLHEFT", "The only cache option. False (default) = always look HEFT_cache/ up first and load a matching build if there is one (under any OutputName);"},
+  {"", "True = skip the lookup, rebuild LHEFTMassBasis, overwrite. Every build is saved either way"}
 };
 
 HEFT$PrintConfigOptionsReference[] := Module[{idx},
-  HEFT$RefPrintSubsection["Configuration options (set in the Configuration section)"];
+  HEFT$RefPrintSubsection["Configuration options - to be set in the Configuration section (Cell 2)"];
   Print[Style["    Variable              Meaning", Bold]];
   Print[Style["    " <> StringRepeat["-", 66], Darker[Gray]]];
   Do[
@@ -151,20 +163,15 @@ HEFT$PrintConfigOptionsReference[] := Module[{idx},
     ],
     {idx, Length[HEFT$ConfigOptionReference]}
   ];
-  Print[Style["\n    LO operators are always included. NNLO labels need HEFTMaxOrder >= 2.", Gray]];
-  Print[Style["\n    Wilson coefficients have no options: cell 3 always writes wcxf/wcxf_init.json", Gray]];
-  Print[Style["    and wcxf/wcxf_output.json with every coefficient at 1; edit wcxf_output.json", Gray]];
-  Print[Style["    (cell 4) to change them. A value of 0 is just 0 in the exported model;", Gray]];
-  Print[Style["    which operators exist is decided by NLOOperators alone.", Gray]];
 ];
 
-HEFT$PrintBasisOperatorReference[basis_String] := Module[{nlo, higher},
-  {nlo, higher} = HEFT$OperatorCatalogsForBasis[basis];
-  HEFT$RefPrintSubsection["Basis " <> basis <> " - NLO (chiral dimension 1)"];
+HEFT$PrintBasisOperatorReference[] := Module[{nlo, higher},
+  {nlo, higher} = HEFT$OperatorCatalogs[];
+  HEFT$RefPrintSubsection["Operators by chiral dimension (1604.06801)"];
   HEFT$RefPrintOperatorCatalog[nlo];
-  If[TrueQ[Global`PrintHigherOrder] && higher =!= {} && HEFTCatalogFlatten[higher] =!= {},
+  If[higher =!= {} && HEFTCatalogFlatten[higher] =!= {},
     HEFT$RefPrintSubsection[
-      "Higher chiral order operators (NNLO extensions, not part of the " <> basis <> " paper itself)"
+      "User-defined operators (extension, not part of the 1604.06801 set)"
     ];
     HEFT$RefPrintOperatorCatalog[higher];
   ];
@@ -173,7 +180,7 @@ HEFT$PrintBasisOperatorReference[basis_String] := Module[{nlo, higher},
 (* ---------------------------------------------------------------------------
    About block - what this model is, who wrote it, what it is built on.
    Printed unconditionally by HEFT$PrintNotebookReference[], whether or not the
-   option/operator listing is suppressed via IgnoreReference = True.
+   configuration-option table is suppressed via IgnoreInstructions = True.
    --------------------------------------------------------------------------- *)
 
 HEFT$AboutAuthors = {
@@ -186,22 +193,17 @@ HEFT$AboutAffiliation = {
 };
 
 HEFT$AboutFeatures = {
-  "LO: the Standard Model in HEFT form - Kappa/Delta normalisation, F-functions in H/vev",
-  "NLO: the complete 1604.06801 basis - bosonic, 2-fermion (2F) and 4-fermion (4F) operators",
-  "Higher orders: example NNLO operators, as an extension beyond that basis",
-  "Gauge: unitary - the only gauge implemented (no Goldstone bosons in the spectrum)",
-  "Electroweak and CKM input schemes, plus optional restrictions/*.rst",
+  "The complete operator set of 1604.06801 - SM, bosonic, 2-fermion (2F) and 4-fermion (4F) operators, inlcuding LO, NLO and NNLO",
+  "Gauge: unitary",
+  "Electroweak input schemes - heft (default), gf, aem",
   "Wilson coefficients read from / written to WCxf JSON files under wcxf/",
   "Mass-basis Lagrangian cached on disk under HEFT_cache/<OutputName>/",
-  "Export to UFO (MadGraph) or FeynArts model files under output/"
+  "Export to UFO or FeynArts model files under output/"
 };
 
 HEFT$AboutReferences = {
-  {"HEFT NLO basis", "Brivio et al., \"The complete HEFT Lagrangian after the LHC Run I\", arXiv:1604.06801"},
-  {"Alternate basis", "arXiv:2206.07722 (not yet implemented)"},
-  {"FeynRules", "Alloul et al., \"FeynRules 2.0\", arXiv:1310.1921"},
-  {"WCxf format", "Aebischer et al., \"WCxf: an exchange format for Wilson coefficients\", arXiv:1712.05298"}
-};
+  {"HEFT operator set of", "Brivio et al., \"The complete HEFT Lagrangian after the LHC Run I\", arXiv:1604.06801"},
+  {"FeynRules", "Alloul et al., \"FeynRules 2.0\", arXiv:1310.1921"}};
 
 HEFT$PrintAbout[] := Module[{idx},
   Print[Style["\n" <> StringRepeat["=", 72], Bold]];
@@ -210,11 +212,8 @@ HEFT$PrintAbout[] := Module[{idx},
   Print[Style[StringRepeat["=", 72], Bold]];
 
   HEFT$RefPrintSubsection["What this is"];
-  Print["    A modular FeynRules model for the Higgs Effective Field Theory: the"];
-  Print["    electroweak chiral Lagrangian with a singlet Higgs, organised as a double"];
-  Print["    expansion in chiral dimension (LamHEFT) and in powers of H/vev (LamF)."];
-  Print["    It assembles the Lagrangian in the mass basis (LHEFT) from the operators you"];
-  Print["    select, and exports it as a UFO or FeynArts model."];
+  Print["    A modular FeynRules model for the Higgs Effective Field Theory."];
+  Print["    The Lagrangian is assembled from the operators of your choice, can be exported as a UFO or FeynArts model."];
 
   HEFT$RefPrintSubsection["What is implemented"];
   Do[Print["    \[Bullet] ", HEFT$AboutFeatures[[idx]]], {idx, Length[HEFT$AboutFeatures]}];
@@ -236,39 +235,26 @@ HEFT$PrintAbout[] := Module[{idx},
   ];
 
   HEFT$RefPrintSubsection["How it is run"];
-  Print["    heft_fr_notebook.wl is the only entry point: evaluate its cells in order,"];
+  Print["    heft_fr_notebook.wl is the only entry point: evaluate its cells in the following order"];
   Print["    Cell 1 (Reference) \[Rule] Cell 2 (Configuration) \[Rule] Cells 3-8."];
-  Print["    The model source lives in model_files/, the manual in README.md."];
+  Print["    The model source lives in model_files/, the detailed description is in README.md and associated publication."];
 ];
 
-(* Prints the About block, and - unless IgnoreReference = True - the configuration-option
-   table plus the operator catalogue for a single basis: the one currently selected via
-   HEFTNLOBasis (falls back to "1604.06801" if not set yet). Pass an explicit basis string
-   to override, e.g. HEFT$PrintNotebookReference["2206.07722"]. Higher chiral order
-   (NNLO) operators are only shown when PrintHigherOrder = True. *)
-HEFT$PrintNotebookReference[] := HEFT$PrintNotebookReference[
-  If[ValueQ[Global`HEFTNLOBasis] && MemberQ[{"1604.06801", "2206.07722"}, Global`HEFTNLOBasis],
-    Global`HEFTNLOBasis,
-    "1604.06801"
-  ]
-];
+(* Prints the About block and the operator catalogue ALWAYS; only the configuration-option
+   table is optional, skipped by IgnoreInstructions = True.  The basis is fixed at 1604.06801,
+   so there is nothing to select, and the user-defined operators are always listed. *)
+HEFT$PrintNotebookReference[] := Module[{skipOptions},
+  skipOptions = TrueQ[Global`IgnoreInstructions];
 
-HEFT$PrintNotebookReference[basis_String] := Module[{},
   HEFT$PrintAbout[];
 
-  If[TrueQ[Global`IgnoreReference],
-    Print[Style["\n[HEFT] Option and operator reference skipped (IgnoreReference = True). " <>
-      "Set IgnoreReference = False to print it.", Bold, FontSize -> 13]];
-    Return[]
+  If[skipOptions,
+    Print[Style["\n[HEFT] Configuration-option descriptions skipped " <>
+      "(IgnoreInstructions = True). Set IgnoreInstructions = False to print them.",
+      Bold, FontSize -> 13]],
+    HEFT$PrintConfigOptionsReference[]
   ];
 
-  Print[Style["\n" <> StringRepeat["=", 72], Bold]];
-  Print[Style["  Reference \[LongDash] configuration options and operator catalogue", Bold, FontSize -> 14]];
-  Print[Style["  (showing basis " <> basis <> " - set HEFTNLOBasis to switch; " <>
-    "PrintHigherOrder = True also shows NNLO;\n   IgnoreReference = True prints " <>
-    "the About block only)", FontSize -> 11, Darker[Gray]]];
-  Print[Style[StringRepeat["=", 72], Bold]];
-  HEFT$PrintConfigOptionsReference[];
-  HEFT$PrintBasisOperatorReference[basis];
-  Print[Style["\n[HEFT] Reference listing complete (basis " <> basis <> ").", Bold, FontSize -> 13]];
+  HEFT$PrintBasisOperatorReference[];
+  Print[Style["\n[HEFT] Reference listing complete.", Bold, FontSize -> 13]];
 ];
